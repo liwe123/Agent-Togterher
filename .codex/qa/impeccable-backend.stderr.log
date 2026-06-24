@@ -1,0 +1,62 @@
+INFO:     Started server process [34556]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:65444 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:53295 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:51535 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:53423 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:50768 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:49168 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:49195 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:49239 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:51850 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:64791 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:64711 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+Exception in callback _ProactorBasePipeTransport._call_connection_lost(None)
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost(None)>
+Traceback (most recent call last):
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\events.py", line 84, in _run
+    self._context.run(self._callback, *self._args)
+  File "C:\Program Files\WindowsApps\PythonSoftwareFoundation.Python.3.11_3.11.2544.0_x64__qbz5n2kfra8p0\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+ConnectionResetError: [WinError 10054] 远程主机强迫关闭了一个现有的连接。
+INFO:     127.0.0.1:61151 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:53042 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:53367 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:53307 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:62477 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open
+INFO:     connection closed
+INFO:     127.0.0.1:60501 - "WebSocket /ws/workspaces/1" [accepted]
+INFO:     connection open

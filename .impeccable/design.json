@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-24T12:36:10+08:00",
+  "title": "Design System: Agent Console",
+  "extensions": {
+    "colorMeta": {
+      "operations-black": {
+        "role": "neutral",
+        "displayName": "Operations Black",
+        "canonical": "oklch(0.125 0.012 70)",
+        "tonalRamp": ["oklch(0.105 0.01 70)", "oklch(0.125 0.012 70)", "oklch(0.16 0.013 70)"]
+      },
+      "signal-amber": {
+        "role": "primary",
+        "displayName": "Signal Amber",
+        "canonical": "oklch(0.76 0.16 65)",
+        "tonalRamp": ["oklch(0.52 0.11 65)", "oklch(0.76 0.16 65)", "oklch(0.86 0.1 65)"]
+      },
+      "live-green": {
+        "role": "secondary",
+        "displayName": "Live Green",
+        "canonical": "oklch(0.72 0.15 155)",
+        "tonalRamp": ["oklch(0.46 0.1 155)", "oklch(0.72 0.15 155)", "oklch(0.84 0.08 155)"]
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "Page Headline",
+        "purpose": "Page titles only; compact, calm and high contrast."
+      },
+      "data": {
+        "displayName": "Operational Data",
+        "purpose": "IDs, timestamps, model names, tokens and logs only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "overlay-only",
+        "value": "0 8px 24px oklch(0.04 0.004 70 / 0.45)",
+        "purpose": "Menus and overlays only; static panels remain flat."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-change",
+        "value": "180ms cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Hover, focus and status transitions."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single highest-priority action on a surface.",
+      "html": "<button class=\"ds-primary\">执行操作</button>",
+      "css": ".ds-primary { min-height: 36px; padding: 8px 14px; border: 1px solid transparent; border-radius: 8px; background: var(--primary); color: var(--primary-foreground); font: 600 14px/1.2 var(--font-sans); transition: background-color 180ms cubic-bezier(0.22,1,0.36,1); } .ds-primary:hover { background: color-mix(in oklch, var(--primary), white 9%); } .ds-primary:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }"
+    },
+    {
+      "name": "Operational Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Flat container for related task or status information.",
+      "html": "<section class=\"ds-panel\"><h3>编队状态</h3><p>运行信息</p></section>",
+      "css": ".ds-panel { padding: 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); color: var(--card-foreground); } .ds-panel h3 { margin: 0 0 8px; font: 600 14px/1.4 var(--font-sans); } .ds-panel p { margin: 0; color: var(--muted-foreground); font: 400 13px/1.5 var(--font-sans); }"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "description": "Text, color and dot communicate state together.",
+      "html": "<span class=\"ds-status\"><span aria-hidden=\"true\"></span>实时在线</span>",
+      "css": ".ds-status { display: inline-flex; align-items: center; gap: 6px; min-height: 20px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; color: var(--foreground); font: 600 12px/1 var(--font-sans); } .ds-status > span { width: 6px; height: 6px; border-radius: 50%; background: var(--status-running); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Flight Desk",
+    "overview": "A restrained operations surface where real state and execution data create the technical character. Warm graphite surfaces carry dense information; signal amber is scarce and actionable.",
+    "keyCharacteristics": [
+      "Flat warm-graphite surfaces",
+      "Sparse signal amber",
+      "State is expressed with color, icon and text",
+      "Desktop density with structural mobile reflow"
+    ],
+    "rules": [
+      {
+        "name": "The Signal Budget Rule",
+        "body": "Amber marks current selection, primary action or critical identifiers; it never decorates large surfaces.",
+        "section": "colors"
+      },
+      {
+        "name": "The Flat Deck Rule",
+        "body": "Static panels use tonal layering and hairlines, not soft shadows.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do show connection, execution and failure states before secondary metadata.",
+      "Do preserve the same component vocabulary across every route.",
+      "Do adapt the information order for mobile rather than hiding critical actions."
+    ],
+    "donts": [
+      "Don't use purple-blue gradients, neon borders, glassmorphism or decorative glow.",
+      "Don't wrap every item in the same rounded card.",
+      "Don't rely on color alone for status.",
+      "Don't use side-stripe borders or gradient text."
+    ]
+  }
+}

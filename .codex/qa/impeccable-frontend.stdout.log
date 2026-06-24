@@ -1,0 +1,47 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+▲ Next.js 16.2.9 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://198.18.0.1:3000
+✓ Ready in 888ms
+
+ GET / 200 in 446ms (next.js: 226ms, application-code: 220ms)
+ GET /settings 200 in 63ms (next.js: 33ms, application-code: 30ms)
+ GET /tasks 200 in 166ms (next.js: 31ms, application-code: 135ms)
+ GET /chats 200 in 134ms (next.js: 29ms, application-code: 105ms)
+ GET /settings 200 in 95ms (next.js: 6ms, application-code: 89ms)
+ GET /tasks/3 200 in 537ms (next.js: 467ms, application-code: 70ms)
+✓ Compiled in 125ms
+ GET /tasks/3 200 in 238ms (next.js: 100ms, application-code: 139ms)
+ GET /tasks/3 200 in 102ms (next.js: 12ms, application-code: 90ms)
+ GET /tasks/3 200 in 46ms (next.js: 7ms, application-code: 39ms)
+ GET /tasks 200 in 197ms (next.js: 72ms, application-code: 125ms)
+ GET /chats 200 in 221ms (next.js: 72ms, application-code: 149ms)
+ GET /tasks/3 200 in 112ms (next.js: 10ms, application-code: 101ms)
+ GET /tasks 200 in 52ms (next.js: 4ms, application-code: 49ms)
+✓ Compiled in 224ms
+ GET /tasks 200 in 259ms (next.js: 84ms, application-code: 175ms)
+ GET /tasks 200 in 138ms (next.js: 5ms, application-code: 133ms)
+ GET /tasks 200 in 148ms (next.js: 5ms, application-code: 143ms)
+ GET /tasks 200 in 150ms (next.js: 47ms, application-code: 103ms)
+ GET /tasks 200 in 152ms (next.js: 26ms, application-code: 126ms)
+ GET /tasks 200 in 86ms (next.js: 6ms, application-code: 80ms)
+ GET /tasks 200 in 59ms (next.js: 6ms, application-code: 53ms)
+ GET /tasks 200 in 32ms (next.js: 4ms, application-code: 28ms)
+✓ Compiled in 114ms
+ GET / 200 in 250ms (next.js: 81ms, application-code: 169ms)
+ GET /chats 200 in 99ms (next.js: 66ms, application-code: 33ms)
+ GET /chats 200 in 34ms (next.js: 7ms, application-code: 27ms)
+ GET / 200 in 88ms (next.js: 5ms, application-code: 83ms)
+ GET / 200 in 10ms (next.js: 3ms, application-code: 7ms)
+ GET /tasks 200 in 23ms (next.js: 4ms, application-code: 18ms)
+ GET /settings 200 in 105ms (next.js: 75ms, application-code: 31ms)
+ GET / 200 in 26ms (next.js: 4ms, application-code: 22ms)
+ GET /chats 200 in 22ms (next.js: 4ms, application-code: 18ms)
+ GET /chats 200 in 20ms (next.js: 3ms, application-code: 16ms)
+ GET / 200 in 20ms (next.js: 4ms, application-code: 16ms)
+ GET /tasks 200 in 114ms (next.js: 3ms, application-code: 111ms)
+ GET /tasks 200 in 62ms (next.js: 4ms, application-code: 57ms)
+[?25h

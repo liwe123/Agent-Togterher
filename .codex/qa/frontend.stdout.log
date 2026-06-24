@@ -1,0 +1,8 @@
+
+> frontend@0.1.0 start
+> next start --port 3000
+
+▲ Next.js 16.2.9
+- Local:         http://localhost:3000
+- Network:       http://198.18.0.1:3000
+✓ Ready in 258ms
