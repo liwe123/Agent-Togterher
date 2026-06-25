@@ -13,6 +13,8 @@ import type {
 
 const reconnectDelayMs = 3000
 const refreshDelayMs = 80
+const taskListLimit = 100
+const terminalTaskStatuses = new Set(["completed", "failed", "cancelled"])
 
 function useRequestRetry() {
   const [requestVersion, setRequestVersion] = useState(0)
@@ -20,6 +22,26 @@ function useRequestRetry() {
     setRequestVersion((version) => version + 1)
   }, [])
   return { requestVersion, retry }
+}
+
+function taskTimestamp(task: { updated_at: string }): number {
+  const timestamp = Date.parse(task.updated_at)
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+function taskStatusRank(status: string): number {
+  if (terminalTaskStatuses.has(status)) return 2
+  return status === "running" ? 1 : 0
+}
+
+function shouldApplyTaskStatus<T extends { status: string; updated_at: string }>(
+  current: T,
+  next: T,
+): boolean {
+  const currentTime = taskTimestamp(current)
+  const nextTime = taskTimestamp(next)
+  if (nextTime !== currentTime) return nextTime > currentTime
+  return taskStatusRank(next.status) >= taskStatusRank(current.status)
 }
 
 export function useTasks() {
@@ -46,7 +68,7 @@ export function useTasks() {
           throw new Error("没有可用工作区，请先启动后端完成默认数据初始化。")
         }
         const workspaceTasks = await requestData<TaskListItem[]>(
-          `/api/tasks?workspace_id=${currentWorkspace.id}`,
+          `/api/tasks?workspace_id=${currentWorkspace.id}&limit=${taskListLimit}`,
           { signal: controller.signal },
         )
         if (!controller.signal.aborted) {
@@ -85,7 +107,7 @@ export function useTasks() {
     async function refreshTasks() {
       try {
         const workspaceTasks = await requestData<TaskListItem[]>(
-          `/api/tasks?workspace_id=${workspaceId}`,
+          `/api/tasks?workspace_id=${workspaceId}&limit=${taskListLimit}`,
         )
         setTasks(workspaceTasks)
         setError(null)
@@ -126,7 +148,8 @@ export function useTasks() {
         if (event.type === "task.status_changed") {
           setTasks((current) =>
             current.map((task) =>
-              task.id === event.payload.id
+              task.id === event.payload.id &&
+              shouldApplyTaskStatus(task, event.payload)
                 ? { ...task, ...event.payload }
                 : task,
             ),
@@ -261,7 +284,9 @@ export function useTaskDetail(taskId: number) {
           event.payload.id === taskId
         ) {
           setTask((current) =>
-            current ? { ...current, ...event.payload } : current,
+            current && shouldApplyTaskStatus(current, event.payload)
+              ? { ...current, ...event.payload }
+              : current,
           )
           scheduleRefresh()
         }

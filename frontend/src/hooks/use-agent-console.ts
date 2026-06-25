@@ -4,13 +4,12 @@ import { useCallback, useEffect, useState } from "react"
 
 import type {
   Agent,
-  ApiResponse,
   ConnectionStatus,
   RecentOutput,
   WorkspaceEvent,
 } from "@/types/agent"
 
-import { apiBaseUrl, websocketBaseUrl } from "@/lib/task-api"
+import { requestData, websocketBaseUrl } from "@/lib/task-api"
 
 export function useAgentConsole() {
   const [agents, setAgents] = useState<Agent[]>([])
@@ -33,20 +32,17 @@ export function useAgentConsole() {
       setError(null)
 
       try {
-        const response = await fetch(`${apiBaseUrl}/api/agents`, {
+        const agentsData = await requestData<Agent[]>("/api/agents", {
           signal: controller.signal,
-          cache: "no-store",
         })
-
-        if (!response.ok) {
-          throw new Error(`Agent API 返回 ${response.status}`)
-        }
-
-        const result = (await response.json()) as ApiResponse<Agent[]>
-        setAgents(result.data)
+        setAgents(agentsData)
       } catch (requestError) {
         if ((requestError as Error).name !== "AbortError") {
-          setError("无法连接 Agent API，请确认后端已在 8000 端口启动。")
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "无法连接 Agent API，请确认后端已在 8000 端口启动。",
+          )
           setConnectionStatus("offline")
         }
       } finally {
@@ -86,7 +82,13 @@ export function useAgentConsole() {
         }
       }
       socket.onmessage = (message) => {
-        const event = JSON.parse(message.data) as WorkspaceEvent
+        let event: WorkspaceEvent
+        try {
+          event = JSON.parse(message.data) as WorkspaceEvent
+        } catch {
+          setError("收到无法解析的控制台实时消息。")
+          return
+        }
 
         if (event.type === "agent.status_changed") {
           const payload = event.payload

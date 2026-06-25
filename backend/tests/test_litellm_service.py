@@ -136,6 +136,35 @@ def test_chat_completion_returns_standard_error_after_all_attempts(
     ]
 
 
+def test_chat_completion_times_out_slow_provider(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = _settings(
+        deepseek_api_key="unit-test-deepseek-key",
+        qwen_api_key="unit-test-qwen-key",
+        model_request_timeout_seconds=0.01,
+    )
+
+    async def slow_acompletion(**_kwargs):
+        await asyncio.sleep(1)
+
+    monkeypatch.setattr(litellm_service, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        litellm_service, "_import_acompletion", lambda: slow_acompletion
+    )
+    litellm_service.clear_model_config_cache()
+
+    with pytest.raises(litellm_service.ModelCallError) as error:
+        asyncio.run(
+            litellm_service.chat_completion(
+                "code_model", [{"role": "user", "content": "ping"}]
+            )
+        )
+
+    attempts = error.value.as_dict()["attempts"]
+    assert attempts[0]["message"] == "Provider request timed out after 0.01s"
+
+
 def test_settings_load_deepseek_key_from_env_file(tmp_path: Path) -> None:
     env_path = tmp_path / ".env"
     env_path.write_text(

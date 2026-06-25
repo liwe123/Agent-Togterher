@@ -34,8 +34,9 @@ def api_client(tmp_path) -> Iterator[TestClient]:
     asyncio.run(create_schema())
     app.dependency_overrides[get_db] = override_get_db
     try:
-        with TestClient(app) as client:
-            yield client
+        with patch("app.core.message_hub.dispatch_background_task"):
+            with TestClient(app) as client:
+                yield client
     finally:
         app.dependency_overrides.clear()
         asyncio.run(engine.dispose())
@@ -286,6 +287,75 @@ def test_task_run_endpoint_executes_agent_and_returns_result(
     rerun = api_client.post(f"/api/tasks/{task_id}/run")
     assert rerun.status_code == 409
     assert "cannot be started" in rerun.json()["error"]
+
+
+def test_list_endpoints_support_bounded_pagination(api_client: TestClient) -> None:
+    workspace = create_workspace(api_client)
+    agent = create_agent(api_client, workspace["id"])
+    conversations = [
+        create_conversation(api_client, workspace["id"])
+        for _ in range(3)
+    ]
+    conversation = conversations[0]
+
+    for index in range(3):
+        assert_success(
+            api_client.post(
+                f"/api/conversations/{conversation['id']}/messages",
+                json={
+                    "sender_type": "agent",
+                    "sender_id": agent["id"],
+                    "content": f"message {index}",
+                },
+            ),
+            201,
+        )
+
+    latest_messages = assert_success(
+        api_client.get(
+            f"/api/conversations/{conversation['id']}/messages",
+            params={"limit": 2},
+        )
+    )
+    assert [message["content"] for message in latest_messages] == [
+        "message 1",
+        "message 2",
+    ]
+
+    paged_conversations = assert_success(
+        api_client.get(
+            "/api/conversations",
+            params={"workspace_id": workspace["id"], "limit": 2, "offset": 1},
+        )
+    )
+    assert [item["id"] for item in paged_conversations] == [
+        conversations[1]["id"],
+        conversations[0]["id"],
+    ]
+
+    task_ids = []
+    for index in range(3):
+        task = assert_success(
+            api_client.post(
+                "/api/tasks",
+                json={
+                    "workspace_id": workspace["id"],
+                    "conversation_id": conversation["id"],
+                    "title": f"Task {index}",
+                    "assigned_agent_id": agent["id"],
+                },
+            ),
+            201,
+        )
+        task_ids.append(task["id"])
+
+    paged_tasks = assert_success(
+        api_client.get(
+            "/api/tasks",
+            params={"workspace_id": workspace["id"], "limit": 2, "offset": 1},
+        )
+    )
+    assert [item["id"] for item in paged_tasks] == [task_ids[1], task_ids[0]]
 
 
 def test_model_endpoints(api_client: TestClient) -> None:

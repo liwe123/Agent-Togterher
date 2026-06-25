@@ -13,6 +13,11 @@ import type {
 } from "@/types/chat"
 import { requestData, websocketBaseUrl } from "@/lib/task-api"
 
+const conversationListLimit = 20
+const messageListLimit = 200
+const taskListLimit = 100
+const terminalTaskStatuses = new Set(["completed", "failed", "cancelled"])
+
 function upsertMessage(
   messages: ChatMessage[],
   message: ChatMessage,
@@ -29,13 +34,32 @@ function upsertMessage(
   return messages.map((item) => (item.id === message.id ? message : item))
 }
 
+function taskTimestamp(task: ChatTask): number {
+  const timestamp = Date.parse(task.updated_at)
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+function taskStatusRank(status: string): number {
+  if (terminalTaskStatuses.has(status)) return 2
+  return status === "running" ? 1 : 0
+}
+
+function shouldReplaceTask(existing: ChatTask, next: ChatTask): boolean {
+  const existingTime = taskTimestamp(existing)
+  const nextTime = taskTimestamp(next)
+  if (nextTime !== existingTime) return nextTime > existingTime
+  return taskStatusRank(next.status) >= taskStatusRank(existing.status)
+}
+
 function upsertTask(tasks: ChatTask[], task: ChatTask): ChatTask[] {
   const existingIndex = tasks.findIndex((item) => item.id === task.id)
   if (existingIndex === -1) {
     return [task, ...tasks]
   }
 
-  return tasks.map((item) => (item.id === task.id ? task : item))
+  return tasks.map((item) =>
+    item.id === task.id && shouldReplaceTask(item, task) ? task : item,
+  )
 }
 
 export function useChat() {
@@ -101,7 +125,7 @@ export function useChat() {
             { signal: controller.signal },
           ),
           requestData<Conversation[]>(
-            `/api/conversations?workspace_id=${currentWorkspace.id}`,
+            `/api/conversations?workspace_id=${currentWorkspace.id}&limit=${conversationListLimit}`,
             { signal: controller.signal },
           ),
         ])
@@ -119,11 +143,11 @@ export function useChat() {
 
         const [conversationMessages, workspaceTasks] = await Promise.all([
           requestData<ChatMessage[]>(
-            `/api/conversations/${currentConversation.id}/messages`,
+            `/api/conversations/${currentConversation.id}/messages?limit=${messageListLimit}`,
             { signal: controller.signal },
           ),
           requestData<ChatTask[]>(
-            `/api/tasks?workspace_id=${currentWorkspace.id}`,
+            `/api/tasks?workspace_id=${currentWorkspace.id}&limit=${taskListLimit}`,
             { signal: controller.signal },
           ),
         ])

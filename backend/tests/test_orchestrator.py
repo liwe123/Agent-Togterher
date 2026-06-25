@@ -5,7 +5,7 @@ import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.core.orchestrator import AgentOrchestrator
+from app.core.orchestrator import AgentOrchestrator, TaskNotRunnableError
 from app.db.base import Base
 from app.models import (
     Agent,
@@ -142,8 +142,8 @@ async def test_run_task_completes_and_persists_result(orchestrator_session) -> N
     assert message.content == completion.content
     assert message.message_type == MessageType.NORMAL
     assert [event[1]["type"] for event in broadcaster.events] == [
-        "agent.status_changed",
         "task.status_changed",
+        "agent.status_changed",
         "task.step_changed",
         "model.call_finished",
         "task.step_changed",
@@ -210,8 +210,8 @@ async def test_run_task_failure_is_persisted_and_reported(orchestrator_session) 
     assert message.message_type == MessageType.ERROR
     assert "Task failed" in message.content
     assert [event[1]["type"] for event in broadcaster.events] == [
-        "agent.status_changed",
         "task.status_changed",
+        "agent.status_changed",
         "task.step_changed",
         "model.call_finished",
         "task.step_changed",
@@ -224,3 +224,23 @@ async def test_run_task_failure_is_persisted_and_reported(orchestrator_session) 
     assert broadcaster.events[4][1]["payload"]["status"] == "failed"
     assert broadcaster.events[5][1]["payload"]["status"] == "failed"
     assert broadcaster.events[6][1]["payload"]["status"] == "failed"
+
+
+@pytest.mark.asyncio
+async def test_run_task_rejects_non_pending_task_before_model_call(
+    orchestrator_session,
+) -> None:
+    _, task = await create_task_graph(orchestrator_session)
+    task.status = TaskStatus.RUNNING
+    await orchestrator_session.commit()
+
+    with patch(
+        "app.core.orchestrator.litellm_service.chat_completion",
+        new=AsyncMock(),
+    ) as model_call:
+        with pytest.raises(TaskNotRunnableError):
+            await AgentOrchestrator(orchestrator_session, RecordingBroadcaster()).run_task(
+                task.id
+            )
+
+    model_call.assert_not_awaited()

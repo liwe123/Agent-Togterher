@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import asyncio
 import re
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
@@ -377,6 +378,7 @@ async def chat_completion(
     configs = get_model_configs()
     chain = _fallback_chain(requested_model, configs)
     acompletion = _import_acompletion()
+    timeout_seconds = get_settings().model_request_timeout_seconds
     failures: list[ModelAttemptFailure] = []
     started_at = perf_counter()
 
@@ -397,7 +399,15 @@ async def chat_completion(
             if api_key is not None:
                 kwargs["api_key"] = api_key
 
-            response = await acompletion(**kwargs)
+            try:
+                response = await asyncio.wait_for(
+                    acompletion(**kwargs),
+                    timeout=timeout_seconds,
+                )
+            except TimeoutError as exc:
+                raise RuntimeError(
+                    f"Provider request timed out after {timeout_seconds:g}s"
+                ) from exc
             content, usage = _extract_result(response)
             latency_ms = round((perf_counter() - started_at) * 1000)
             logger.info(

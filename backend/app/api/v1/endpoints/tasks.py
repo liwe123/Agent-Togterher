@@ -104,6 +104,8 @@ async def _validate_references(
 async def list_tasks(
     workspace_id: int | None = Query(default=None, gt=0),
     task_status: TaskStatus | None = Query(default=None, alias="status"),
+    limit: int = Query(default=100, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[list[TaskListItemRead]]:
     statement = select(Task).options(selectinload(Task.assigned_agent))
@@ -111,7 +113,11 @@ async def list_tasks(
         statement = statement.where(Task.workspace_id == workspace_id)
     if task_status is not None:
         statement = statement.where(Task.status == task_status)
-    tasks = (await session.scalars(statement.order_by(Task.id.desc()))).all()
+    tasks = (
+        await session.scalars(
+            statement.order_by(Task.id.desc()).offset(offset).limit(limit)
+        )
+    ).all()
     return SuccessResponse(data=[_task_list_item(task) for task in tasks])
 
 

@@ -2,10 +2,9 @@
 
 import { useEffect, useState } from "react";
 
-type ApiStatus = "checking" | "online" | "offline";
+import { apiBaseUrl } from "@/lib/task-api";
 
-const apiBaseUrl =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+type ApiStatus = "checking" | "online" | "offline";
 
 export function SystemStatus() {
   const [status, setStatus] = useState<ApiStatus>("checking");

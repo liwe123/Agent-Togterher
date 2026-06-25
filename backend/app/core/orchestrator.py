@@ -5,7 +5,7 @@ from collections.abc import Awaitable
 from decimal import Decimal
 from typing import Final
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents import final_agent, manager_agent, review_agent, worker_agent
@@ -70,13 +70,7 @@ class AgentOrchestrator:
         self._broadcaster = broadcaster
 
     async def run_task(self, task_id: int) -> TaskRead:
-        task = await self._session.get(Task, task_id)
-        if task is None:
-            raise TaskNotFoundError(f"Task {task_id} not found")
-        if task.status != TaskStatus.PENDING:
-            raise TaskNotRunnableError(
-                f"Task {task_id} is {task.status.value} and cannot be started"
-            )
+        task = await self._claim_pending_task(task_id)
 
         agent = (
             await self._session.get(Agent, task.assigned_agent_id)
@@ -106,7 +100,6 @@ class AgentOrchestrator:
                 )
 
             await self.update_agent_status(agent, "running")
-            await self.update_task_status(task, TaskStatus.RUNNING)
             step = await self.save_task_step(
                 task,
                 agent,
@@ -167,7 +160,6 @@ class AgentOrchestrator:
             )
 
             await self.update_agent_status(manager, "running")
-            await self.update_task_status(task, TaskStatus.RUNNING)
             step = await self.save_task_step(
                 task,
                 manager,
@@ -363,6 +355,33 @@ class AgentOrchestrator:
                 step_name=step_name,
             )
             return TaskRead.model_validate(task)
+
+    async def _claim_pending_task(self, task_id: int) -> Task:
+        claim = await self._session.execute(
+            update(Task)
+            .where(Task.id == task_id, Task.status == TaskStatus.PENDING)
+            .values(status=TaskStatus.RUNNING, updated_at=utc_now())
+        )
+        if claim.rowcount != 1:
+            await self._session.rollback()
+            task = await self._session.get(Task, task_id)
+            if task is None:
+                raise TaskNotFoundError(f"Task {task_id} not found")
+            raise TaskNotRunnableError(
+                f"Task {task_id} is {task.status.value} and cannot be started"
+            )
+
+        await self._session.commit()
+        task = await self._session.get(Task, task_id)
+        if task is None:
+            raise TaskNotFoundError(f"Task {task_id} not found after claim")
+
+        task_data = TaskRead.model_validate(task)
+        await self._broadcaster.broadcast_to_workspace(
+            task.workspace_id,
+            create_event("task.status_changed", task_data),
+        )
+        return task
 
     async def _call_and_log(
         self,

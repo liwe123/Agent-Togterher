@@ -20,7 +20,18 @@ export async function requestData<T>(
       ...init?.headers,
     },
   })
-  const result = (await response.json()) as ChatApiResponse<T>
+  let result: ChatApiResponse<T> | null = null
+  try {
+    result = (await response.json()) as ChatApiResponse<T>
+  } catch {
+    if (!response.ok) {
+      throw new Error(`请求失败（${response.status}）`)
+    }
+    throw new Error("API 响应格式无效。")
+  }
+  if (result === null) {
+    throw new Error("API 响应格式无效。")
+  }
 
   if (!response.ok || !result.success) {
     throw new Error(

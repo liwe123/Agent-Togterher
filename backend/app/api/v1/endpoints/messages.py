@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +21,8 @@ async def _get_conversation(session: AsyncSession, conversation_id: int) -> Conv
 @router.get("", response_model=SuccessResponse[list[MessageRead]])
 async def list_messages(
     conversation_id: int,
+    limit: int = Query(default=200, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[list[MessageRead]]:
     await _get_conversation(session, conversation_id)
@@ -28,10 +30,12 @@ async def list_messages(
         await session.scalars(
             select(Message)
             .where(Message.conversation_id == conversation_id)
-            .order_by(Message.id)
+            .order_by(Message.id.desc())
+            .offset(offset)
+            .limit(limit)
         )
     ).all()
-    return SuccessResponse(data=list(messages))
+    return SuccessResponse(data=list(reversed(messages)))
 
 
 @router.post(

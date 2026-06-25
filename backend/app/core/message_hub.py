@@ -1,5 +1,9 @@
+import asyncio
+import logging
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,8 +23,26 @@ from app.models import (
 from app.schemas import AgentRead, MessageCreate, MessageRead, TaskRead
 from app.websocket import WebSocketManager, create_event, websocket_manager
 
+logger = logging.getLogger(__name__)
+
 DEFAULT_AGENT_NAME = "项目总设计师"
 _MENTION_PATTERN = re.compile(r"[@＠]([\w-]+)")
+TaskDispatcher = Callable[[int], None]
+
+
+def _log_background_result(background_task: asyncio.Task[Any]) -> None:
+    try:
+        background_task.result()
+    except Exception:
+        logger.exception("Background task execution failed")
+
+
+def dispatch_background_task(task_id: int) -> None:
+    """Schedule task execution and make unexpected dispatcher errors observable."""
+    from app.core.orchestrator import run_task
+
+    background_task = asyncio.create_task(run_task(task_id))
+    background_task.add_done_callback(_log_background_result)
 
 
 def parse_mentions(content: str) -> list[str]:
@@ -49,9 +71,11 @@ class MessageHub:
         self,
         session: AsyncSession,
         broadcaster: WebSocketManager = websocket_manager,
+        dispatcher: TaskDispatcher | None = None,
     ) -> None:
         self._session = session
         self._broadcaster = broadcaster
+        self._dispatcher = dispatcher or dispatch_background_task
 
     async def receive_user_message(
         self, conversation_id: int, content: str
@@ -95,10 +119,6 @@ class MessageHub:
         await self._session.refresh(message)
         await self._session.refresh(task)
 
-        from app.core.orchestrator import run_task
-        import asyncio
-        asyncio.create_task(run_task(task.id))
-
         result = MessageHubResult(
             message=MessageRead.model_validate(message),
             task=TaskRead.model_validate(task),
@@ -112,6 +132,7 @@ class MessageHub:
             conversation.workspace_id,
             create_event("task.status_changed", result.task),
         )
+        self._dispatcher(task.id)
         return result
 
     async def receive_message(

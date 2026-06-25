@@ -14,13 +14,17 @@ router = APIRouter(prefix="/conversations", tags=["conversations"])
 @router.get("", response_model=SuccessResponse[list[ConversationRead]])
 async def list_conversations(
     workspace_id: int | None = Query(default=None, gt=0),
+    limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[list[ConversationRead]]:
     statement = select(Conversation)
     if workspace_id is not None:
         statement = statement.where(Conversation.workspace_id == workspace_id)
     conversations = (
-        await session.scalars(statement.order_by(Conversation.id.desc()))
+        await session.scalars(
+            statement.order_by(Conversation.id.desc()).offset(offset).limit(limit)
+        )
     ).all()
     return SuccessResponse(data=list(conversations))
 
