@@ -1,3 +1,4 @@
+from decimal import Decimal
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -72,6 +73,49 @@ async def orchestrator_session(tmp_path):
     async with session_factory() as session:
         yield session
     await engine.dispose()
+
+
+@pytest_asyncio.fixture
+async def orchestrator_session_factory(tmp_path):
+    database_path = tmp_path / "orchestrator-fallback-test.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{database_path.as_posix()}")
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+    async with engine.begin() as connection:
+        await connection.run_sync(Base.metadata.create_all)
+    try:
+        yield session_factory
+    finally:
+        await engine.dispose()
+
+
+class BrokenFailureModelCallOrchestrator(AgentOrchestrator):
+    async def save_model_call(
+        self,
+        task: Task,
+        agent: Agent,
+        *,
+        completion: ChatCompletionResult | None = None,
+        error: Exception | None = None,
+    ) -> ModelCall:
+        if error is not None:
+            self._session.add(
+                ModelCall(
+                    task_id=task.id,
+                    agent_id=agent.id,
+                    provider="broken",
+                    prompt_tokens=0,
+                    completion_tokens=0,
+                    cost=Decimal("0"),
+                    status="failed",
+                )
+            )
+            await self._session.flush()
+        return await super().save_model_call(
+            task,
+            agent,
+            completion=completion,
+            error=error,
+        )
 
 
 @pytest.mark.asyncio
@@ -224,6 +268,54 @@ async def test_run_task_failure_is_persisted_and_reported(orchestrator_session) 
     assert broadcaster.events[4][1]["payload"]["status"] == "failed"
     assert broadcaster.events[5][1]["payload"]["status"] == "failed"
     assert broadcaster.events[6][1]["payload"]["status"] == "failed"
+
+
+@pytest.mark.asyncio
+async def test_run_task_failure_uses_fallback_session_when_active_session_is_invalid(
+    orchestrator_session_factory,
+) -> None:
+    async with orchestrator_session_factory() as session:
+        agent, task = await create_task_graph(session)
+        task_id = task.id
+        agent_id = agent.id
+
+        with patch(
+            "app.core.orchestrator.litellm_service.chat_completion",
+            new=AsyncMock(
+                side_effect=ModelCallError(
+                    "code_model",
+                    [
+                        ModelAttemptFailure(
+                            provider="deepseek",
+                            model_name="deepseek/deepseek-chat",
+                            message="provider timeout",
+                        )
+                    ],
+                )
+            ),
+        ):
+            result = await BrokenFailureModelCallOrchestrator(
+                session,
+                RecordingBroadcaster(),
+                failure_session_factory=orchestrator_session_factory,
+            ).run_task(task_id)
+
+    async with orchestrator_session_factory() as verification_session:
+        saved_task = await verification_session.get(Task, task_id)
+        saved_agent = await verification_session.get(Agent, agent_id)
+        failed_step = await verification_session.scalar(
+            select(TaskStep).where(TaskStep.task_id == task_id)
+        )
+        error_message = saved_task.result or ""
+
+    assert result.status == TaskStatus.FAILED
+    assert saved_task is not None
+    assert saved_task.status == TaskStatus.FAILED
+    assert saved_agent is not None
+    assert saved_agent.status == "failed"
+    assert failed_step is not None
+    assert failed_step.status == "failed"
+    assert "model_calls.model_name" in error_message
 
 
 @pytest.mark.asyncio

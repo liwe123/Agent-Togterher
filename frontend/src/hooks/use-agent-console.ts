@@ -8,12 +8,15 @@ import type {
   RecentOutput,
   WorkspaceEvent,
 } from "@/types/agent"
+import type { Workspace } from "@/types/chat"
 
+import { selectConsoleAgents } from "@/lib/agent-console-data"
 import { requestData, websocketBaseUrl } from "@/lib/task-api"
 
 export function useAgentConsole() {
   const [agents, setAgents] = useState<Agent[]>([])
   const [recentOutputs, setRecentOutputs] = useState<RecentOutput[]>([])
+  const [workspaceId, setWorkspaceId] = useState<number | null>(null)
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("connecting")
   const [isLoading, setIsLoading] = useState(true)
@@ -32,10 +35,21 @@ export function useAgentConsole() {
       setError(null)
 
       try {
-        const agentsData = await requestData<Agent[]>("/api/agents", {
+        const workspaces = await requestData<Workspace[]>("/api/workspaces", {
           signal: controller.signal,
         })
-        setAgents(agentsData)
+        const currentWorkspace = workspaces[0]
+        if (!currentWorkspace) {
+          throw new Error("没有可用工作区，请先启动后端完成默认数据初始化。")
+        }
+
+        const agentsData = await requestData<Agent[]>(
+          `/api/agents?workspace_id=${currentWorkspace.id}`,
+          { signal: controller.signal },
+        )
+        const selected = selectConsoleAgents(agentsData, currentWorkspace.id)
+        setWorkspaceId(selected.workspaceId)
+        setAgents(selected.agents)
       } catch (requestError) {
         if ((requestError as Error).name !== "AbortError") {
           setError(
@@ -55,8 +69,6 @@ export function useAgentConsole() {
     void loadAgents()
     return () => controller.abort()
   }, [requestVersion])
-
-  const workspaceId = agents[0]?.workspace_id ?? null
 
   useEffect(() => {
     if (workspaceId === null) {

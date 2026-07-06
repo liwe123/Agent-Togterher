@@ -19,8 +19,10 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await init_db()
     from app.db.seed import seed_defaults
     from app.db.session import AsyncSessionLocal
+    from app.core.message_hub import recover_unfinished_tasks
     async with AsyncSessionLocal() as session:
         await seed_defaults(session)
+        await recover_unfinished_tasks(session)
     yield
     await close_db()
 

@@ -5,8 +5,8 @@ from collections.abc import Awaitable
 from decimal import Decimal
 from typing import Final
 
-from sqlalchemy import select, update
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import inspect as sqlalchemy_inspect, select, update
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents import final_agent, manager_agent, review_agent, worker_agent
 from app.db.base import utc_now
@@ -65,9 +65,11 @@ class AgentOrchestrator:
         self,
         session: AsyncSession,
         broadcaster: WebSocketManager = websocket_manager,
+        failure_session_factory: async_sessionmaker[AsyncSession] | None = None,
     ) -> None:
         self._session = session
         self._broadcaster = broadcaster
+        self._failure_session_factory = failure_session_factory or AsyncSessionLocal
 
     async def run_task(self, task_id: int) -> TaskRead:
         task = await self._claim_pending_task(task_id)
@@ -133,11 +135,18 @@ class AgentOrchestrator:
             error_message = self._error_message(exc)
             logger.warning(
                 "Task execution failed",
-                extra={"task_id": task.id, "agent_id": getattr(agent, "id", None)},
+                extra={
+                    "task_id": self._identity_id(task),
+                    "agent_id": self._identity_id(agent),
+                },
                 exc_info=True,
             )
-            await self._mark_failed(task, agent, step, error_message)
-            return TaskRead.model_validate(task)
+            return await self._mark_failed_resilient(
+                task,
+                agent,
+                step,
+                error_message,
+            )
 
     async def _run_multi_agent_task(self, task: Task, manager: Agent) -> TaskRead:
         """Run Manager -> Worker(s) -> Review -> Final for a manager task."""
@@ -341,20 +350,19 @@ class AgentOrchestrator:
             logger.warning(
                 "Multi-Agent task execution failed",
                 extra={
-                    "task_id": task.id,
-                    "agent_id": getattr(active_agent, "id", None),
+                    "task_id": self._identity_id(task),
+                    "agent_id": self._identity_id(active_agent),
                     "step_name": step_name,
                 },
                 exc_info=True,
             )
-            await self._mark_failed(
+            return await self._mark_failed_resilient(
                 task,
                 active_agent,
                 step,
                 error_message,
                 step_name=step_name,
             )
-            return TaskRead.model_validate(task)
 
     async def _claim_pending_task(self, task_id: int) -> Task:
         claim = await self._session.execute(
@@ -592,6 +600,82 @@ class AgentOrchestrator:
         )
         return message_data
 
+    async def _mark_failed_resilient(
+        self,
+        task: Task,
+        agent: Agent | None,
+        step: TaskStep | None,
+        error_message: str,
+        *,
+        step_name: str = MODEL_STEP_NAME,
+    ) -> TaskRead:
+        task_id = self._identity_id(task)
+        agent_id = self._identity_id(agent)
+        step_id = self._identity_id(step)
+        if task_id is None:
+            logger.error("Cannot persist task failure state without a task id")
+            return TaskRead.model_validate(task)
+
+        if not self._session.is_active:
+            logger.warning(
+                "Task failure session is inactive; using fallback session",
+                extra={"task_id": task_id},
+            )
+            await self._rollback_failure_session(task_id)
+        elif await self._mark_failed(
+            task,
+            agent,
+            step,
+            error_message,
+            step_name=step_name,
+        ):
+            return TaskRead.model_validate(task)
+
+        fallback_result = await self._mark_failed_with_fallback_session(
+            task_id,
+            agent_id,
+            step_id,
+            error_message,
+            step_name=step_name,
+        )
+        if fallback_result is not None:
+            return fallback_result
+        return TaskRead.model_validate(task)
+
+    async def _mark_failed_with_fallback_session(
+        self,
+        task_id: int,
+        agent_id: int | None,
+        step_id: int | None,
+        error_message: str,
+        *,
+        step_name: str,
+    ) -> TaskRead | None:
+        async with self._failure_session_factory() as session:
+            task = await session.get(Task, task_id)
+            if task is None:
+                logger.error(
+                    "Failed to persist fallback task failure state; task is missing",
+                    extra={"task_id": task_id},
+                )
+                return None
+            agent = await session.get(Agent, agent_id) if agent_id is not None else None
+            step = await session.get(TaskStep, step_id) if step_id is not None else None
+            fallback_orchestrator = AgentOrchestrator(
+                session,
+                self._broadcaster,
+                failure_session_factory=self._failure_session_factory,
+            )
+            if await fallback_orchestrator._mark_failed(
+                task,
+                agent,
+                step,
+                error_message,
+                step_name=step_name,
+            ):
+                return TaskRead.model_validate(task)
+        return None
+
     async def _mark_failed(
         self,
         task: Task,
@@ -600,7 +684,7 @@ class AgentOrchestrator:
         error_message: str,
         *,
         step_name: str = MODEL_STEP_NAME,
-    ) -> None:
+    ) -> bool:
         try:
             if step is None:
                 step = await self.save_task_step(
@@ -643,9 +727,14 @@ class AgentOrchestrator:
         except Exception:
             logger.exception(
                 "Failed to persist complete task failure state",
-                extra={"task_id": task.id},
+                extra={"task_id": self._identity_id(task)},
             )
-            await self._session.rollback()
+            try:
+                await self._rollback_failure_session(self._identity_id(task))
+            except Exception:
+                logger.exception("Failed to prepare fallback task failure state")
+            return False
+        return True
 
     @staticmethod
     def _is_manager(agent: Agent) -> bool:
@@ -684,6 +773,30 @@ class AgentOrchestrator:
             return "Unknown task execution error"
         message = str(error).strip() or error.__class__.__name__
         return message[:4000]
+
+    async def _rollback_failure_session(self, task_id: int | None) -> None:
+        try:
+            await self._session.rollback()
+        except Exception:
+            logger.exception(
+                "Failed to roll back task failure session",
+                extra={"task_id": task_id},
+            )
+
+    @staticmethod
+    def _identity_id(instance: object | None) -> int | None:
+        if instance is None:
+            return None
+        try:
+            identity = sqlalchemy_inspect(instance).identity
+            if identity:
+                return int(identity[0])
+        except Exception:
+            pass
+        try:
+            return int(getattr(instance, "id"))
+        except Exception:
+            return None
 
 
 async def run_task(task_id: int) -> TaskRead:

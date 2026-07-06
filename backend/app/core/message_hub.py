@@ -45,6 +45,33 @@ def dispatch_background_task(task_id: int) -> None:
     background_task.add_done_callback(_log_background_result)
 
 
+async def recover_unfinished_tasks(
+    session: AsyncSession,
+    dispatcher: TaskDispatcher | None = None,
+) -> int:
+    """Dispatch tasks left unfinished by a previous in-process worker."""
+    task_dispatcher = dispatcher or dispatch_background_task
+    tasks = list(
+        await session.scalars(
+            select(Task)
+            .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.RUNNING]))
+            .order_by(Task.id)
+        )
+    )
+    if not tasks:
+        return 0
+
+    for task in tasks:
+        if task.status == TaskStatus.RUNNING:
+            task.status = TaskStatus.PENDING
+
+    await commit_or_conflict(session)
+
+    for task in tasks:
+        task_dispatcher(task.id)
+    return len(tasks)
+
+
 def parse_mentions(content: str) -> list[str]:
     """Return unique @mention names in their first-occurrence order."""
     mentions: list[str] = []
