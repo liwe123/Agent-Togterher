@@ -44,8 +44,8 @@ const providerDisplayName = (p: string) =>
 const purposeColors: Record<string, string> = {
   manager_model: "bg-primary/12 text-primary",
   code_model: "bg-muted text-foreground/80",
-  writing_model: "bg-orange-400/10 text-orange-300",
-  review_model: "bg-emerald-500/15 text-emerald-400",
+  writing_model: "bg-orange-400/10 text-orange-700 md:text-orange-300",
+  review_model: "bg-emerald-500/15 text-emerald-700 md:text-emerald-400",
   cheap_model: "bg-zinc-500/15 text-zinc-400",
 }
 
@@ -73,7 +73,7 @@ export function SettingsPage() {
   } = useSettings()
 
   return (
-    <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[232px_minmax(0,1fr)]">
+    <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[76px_minmax(0,1fr)]">
       <AppSidebar connectionStatus="online" activeItem="settings" />
 
       <ErrorBoundary>
@@ -256,20 +256,20 @@ function ModelCard({
   const colorClass = purposeColors[model.name] ?? "bg-muted text-muted-foreground"
 
   return (
-    <div className="flex flex-col gap-4 bg-card/60 px-4 py-5 transition-colors hover:bg-muted/25 sm:px-5">
+    <div className="flex flex-col justify-between gap-4 bg-card/75 p-5 transition-all hover:bg-muted/20 border-b sm:border-b-0 sm:border-r border-border/70">
       {/* Title row */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
+        <div className="flex min-w-0 items-center gap-3">
           <span
             className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold",
+              "flex size-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold shadow-sm",
               colorClass,
             )}
           >
             {model.name.charAt(0).toUpperCase()}
           </span>
           <div className="min-w-0">
-            <h3 className="truncate text-sm font-semibold">
+            <h3 className="truncate text-sm font-bold">
               {roleLabels[model.name] ?? model.name}
             </h3>
             <p className="truncate font-mono text-[11px] text-muted-foreground">
@@ -280,41 +280,41 @@ function ModelCard({
         <Badge
           variant="outline"
           className={cn(
-            "shrink-0 text-[10px]",
+            "shrink-0 text-[10px] font-mono",
             providerConfigured
-              ? "border-emerald-500/40 text-emerald-400"
-              : "border-orange-500/40 text-orange-400",
+              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 md:text-emerald-400"
+              : "border-orange-500/40 bg-orange-500/10 text-orange-700 md:text-orange-400",
           )}
         >
-          {providerConfigured ? "已配置" : "未配置"}
+          {providerConfigured ? "KEY READY" : "KEY MISSING"}
         </Badge>
       </div>
 
       {/* Details */}
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2.5 text-xs rounded-xl border border-border/60 bg-muted/20 p-3">
         <DetailItem label="Provider" value={providerDisplayName(model.provider)} />
         <DetailItem label="Model ID" value={model.model} mono />
         <DetailItem label="用途" value={model.purpose} span2 />
         {model.fallback_model ? (
-          <div className="col-span-2 flex items-center gap-1.5 text-muted-foreground">
-            <ChevronRight aria-hidden="true" className="size-3" />
-            <span>Fallback：</span>
-            <span className="font-mono text-foreground/80">
+          <div className="col-span-2 flex items-center gap-1.5 text-muted-foreground text-[11px]">
+            <ChevronRight aria-hidden="true" className="size-3 text-primary" />
+            <span>Fallback 降级：</span>
+            <span className="font-mono text-foreground font-medium">
               {roleLabels[model.fallback_model] ?? model.fallback_model}
             </span>
           </div>
         ) : (
-          <div className="col-span-2 text-muted-foreground">无 Fallback</div>
+          <div className="col-span-2 text-muted-foreground text-[11px]">无 Fallback 降级配置</div>
         )}
       </div>
 
       {/* Test button + result */}
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 pt-1">
         <Button
           type="button"
           size="sm"
           variant={testState.status === "error" ? "destructive" : "outline"}
-          className="w-full"
+          className="w-full shadow-sm"
           disabled={testState.status === "testing"}
           onClick={onTest}
         >
@@ -324,12 +324,12 @@ function ModelCard({
                 aria-hidden="true"
                 className="mr-1.5 size-3.5 animate-spin"
               />
-              测试中…
+              正在测试 API 连通性…
             </>
           ) : (
             <>
-              <FlaskConical aria-hidden="true" className="mr-1.5 size-3.5" />
-              测试连通性
+              <FlaskConical aria-hidden="true" className="mr-1.5 size-3.5 text-primary" />
+              测试连通性与延迟
             </>
           )}
         </Button>
@@ -382,7 +382,7 @@ function TestResultSuccess({
 }) {
   return (
     <div className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 px-3 py-2.5">
-      <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-emerald-400">
+      <div className="mb-1.5 flex items-center gap-1.5 text-xs font-medium text-emerald-700 md:text-emerald-400">
         <CheckCircle2 aria-hidden="true" className="size-3.5" />
         测试成功
         {result.fallback_used && (

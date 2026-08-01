@@ -1,6 +1,7 @@
 "use client"
 
-import { AlertCircle, MessagesSquare, Radio } from "lucide-react"
+import { AlertCircle, ArrowLeft, MessagesSquare, Radio, UsersRound } from "lucide-react"
+import Link from "next/link"
 
 import { ChatComposer } from "@/components/chat/chat-composer"
 import { MessageList } from "@/components/chat/message-list"
@@ -33,13 +34,13 @@ export function ChatPage() {
   } = useChat()
 
   return (
-    <div className="chat-shell grid h-svh min-h-0 grid-rows-[auto_minmax(0,1fr)] overflow-hidden md:grid-cols-[232px_minmax(0,1fr)] md:grid-rows-1">
+    <div className="chat-shell grid h-svh min-h-0 grid-rows-[minmax(0,1fr)] overflow-hidden md:grid-cols-[76px_minmax(0,1fr)]">
       <AppSidebar connectionStatus={connectionStatus} activeItem="chats" />
 
       <ErrorBoundary>
-        <main className="console-main flex min-h-0 flex-col px-3 py-3 sm:px-5 sm:py-5 md:px-8 md:py-7 xl:px-10">
+        <main className="console-main mobile-chat-main flex min-h-0 flex-col px-0 py-0 md:px-8 md:py-7 xl:px-10">
           <div className="mx-auto flex min-h-0 w-full max-w-[1520px] flex-1 flex-col gap-5">
-            <header className="flex shrink-0 items-center justify-between gap-4">
+            <header className="hidden shrink-0 items-center justify-between gap-4 md:flex">
               <div className="flex min-w-0 flex-col gap-1">
                 <h1 className="text-[1.75rem] font-semibold tracking-[-0.025em]">协作频道</h1>
                 <p className="truncate text-xs text-muted-foreground sm:text-sm">
@@ -77,8 +78,28 @@ export function ChatPage() {
                 </div>
               </section>
             ) : (
-              <section className="console-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-border bg-card/72">
-                <div className="flex shrink-0 items-center justify-between gap-4 border-b border-border px-4 py-3 sm:px-5 sm:py-4">
+              <section className="console-panel flex min-h-0 flex-1 flex-col overflow-hidden border-border bg-card/72 md:rounded-xl md:border">
+                <div className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4 md:hidden">
+                  <Link href="/" aria-label="返回控制台" className="flex size-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
+                    <ArrowLeft aria-hidden="true" className="size-5" />
+                  </Link>
+                  <div className="min-w-0 text-center">
+                    <h1 className="truncate text-base font-semibold">{conversation?.title ?? "默认群聊"}</h1>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground">{agents.length} 位 Agent 在线协作</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="relative flex size-9 items-center justify-center text-muted-foreground">
+                      <MessagesSquare aria-hidden="true" className="size-5" />
+                      {messages.length > 0 ? <span className="absolute top-0 right-0 flex size-4 items-center justify-center rounded-full bg-primary text-[9px] font-bold text-primary-foreground">{Math.min(messages.length, 9)}</span> : null}
+                    </span>
+                    <span className="relative flex size-9 items-center justify-center text-muted-foreground">
+                      <UsersRound aria-hidden="true" className="size-5" />
+                      <span className="absolute -right-0.5 bottom-0 text-[9px]">{agents.length}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="hidden shrink-0 items-center justify-between gap-4 border-b border-border px-5 py-4 md:flex">
                   <div className="flex min-w-0 items-center gap-3">
                     <span className="section-mark flex size-9 shrink-0 items-center justify-center rounded-md">
                       <MessagesSquare aria-hidden="true" className="size-4" />

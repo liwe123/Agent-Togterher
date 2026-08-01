@@ -56,7 +56,7 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
   } = useTaskDetail(taskId)
 
   return (
-    <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[232px_minmax(0,1fr)]">
+    <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[76px_minmax(0,1fr)]">
       <AppSidebar connectionStatus={connectionStatus} activeItem="tasks" />
 
       <ErrorBoundary>
@@ -252,50 +252,53 @@ function OriginalInput({ task }: { task: TaskDetail }) {
 
 function TaskSteps({ steps }: { steps: TaskStep[] }) {
   return (
-    <section className="console-panel overflow-hidden rounded-xl border border-border bg-card/72">
+    <section className="console-panel overflow-hidden rounded-xl border border-border bg-card/80 shadow-md">
       <SectionHeader
         icon={ListChecks}
-        title="Task Steps"
-        description={`${steps.length} 个执行步骤`}
+        title="Task Steps Pipeline"
+        description={`${steps.length} 个执行步骤 · 链路顺序追踪`}
       />
       {steps.length === 0 ? (
-        <EmptySection icon={ListChecks} text="任务开始执行后，步骤会实时出现在这里。" />
+        <EmptySection icon={ListChecks} text="任务开始执行后，步骤流程图会实时推送到这里。" />
       ) : (
-        <div className="divide-y divide-border">
+        <div className="p-4 sm:p-6 space-y-6">
           {steps.map((step, index) => (
-            <article key={step.id} className="grid gap-4 p-4 sm:p-5 lg:grid-cols-[44px_minmax(0,1fr)]">
-              <div className="hidden flex-col items-center lg:flex">
+            <article key={step.id} className="relative flex gap-4 lg:gap-6">
+              {/* Stepper Guide Line & Node Badge */}
+              <div className="flex flex-col items-center shrink-0">
                 <span
                   className={cn(
-                    "flex size-8 items-center justify-center rounded-full border font-mono text-xs font-semibold",
+                    "flex size-9 items-center justify-center rounded-full border font-mono text-xs font-bold shadow-sm transition-all",
                     step.status === "failed"
-                      ? "border-destructive/40 bg-destructive/10 text-destructive"
+                      ? "border-destructive/60 bg-destructive/15 text-destructive shadow-[0_0_10px_var(--destructive)]"
                       : step.status === "completed"
-                        ? "border-primary/35 bg-primary/12 text-primary"
-                        : "border-border bg-muted text-muted-foreground",
+                        ? "border-primary/50 bg-primary/15 text-primary shadow-[0_0_10px_color-mix(in_oklch,var(--primary)_25%,transparent)]"
+                        : step.status === "running"
+                          ? "border-[var(--status-running)] bg-[var(--status-running)]/20 text-foreground animate-pulse"
+                          : "border-border bg-muted/60 text-muted-foreground",
                   )}
                 >
                   {index + 1}
                 </span>
-                {index < steps.length - 1 ? <span className="mt-2 h-full w-px bg-border" /> : null}
+                {index < steps.length - 1 ? (
+                  <span className="my-1.5 h-full w-0.5 min-h-12 bg-border/70 rounded-full" />
+                ) : null}
               </div>
 
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+              {/* Step Main Card */}
+              <div className="min-w-0 flex-1 rounded-xl border border-border/80 bg-background/50 p-4 shadow-sm transition-colors hover:border-primary/30">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/60 pb-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-mono text-[11px] text-muted-foreground lg:hidden">
-                        {index + 1}.
-                      </span>
                       <h3 className="truncate text-sm font-semibold">{stepLabel(step.step_name)}</h3>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                      <span className="flex items-center gap-1.5">
-                        <Bot aria-hidden="true" className="size-3" />
+                      <span className="flex items-center gap-1.5 font-medium text-foreground/80">
+                        <Bot aria-hidden="true" className="size-3.5 text-primary" />
                         {step.agent?.name ?? "未记录 Agent"}
                       </span>
-                      <span className="flex items-center gap-1.5 font-mono">
-                        <Clock3 aria-hidden="true" className="size-3" />
+                      <span className="flex items-center gap-1 font-mono">
+                        <Clock3 aria-hidden="true" className="size-3 text-muted-foreground" />
                         {formatDuration(step.duration_ms)}
                       </span>
                       <span className="font-mono">{formatDateTime(step.started_at)}</span>
@@ -304,7 +307,7 @@ function TaskSteps({ steps }: { steps: TaskStep[] }) {
                   <TaskStatusBadge status={step.status} />
                 </div>
 
-                <div className="mt-4 grid gap-3 xl:grid-cols-2">
+                <div className="mt-3.5 grid gap-3 xl:grid-cols-2">
                   <StepPayload label="步骤输入" value={step.input} />
                   <StepPayload
                     label={step.status === "failed" ? "错误输出" : "步骤输出"}
@@ -324,13 +327,13 @@ function TaskSteps({ steps }: { steps: TaskStep[] }) {
 function StepPayload({ label, value, isError = false }: { label: string; value: string | null; isError?: boolean }) {
   return (
     <div className="min-w-0">
-      <p className="mb-1.5 text-[11px] font-medium text-muted-foreground">{label}</p>
+      <p className="mb-1.5 text-[11px] font-semibold text-muted-foreground">{label}</p>
       <pre
         className={cn(
-          "max-h-64 min-h-24 overflow-auto whitespace-pre-wrap rounded-lg border p-3 font-mono text-[11px] leading-5 scrollbar-thin",
+          "max-h-64 min-h-24 overflow-auto whitespace-pre-wrap rounded-xl border p-3.5 font-mono text-[11px] leading-5 scrollbar-thin shadow-inner",
           isError
-            ? "border-destructive/30 bg-destructive/8 text-destructive"
-            : "border-border bg-background/45 text-foreground/80",
+            ? "border-destructive/35 bg-destructive/10 text-destructive"
+            : "border-border/70 bg-card/70 text-foreground/90",
         )}
       >
         {value ?? "暂无内容"}
@@ -341,16 +344,16 @@ function StepPayload({ label, value, isError = false }: { label: string; value: 
 
 function ModelCallLogs({ calls }: { calls: ModelCall[] }) {
   return (
-    <section className="console-panel overflow-hidden rounded-xl border border-border bg-card/72">
+    <section className="console-panel overflow-hidden rounded-xl border border-border bg-card/80 shadow-md">
       <SectionHeader
         icon={Activity}
-        title="模型调用日志"
-        description={`${calls.length} 次调用 · token、耗时与错误信息`}
+        title="模型调用 Trace 日志"
+        description={`${calls.length} 次调用 · Token 消耗、延迟与成本指标`}
       />
       {calls.length === 0 ? (
-        <EmptySection icon={ServerCog} text="模型调用完成后，日志会实时出现在这里。" />
+        <EmptySection icon={ServerCog} text="模型调用完成后，Trace 日志会实时出现在这里。" />
       ) : (
-        <div className="divide-y divide-border">
+        <div className="divide-y divide-border/70">
           {calls.map((call, index) => (
             <ModelCallRow key={call.id} call={call} index={index} />
           ))}
@@ -362,23 +365,23 @@ function ModelCallLogs({ calls }: { calls: ModelCall[] }) {
 
 function ModelCallRow({ call, index }: { call: ModelCall; index: number }) {
   return (
-    <article className="p-4 sm:p-5">
+    <article className="p-4 sm:p-5 hover:bg-muted/15 transition-colors">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-muted font-mono text-xs text-muted-foreground">
-            {index + 1}
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary/80 font-mono text-xs font-bold text-foreground">
+            #{index + 1}
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="truncate font-mono text-sm font-semibold">{call.model_name}</h3>
-              <Badge variant="secondary">{call.provider}</Badge>
+              <Badge variant="outline" className="border-primary/30 text-primary">{call.provider}</Badge>
             </div>
             <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
               <span className="flex items-center gap-1.5">
-                <Bot aria-hidden="true" className="size-3" />
+                <Bot aria-hidden="true" className="size-3 text-primary" />
                 {call.agent?.name ?? "未记录 Agent"}
               </span>
-              <span className="font-mono">CALL #{call.id}</span>
+              <span className="font-mono text-foreground/70">CALL #{call.id}</span>
               <span className="font-mono">{formatDateTime(call.created_at)}</span>
             </p>
           </div>
@@ -386,20 +389,20 @@ function ModelCallRow({ call, index }: { call: ModelCall; index: number }) {
         <TaskStatusBadge status={call.status} />
       </div>
 
-      <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-border bg-border/70 sm:grid-cols-3 xl:grid-cols-6">
-        <CallMetric label="Prompt" value={formatTokens(call.prompt_tokens)} />
-        <CallMetric label="Completion" value={formatTokens(call.completion_tokens)} />
-        <CallMetric label="Total tokens" value={formatTokens(call.total_tokens)} />
-        <CallMetric label="耗时" value={formatDuration(call.latency_ms)} />
-        <CallMetric label="成本" value={formatCost(call.cost)} />
-        <CallMetric label="状态" value={call.status} />
+      <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border/80 bg-border/80 sm:grid-cols-3 xl:grid-cols-6 shadow-sm">
+        <CallMetric label="Prompt Token" value={formatTokens(call.prompt_tokens)} />
+        <CallMetric label="Completion Token" value={formatTokens(call.completion_tokens)} />
+        <CallMetric label="Total Token" value={formatTokens(call.total_tokens)} />
+        <CallMetric label="耗时 (ms)" value={formatDuration(call.latency_ms)} highlight={Boolean(call.latency_ms && call.latency_ms > 5000)} />
+        <CallMetric label="预估成本 ($)" value={formatCost(call.cost)} />
+        <CallMetric label="执行状态" value={call.status} />
       </dl>
 
       {call.error_message ? (
-        <div className="mt-3 flex gap-2.5 rounded-lg border border-destructive/30 bg-destructive/8 p-3 text-xs leading-5 text-destructive">
+        <div className="mt-3 flex gap-2.5 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs leading-5 text-destructive">
           <AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <div className="min-w-0">
-            <p className="font-medium">错误信息</p>
+            <p className="font-semibold">错误信息</p>
             <pre className="mt-1 whitespace-pre-wrap font-mono text-[11px]">{call.error_message}</pre>
           </div>
         </div>
@@ -408,11 +411,13 @@ function ModelCallRow({ call, index }: { call: ModelCall; index: number }) {
   )
 }
 
-function CallMetric({ label, value }: { label: string; value: string }) {
+function CallMetric({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="bg-background/45 px-3 py-2.5">
-      <dt className="text-[10px] text-muted-foreground">{label}</dt>
-      <dd className="mt-1 truncate font-mono text-xs font-medium">{value}</dd>
+    <div className="bg-card/90 px-3 py-2.5">
+      <dt className="text-[10px] font-medium text-muted-foreground">{label}</dt>
+      <dd className={cn("mt-1 truncate font-mono text-xs font-semibold", highlight ? "text-orange-400" : "text-foreground")}>
+        {value}
+      </dd>
     </div>
   )
 }

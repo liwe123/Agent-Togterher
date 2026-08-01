@@ -14,5 +14,6 @@ dist/
 # IDEs & System files
 .idea/
 .vscode/
+.claude/
 .DS_Store
 Thumbs.db

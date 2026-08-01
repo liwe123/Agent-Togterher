@@ -1,20 +1,26 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-06-24T12:36:10+08:00",
+  "generatedAt": "2026-06-24T13:02:07+08:00",
   "title": "Design System: Agent Console",
   "extensions": {
     "colorMeta": {
       "operations-black": {
         "role": "neutral",
         "displayName": "Operations Black",
-        "canonical": "oklch(0.125 0.012 70)",
-        "tonalRamp": ["oklch(0.105 0.01 70)", "oklch(0.125 0.012 70)", "oklch(0.16 0.013 70)"]
+        "canonical": "oklch(0.105 0.012 155)",
+        "tonalRamp": ["oklch(0.085 0.011 155)", "oklch(0.105 0.012 155)", "oklch(0.145 0.013 155)"]
       },
-      "signal-amber": {
+      "signal-mint": {
         "role": "primary",
-        "displayName": "Signal Amber",
-        "canonical": "oklch(0.76 0.16 65)",
-        "tonalRamp": ["oklch(0.52 0.11 65)", "oklch(0.76 0.16 65)", "oklch(0.86 0.1 65)"]
+        "displayName": "Signal Mint",
+        "canonical": "oklch(0.76 0.16 160)",
+        "tonalRamp": ["oklch(0.49 0.1 160)", "oklch(0.76 0.16 160)", "oklch(0.86 0.08 160)"]
+      },
+      "mobile-violet": {
+        "role": "primary",
+        "displayName": "Mobile Violet",
+        "canonical": "oklch(0.57 0.17 268)",
+        "tonalRamp": ["oklch(0.4 0.12 268)", "oklch(0.57 0.17 268)", "oklch(0.9 0.04 268)"]
       },
       "live-green": {
         "role": "secondary",
@@ -36,8 +42,8 @@
     "shadows": [
       {
         "name": "overlay-only",
-        "value": "0 8px 24px oklch(0.04 0.004 70 / 0.45)",
-        "purpose": "Menus and overlays only; static panels remain flat."
+        "value": "0 8px 24px oklch(0.04 0.004 155 / 0.45)",
+        "purpose": "Menus, overlays, and running-avatar status halos only."
       }
     ],
     "motion": [
@@ -80,18 +86,19 @@
     }
   ],
   "narrative": {
-    "northStar": "The Quiet Flight Desk",
-    "overview": "A restrained operations surface where real state and execution data create the technical character. Warm graphite surfaces carry dense information; signal amber is scarce and actionable.",
+    "northStar": "The Connected Cluster Lounge",
+    "overview": "A dark desktop cluster deck pairs with a light native mobile collaboration surface. Agent portraits, service groups, and semantic connection halos make multi-agent work feel human and immediately scannable.",
     "keyCharacteristics": [
-      "Flat warm-graphite surfaces",
-      "Sparse signal amber",
+      "Dark green-black desktop deck",
+      "Light native mobile canvas",
+      "Agent portraits as primary identity",
       "State is expressed with color, icon and text",
       "Desktop density with structural mobile reflow"
     ],
     "rules": [
       {
         "name": "The Signal Budget Rule",
-        "body": "Amber marks current selection, primary action or critical identifiers; it never decorates large surfaces.",
+        "body": "Mint marks desktop connection and running state; violet marks mobile selection and mentions. Neither decorates large surfaces.",
         "section": "colors"
       },
       {
@@ -106,7 +113,7 @@
       "Do adapt the information order for mobile rather than hiding critical actions."
     ],
     "donts": [
-      "Don't use purple-blue gradients, neon borders, glassmorphism or decorative glow.",
+      "Don't use purple-blue gradients, glassmorphism, or decorative glow outside running-avatar status halos.",
       "Don't wrap every item in the same rounded card.",
       "Don't rely on color alone for status.",
       "Don't use side-stripe borders or gradient text."
