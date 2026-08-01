@@ -19,6 +19,7 @@ import {
 import Link from "next/link"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
+import { ErrorBoundary } from "@/components/error-boundary"
 import { TaskStatusBadge } from "@/components/tasks/task-status-badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -58,58 +59,60 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
     <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[232px_minmax(0,1fr)]">
       <AppSidebar connectionStatus={connectionStatus} activeItem="tasks" />
 
-      <main className="console-main px-4 py-5 sm:px-6 md:px-8 md:py-8 xl:px-10">
-        <div className="mx-auto flex w-full max-w-[1520px] flex-col gap-6">
-          <header className="flex items-start justify-between gap-4">
-            <div className="flex min-w-0 flex-col gap-3">
-              <Link
-                href="/tasks"
-                className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2 w-fit text-muted-foreground")}
-              >
-                <ArrowLeft aria-hidden="true" className="size-3.5" />
-                返回任务列表
-              </Link>
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="font-mono text-xs text-muted-foreground">
-                    TASK #{taskId}
-                  </span>
-                  {task ? <TaskStatusBadge status={task.status} /> : null}
+      <ErrorBoundary>
+        <main className="console-main px-4 py-5 sm:px-6 md:px-8 md:py-8 xl:px-10">
+          <div className="mx-auto flex w-full max-w-[1520px] flex-col gap-6">
+            <header className="flex items-start justify-between gap-4">
+              <div className="flex min-w-0 flex-col gap-3">
+                <Link
+                  href="/tasks"
+                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2 w-fit text-muted-foreground")}
+                >
+                  <ArrowLeft aria-hidden="true" className="size-3.5" />
+                  返回任务列表
+                </Link>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-xs text-muted-foreground">
+                      TASK #{taskId}
+                    </span>
+                    {task ? <TaskStatusBadge status={task.status} /> : null}
+                  </div>
+                  <h1 className="mt-1 max-w-[42ch] text-balance break-words text-[1.75rem] font-semibold tracking-[-0.025em]">
+                    {task?.title ?? "任务详情"}
+                  </h1>
                 </div>
-                <h1 className="mt-1 max-w-[42ch] text-balance break-words text-[1.75rem] font-semibold tracking-[-0.025em]">
-                  {task?.title ?? "任务详情"}
-                </h1>
               </div>
-            </div>
-            <Badge
-              className="connection-chip mt-9"
-              variant={connectionStatus === "offline" ? "destructive" : "outline"}
-            >
-              <span
-                className="status-dot size-1.5 rounded-full"
-                data-status={connectionStatus}
-                aria-hidden="true"
-              />
-              {connectionLabels[connectionStatus]}
-            </Badge>
-          </header>
+              <Badge
+                className="connection-chip mt-9"
+                variant={connectionStatus === "offline" ? "destructive" : "outline"}
+              >
+                <span
+                  className="status-dot size-1.5 rounded-full"
+                  data-status={connectionStatus}
+                  aria-hidden="true"
+                />
+                {connectionLabels[connectionStatus]}
+              </Badge>
+            </header>
 
-          {isLoading ? (
-            <TaskDetailSkeleton />
-          ) : !task ? (
-            <TaskDetailError error={error ?? "任务不存在。"} onRetry={retry} />
-          ) : (
-            <>
-              {error ? <RealtimeError error={error} onRetry={retry} /> : null}
-              <TaskOverview task={task} />
-              <TaskMetrics task={task} />
-              <OriginalInput task={task} />
-              <TaskSteps steps={task.task_steps} />
-              <ModelCallLogs calls={task.model_calls} />
-            </>
-          )}
-        </div>
-      </main>
+            {isLoading ? (
+              <TaskDetailSkeleton />
+            ) : !task ? (
+              <TaskDetailError error={error ?? "任务不存在。"} onRetry={retry} />
+            ) : (
+              <>
+                {error ? <RealtimeError error={error} onRetry={retry} /> : null}
+                <TaskOverview task={task} />
+                <TaskMetrics task={task} />
+                <OriginalInput task={task} />
+                <TaskSteps steps={task.task_steps} />
+                <ModelCallLogs calls={task.model_calls} />
+              </>
+            )}
+          </div>
+        </main>
+      </ErrorBoundary>
     </div>
   )
 }

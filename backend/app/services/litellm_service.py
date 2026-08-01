@@ -5,6 +5,7 @@ import asyncio
 import re
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 from time import perf_counter
@@ -37,6 +38,7 @@ class ChatCompletionResult:
     requested_model: str
     latency_ms: int
     fallback_used: bool
+    cost: Decimal = Decimal("0")
 
 
 @dataclass(frozen=True)
@@ -320,7 +322,7 @@ def _value(container: Any, name: str, default: Any = None) -> Any:
     return getattr(container, name, default)
 
 
-def _extract_result(response: Any) -> tuple[str, TokenUsage]:
+def _extract_result(response: Any) -> tuple[str, TokenUsage, Decimal]:
     choices = _value(response, "choices", [])
     if not choices:
         raise ValueError("Provider response did not contain choices")
@@ -340,11 +342,25 @@ def _extract_result(response: Any) -> tuple[str, TokenUsage]:
         _value(usage, "total_tokens", prompt_tokens + completion_tokens)
         or prompt_tokens + completion_tokens
     )
+    cost = _extract_cost(response)
     return normalized_content, TokenUsage(
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
         total_tokens=total_tokens,
-    )
+    ), cost
+
+
+def _extract_cost(response: Any) -> Decimal:
+    """Extract cost from LiteLLM response, defaulting to 0."""
+    usage = _value(response, "usage", {}) or {}
+    cost = _value(usage, "cost", None)
+    if cost is not None:
+        return Decimal(str(cost))
+    # Try response-level cost
+    cost = _value(response, "cost", None)
+    if cost is not None:
+        return Decimal(str(cost))
+    return Decimal("0")
 
 
 def _sanitize_error_message(error: BaseException) -> str:
@@ -408,7 +424,7 @@ async def chat_completion(
                 raise RuntimeError(
                     f"Provider request timed out after {timeout_seconds:g}s"
                 ) from exc
-            content, usage = _extract_result(response)
+            content, usage, cost = _extract_result(response)
             latency_ms = round((perf_counter() - started_at) * 1000)
             logger.info(
                 "LiteLLM call succeeded provider=%s model=%s latency_ms=%d fallback=%s",
@@ -425,6 +441,7 @@ async def chat_completion(
                 requested_model=requested_model,
                 latency_ms=latency_ms,
                 fallback_used=attempt_index > 0,
+                cost=cost,
             )
         except Exception as exc:
             message = _sanitize_error_message(exc)

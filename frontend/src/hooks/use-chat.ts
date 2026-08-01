@@ -11,12 +11,10 @@ import type {
   MessageHubResult,
   Workspace,
 } from "@/types/chat"
-import { requestData, websocketBaseUrl } from "@/lib/task-api"
-
-const conversationListLimit = 20
-const messageListLimit = 200
-const taskListLimit = 100
-const terminalTaskStatuses = new Set(["completed", "failed", "cancelled"])
+import { requestData } from "@/lib/task-api"
+import { CONVERSATION_LIST_LIMIT, MESSAGE_LIST_LIMIT, TASK_LIST_LIMIT } from "@/lib/constants"
+import { shouldApplyTaskStatus } from "@/lib/task-utils"
+import { useWorkspaceSocket } from "@/hooks/use-workspace-socket"
 
 function upsertMessage(
   messages: ChatMessage[],
@@ -34,23 +32,6 @@ function upsertMessage(
   return messages.map((item) => (item.id === message.id ? message : item))
 }
 
-function taskTimestamp(task: ChatTask): number {
-  const timestamp = Date.parse(task.updated_at)
-  return Number.isFinite(timestamp) ? timestamp : 0
-}
-
-function taskStatusRank(status: string): number {
-  if (terminalTaskStatuses.has(status)) return 2
-  return status === "running" ? 1 : 0
-}
-
-function shouldReplaceTask(existing: ChatTask, next: ChatTask): boolean {
-  const existingTime = taskTimestamp(existing)
-  const nextTime = taskTimestamp(next)
-  if (nextTime !== existingTime) return nextTime > existingTime
-  return taskStatusRank(next.status) >= taskStatusRank(existing.status)
-}
-
 function upsertTask(tasks: ChatTask[], task: ChatTask): ChatTask[] {
   const existingIndex = tasks.findIndex((item) => item.id === task.id)
   if (existingIndex === -1) {
@@ -58,7 +39,7 @@ function upsertTask(tasks: ChatTask[], task: ChatTask): ChatTask[] {
   }
 
   return tasks.map((item) =>
-    item.id === task.id && shouldReplaceTask(item, task) ? task : item,
+    item.id === task.id && shouldApplyTaskStatus(item, task) ? task : item,
   )
 }
 
@@ -75,6 +56,7 @@ export function useChat() {
   const [error, setError] = useState<string | null>(null)
   const [requestVersion, setRequestVersion] = useState(0)
   const localErrorId = useRef(-1)
+  const fetchedRef = useRef(false)
 
   const appendErrorMessage = useCallback(
     (message: string, conversationId?: number) => {
@@ -100,10 +82,14 @@ export function useChat() {
   )
 
   const retry = useCallback(() => {
+    fetchedRef.current = false
     setRequestVersion((version) => version + 1)
   }, [])
 
   useEffect(() => {
+    if (fetchedRef.current) return
+    fetchedRef.current = true
+
     const controller = new AbortController()
 
     async function loadChat() {
@@ -125,7 +111,7 @@ export function useChat() {
             { signal: controller.signal },
           ),
           requestData<Conversation[]>(
-            `/api/conversations?workspace_id=${currentWorkspace.id}&limit=${conversationListLimit}`,
+            `/api/conversations?workspace_id=${currentWorkspace.id}&limit=${CONVERSATION_LIST_LIMIT}`,
             { signal: controller.signal },
           ),
         ])
@@ -143,11 +129,11 @@ export function useChat() {
 
         const [conversationMessages, workspaceTasks] = await Promise.all([
           requestData<ChatMessage[]>(
-            `/api/conversations/${currentConversation.id}/messages?limit=${messageListLimit}`,
+            `/api/conversations/${currentConversation.id}/messages?limit=${MESSAGE_LIST_LIMIT}`,
             { signal: controller.signal },
           ),
           requestData<ChatTask[]>(
-            `/api/tasks?workspace_id=${currentWorkspace.id}&limit=${taskListLimit}`,
+            `/api/tasks?workspace_id=${currentWorkspace.id}&limit=${TASK_LIST_LIMIT}`,
             { signal: controller.signal },
           ),
         ])
@@ -185,87 +171,49 @@ export function useChat() {
     return () => controller.abort()
   }, [requestVersion])
 
-  useEffect(() => {
-    if (!workspace || !conversation) {
-      return
-    }
+  useWorkspaceSocket({
+    workspaceId: workspace?.id ?? null,
+    onEvent: useCallback((event) => {
+      const e = event as ChatWorkspaceEvent
+      const conversationId = conversation?.id
 
-    const workspaceId = workspace.id
-    const conversationId = conversation.id
-    let socket: WebSocket | null = null
-    let retryTimer: ReturnType<typeof setTimeout> | null = null
-    let shouldReconnect = true
-
-    function connect() {
-      setConnectionStatus("connecting")
-      socket = new WebSocket(
-        `${websocketBaseUrl}/ws/workspaces/${workspaceId}`,
-      )
-
-      socket.onopen = () => setConnectionStatus("online")
-      socket.onerror = () => setConnectionStatus("offline")
-      socket.onclose = () => {
-        setConnectionStatus("offline")
-        if (shouldReconnect) {
-          retryTimer = setTimeout(connect, 3000)
-        }
+      if (
+        e.type === "message.created" &&
+        e.payload.conversation_id === conversationId
+      ) {
+        setMessages((current) => upsertMessage(current, e.payload as ChatMessage))
+        return
       }
-      socket.onmessage = (eventMessage) => {
-        let event: ChatWorkspaceEvent
-        try {
-          event = JSON.parse(eventMessage.data) as ChatWorkspaceEvent
-        } catch {
-          appendErrorMessage("收到无法解析的实时消息。", conversationId)
-          return
-        }
 
-        if (
-          event.type === "message.created" &&
-          event.payload.conversation_id === conversationId
-        ) {
-          setMessages((current) => upsertMessage(current, event.payload))
-          return
-        }
-
-        if (
-          event.type === "task.status_changed" &&
-          event.payload.conversation_id === conversationId
-        ) {
-          setTasks((current) => upsertTask(current, event.payload))
-          return
-        }
-
-        if (event.type === "agent.status_changed") {
-          setAgents((current) =>
-            current.map((agent) =>
-              agent.id === event.payload.id
-                ? {
-                    ...agent,
-                    status: event.payload.status,
-                    last_active_at: event.payload.last_active_at,
-                  }
-                : agent,
-            ),
-          )
-          return
-        }
-
-        if (event.type === "error") {
-          appendErrorMessage(event.payload.message, conversationId)
-        }
+      if (
+        e.type === "task.status_changed" &&
+        (e.payload as ChatTask).conversation_id === conversationId
+      ) {
+        setTasks((current) => upsertTask(current, e.payload as ChatTask))
+        return
       }
-    }
 
-    connect()
-
-    return () => {
-      shouldReconnect = false
-      if (retryTimer !== null) {
-        clearTimeout(retryTimer)
+      if (e.type === "agent.status_changed") {
+        setAgents((current) =>
+          current.map((agent) =>
+            agent.id === e.payload.id
+              ? {
+                  ...agent,
+                  status: e.payload.status,
+                  last_active_at: e.payload.last_active_at,
+                }
+              : agent,
+          ),
+        )
+        return
       }
-      socket?.close()
-    }
-  }, [appendErrorMessage, conversation, workspace])
+
+      if (e.type === "error") {
+        appendErrorMessage(e.payload.message, conversationId)
+      }
+    }, [appendErrorMessage, conversation?.id]),
+    onStatusChange: setConnectionStatus,
+  })
 
   const sendMessage = useCallback(
     async (content: string): Promise<boolean> => {

@@ -1,8 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
-import { requestData, websocketBaseUrl } from "@/lib/task-api"
+import { requestData } from "@/lib/task-api"
 import type {
   ConnectionStatus,
   TaskDetail,
@@ -10,11 +10,9 @@ import type {
   TaskWorkspaceEvent,
   Workspace,
 } from "@/types/task"
-
-const reconnectDelayMs = 3000
-const refreshDelayMs = 80
-const taskListLimit = 100
-const terminalTaskStatuses = new Set(["completed", "failed", "cancelled"])
+import { TASK_LIST_LIMIT, TASK_REFRESH_DELAY_MS } from "@/lib/constants"
+import { shouldApplyTaskStatus } from "@/lib/task-utils"
+import { useWorkspaceSocket } from "@/hooks/use-workspace-socket"
 
 function useRequestRetry() {
   const [requestVersion, setRequestVersion] = useState(0)
@@ -22,26 +20,6 @@ function useRequestRetry() {
     setRequestVersion((version) => version + 1)
   }, [])
   return { requestVersion, retry }
-}
-
-function taskTimestamp(task: { updated_at: string }): number {
-  const timestamp = Date.parse(task.updated_at)
-  return Number.isFinite(timestamp) ? timestamp : 0
-}
-
-function taskStatusRank(status: string): number {
-  if (terminalTaskStatuses.has(status)) return 2
-  return status === "running" ? 1 : 0
-}
-
-function shouldApplyTaskStatus<T extends { status: string; updated_at: string }>(
-  current: T,
-  next: T,
-): boolean {
-  const currentTime = taskTimestamp(current)
-  const nextTime = taskTimestamp(next)
-  if (nextTime !== currentTime) return nextTime > currentTime
-  return taskStatusRank(next.status) >= taskStatusRank(current.status)
 }
 
 export function useTasks() {
@@ -52,8 +30,37 @@ export function useTasks() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { requestVersion, retry } = useRequestRetry()
+  const fetchedRef = useRef(false)
+
+  // --- refresh timer management (kept in the hook) ---
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimerRef.current !== null) clearTimeout(refreshTimerRef.current)
+    refreshTimerRef.current = setTimeout(() => {
+      if (workspace === null) return
+      const workspaceId = workspace.id
+      requestData<TaskListItem[]>(
+        `/api/tasks?workspace_id=${workspaceId}&limit=${TASK_LIST_LIMIT}`,
+      )
+        .then((workspaceTasks) => {
+          setTasks(workspaceTasks)
+          setError(null)
+        })
+        .catch((requestError) => {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "任务列表实时刷新失败。",
+          )
+        })
+    }, TASK_REFRESH_DELAY_MS)
+  }, [workspace])
 
   useEffect(() => {
+    if (fetchedRef.current) return
+    fetchedRef.current = true
+
     const controller = new AbortController()
 
     async function loadTasks() {
@@ -68,7 +75,7 @@ export function useTasks() {
           throw new Error("没有可用工作区，请先启动后端完成默认数据初始化。")
         }
         const workspaceTasks = await requestData<TaskListItem[]>(
-          `/api/tasks?workspace_id=${currentWorkspace.id}&limit=${taskListLimit}`,
+          `/api/tasks?workspace_id=${currentWorkspace.id}&limit=${TASK_LIST_LIMIT}`,
           { signal: controller.signal },
         )
         if (!controller.signal.aborted) {
@@ -95,86 +102,33 @@ export function useTasks() {
     return () => controller.abort()
   }, [requestVersion])
 
-  useEffect(() => {
-    if (!workspace) return
+  useWorkspaceSocket({
+    workspaceId: workspace?.id ?? null,
+    onEvent: useCallback((event) => {
+      const e = event as TaskWorkspaceEvent
 
-    const workspaceId = workspace.id
-    let socket: WebSocket | null = null
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-    let refreshTimer: ReturnType<typeof setTimeout> | null = null
-    let shouldReconnect = true
-
-    async function refreshTasks() {
-      try {
-        const workspaceTasks = await requestData<TaskListItem[]>(
-          `/api/tasks?workspace_id=${workspaceId}&limit=${taskListLimit}`,
+      if (e.type === "task.status_changed") {
+        setTasks((current) =>
+          current.map((task) =>
+            task.id === e.payload.id &&
+            shouldApplyTaskStatus(task, e.payload)
+              ? { ...task, ...e.payload }
+              : task,
+          ),
         )
-        setTasks(workspaceTasks)
-        setError(null)
-      } catch (requestError) {
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "任务列表实时刷新失败。",
-        )
+        scheduleRefresh()
       }
-    }
 
-    function scheduleRefresh() {
-      if (refreshTimer !== null) clearTimeout(refreshTimer)
-      refreshTimer = setTimeout(() => void refreshTasks(), refreshDelayMs)
-    }
-
-    function connect() {
-      setConnectionStatus("connecting")
-      socket = new WebSocket(`${websocketBaseUrl}/ws/workspaces/${workspaceId}`)
-      socket.onopen = () => setConnectionStatus("online")
-      socket.onerror = () => setConnectionStatus("offline")
-      socket.onclose = () => {
-        setConnectionStatus("offline")
-        if (shouldReconnect) {
-          reconnectTimer = setTimeout(connect, reconnectDelayMs)
-        }
+      if (e.type === "task.step_changed" || e.type === "model.call_finished") {
+        scheduleRefresh()
       }
-      socket.onmessage = (message) => {
-        let event: TaskWorkspaceEvent
-        try {
-          event = JSON.parse(message.data) as TaskWorkspaceEvent
-        } catch {
-          setError("收到无法解析的任务实时消息。")
-          return
-        }
 
-        if (event.type === "task.status_changed") {
-          setTasks((current) =>
-            current.map((task) =>
-              task.id === event.payload.id &&
-              shouldApplyTaskStatus(task, event.payload)
-                ? { ...task, ...event.payload }
-                : task,
-            ),
-          )
-          scheduleRefresh()
-        }
-
-        if (event.type === "task.step_changed" || event.type === "model.call_finished") {
-          scheduleRefresh()
-        }
-
-        if (event.type === "error") {
-          setError(event.payload.message)
-        }
+      if (e.type === "error") {
+        setError(e.payload.message)
       }
-    }
-
-    connect()
-    return () => {
-      shouldReconnect = false
-      if (reconnectTimer !== null) clearTimeout(reconnectTimer)
-      if (refreshTimer !== null) clearTimeout(refreshTimer)
-      socket?.close()
-    }
-  }, [workspace])
+    }, [scheduleRefresh]),
+    onStatusChange: setConnectionStatus,
+  })
 
   return {
     workspace,
@@ -193,6 +147,30 @@ export function useTaskDetail(taskId: number) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const { requestVersion, retry } = useRequestRetry()
+
+  const workspaceId = task?.workspace_id ?? null
+
+  // --- refresh timer management (kept in the hook) ---
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const scheduleRefresh = useCallback(() => {
+    if (refreshTimerRef.current !== null) clearTimeout(refreshTimerRef.current)
+    refreshTimerRef.current = setTimeout(() => {
+      if (workspaceId === null) return
+      requestData<TaskDetail>(`/api/tasks/${taskId}`)
+        .then((detail) => {
+          setTask(detail)
+          setError(null)
+        })
+        .catch((requestError) => {
+          setError(
+            requestError instanceof Error
+              ? requestError.message
+              : "任务详情实时刷新失败。",
+          )
+        })
+    }, TASK_REFRESH_DELAY_MS)
+  }, [taskId, workspaceId])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -228,95 +206,41 @@ export function useTaskDetail(taskId: number) {
     return () => controller.abort()
   }, [requestVersion, taskId])
 
-  const workspaceId = task?.workspace_id ?? null
+  useWorkspaceSocket({
+    workspaceId,
+    onEvent: useCallback((event) => {
+      const e = event as TaskWorkspaceEvent
 
-  useEffect(() => {
-    if (workspaceId === null) return
-
-    let socket: WebSocket | null = null
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-    let refreshTimer: ReturnType<typeof setTimeout> | null = null
-    let shouldReconnect = true
-
-    async function refreshTask() {
-      try {
-        const detail = await requestData<TaskDetail>(
-          `/api/tasks/${taskId}`,
+      if (
+        e.type === "task.status_changed" &&
+        e.payload.id === taskId
+      ) {
+        setTask((current) =>
+          current && shouldApplyTaskStatus(current, e.payload)
+            ? { ...current, ...e.payload }
+            : current,
         )
-        setTask(detail)
-        setError(null)
-      } catch (requestError) {
-        setError(
-          requestError instanceof Error
-            ? requestError.message
-            : "任务详情实时刷新失败。",
-        )
+        scheduleRefresh()
       }
-    }
 
-    function scheduleRefresh() {
-      if (refreshTimer !== null) clearTimeout(refreshTimer)
-      refreshTimer = setTimeout(() => void refreshTask(), refreshDelayMs)
-    }
-
-    function connect() {
-      setConnectionStatus("connecting")
-      socket = new WebSocket(`${websocketBaseUrl}/ws/workspaces/${workspaceId}`)
-      socket.onopen = () => setConnectionStatus("online")
-      socket.onerror = () => setConnectionStatus("offline")
-      socket.onclose = () => {
-        setConnectionStatus("offline")
-        if (shouldReconnect) {
-          reconnectTimer = setTimeout(connect, reconnectDelayMs)
-        }
+      if (
+        e.type === "task.step_changed" &&
+        e.payload.task_id === taskId
+      ) {
+        scheduleRefresh()
       }
-      socket.onmessage = (message) => {
-        let event: TaskWorkspaceEvent
-        try {
-          event = JSON.parse(message.data) as TaskWorkspaceEvent
-        } catch {
-          setError("收到无法解析的任务实时消息。")
-          return
-        }
 
-        if (
-          event.type === "task.status_changed" &&
-          event.payload.id === taskId
-        ) {
-          setTask((current) =>
-            current && shouldApplyTaskStatus(current, event.payload)
-              ? { ...current, ...event.payload }
-              : current,
-          )
-          scheduleRefresh()
-        }
-
-        if (
-          event.type === "task.step_changed" &&
-          event.payload.task_id === taskId
-        ) {
-          scheduleRefresh()
-        }
-
-        if (
-          event.type === "model.call_finished" &&
-          event.payload.task_id === taskId
-        ) {
-          scheduleRefresh()
-        }
-
-        if (event.type === "error") setError(event.payload.message)
+      if (
+        e.type === "model.call_finished" &&
+        e.payload.task_id === taskId
+      ) {
+        scheduleRefresh()
       }
-    }
 
-    connect()
-    return () => {
-      shouldReconnect = false
-      if (reconnectTimer !== null) clearTimeout(reconnectTimer)
-      if (refreshTimer !== null) clearTimeout(refreshTimer)
-      socket?.close()
-    }
-  }, [taskId, workspaceId])
+      if (e.type === "error") setError(e.payload.message)
+    }, [scheduleRefresh, taskId]),
+    onStatusChange: setConnectionStatus,
+  })
 
   return {
     task,

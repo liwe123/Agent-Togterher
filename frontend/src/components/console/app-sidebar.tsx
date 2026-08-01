@@ -52,13 +52,16 @@ export function AppSidebar({
         {navigation.map((item) => {
           const Icon = item.icon
           const isActive = item.id === activeItem
+          const isDisabled = item.href.startsWith("#")
           return (
             <Link
               key={item.label}
               href={item.href}
               aria-current={isActive ? "page" : undefined}
+              aria-disabled={isDisabled ? "true" : undefined}
               className={cn(
                 "group relative flex shrink-0 items-center gap-3 rounded-md px-3 py-2.5 text-sm font-medium transition-colors",
+                isDisabled && "pointer-events-none opacity-50",
                 isActive
                   ? "order-first bg-sidebar-accent text-sidebar-accent-foreground md:order-none"
                   : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",

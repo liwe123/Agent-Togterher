@@ -5,7 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import AppError
@@ -27,6 +27,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_AGENT_NAME = "项目总设计师"
 _MENTION_PATTERN = re.compile(r"[@＠]([\w-]+)")
+MAX_RUNNING_TASKS_PER_WORKSPACE = 3
 TaskDispatcher = Callable[[int], None]
 
 
@@ -112,6 +113,17 @@ class MessageHub:
             raise AppError(422, "Message content cannot be empty")
 
         conversation = await self._get_conversation(conversation_id)
+        running_count = await self._session.scalar(
+            select(func.count(Task.id)).where(
+                Task.workspace_id == conversation.workspace_id,
+                Task.status == TaskStatus.RUNNING,
+            )
+        )
+        if running_count is not None and running_count >= MAX_RUNNING_TASKS_PER_WORKSPACE:
+            raise AppError(
+                429,
+                f"Workspace has {running_count} running tasks (max {MAX_RUNNING_TASKS_PER_WORKSPACE}). Please wait for some to complete.",
+            )
         agents = list(
             await self._session.scalars(
                 select(Agent)

@@ -14,6 +14,7 @@ import Link from "next/link"
 import { useState } from "react"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
+import { ErrorBoundary } from "@/components/error-boundary"
 import { TaskStatusBadge } from "@/components/tasks/task-status-badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -67,119 +68,121 @@ export function TasksPage() {
     <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[232px_minmax(0,1fr)]">
       <AppSidebar connectionStatus={connectionStatus} activeItem="tasks" />
 
-      <main className="console-main px-4 py-5 sm:px-6 md:px-8 md:py-8 xl:px-10">
-        <div className="mx-auto flex w-full max-w-[1520px] flex-col gap-7">
-          <header className="flex items-center justify-between gap-4">
-            <div className="flex min-w-0 flex-col gap-1">
-              <h1 className="text-[1.75rem] font-semibold tracking-[-0.025em]">任务队列</h1>
-              <p className="truncate text-xs text-muted-foreground sm:text-sm">
-                {workspace
-                  ? `${workspace.name} · 任务执行与结果总览`
-                  : "任务执行与结果总览"}
-              </p>
-            </div>
-            <Badge
-              className="connection-chip"
-              variant={connectionStatus === "offline" ? "destructive" : "outline"}
-            >
-              <span
-                className="status-dot size-1.5 rounded-full"
-                data-status={connectionStatus}
-                aria-hidden="true"
-              />
-              {connectionLabels[connectionStatus]}
-            </Badge>
-          </header>
+      <ErrorBoundary>
+        <main className="console-main px-4 py-5 sm:px-6 md:px-8 md:py-8 xl:px-10">
+          <div className="mx-auto flex w-full max-w-[1520px] flex-col gap-7">
+            <header className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 flex-col gap-1">
+                <h1 className="text-[1.75rem] font-semibold tracking-[-0.025em]">任务队列</h1>
+                <p className="truncate text-xs text-muted-foreground sm:text-sm">
+                  {workspace
+                    ? `${workspace.name} · 任务执行与结果总览`
+                    : "任务执行与结果总览"}
+                </p>
+              </div>
+              <Badge
+                className="connection-chip"
+                variant={connectionStatus === "offline" ? "destructive" : "outline"}
+              >
+                <span
+                  className="status-dot size-1.5 rounded-full"
+                  data-status={connectionStatus}
+                  aria-hidden="true"
+                />
+                {connectionLabels[connectionStatus]}
+              </Badge>
+            </header>
 
-          <section aria-label="任务状态筛选" className="console-panel grid grid-cols-2 gap-1.5 rounded-xl border border-border bg-card/70 p-1.5 sm:grid-cols-5">
-            {filters.map((filter) => {
-              const Icon = filter.icon
-              const isActive = activeFilter === filter.value
-              return (
-                <button
-                  key={filter.value}
-                  type="button"
-                  aria-pressed={isActive}
-                  onClick={() => setActiveFilter(filter.value)}
-                  className={cn(
-                    "flex min-w-0 items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
-                    isActive
-                      ? "border-primary/45 bg-primary/9 text-foreground"
-                      : "border-transparent bg-transparent text-muted-foreground hover:border-border hover:bg-muted/45 hover:text-foreground",
-                  )}
-                >
-                  <span
+            <section aria-label="任务状态筛选" className="console-panel grid grid-cols-2 gap-1.5 rounded-xl border border-border bg-card/70 p-1.5 sm:grid-cols-5">
+              {filters.map((filter) => {
+                const Icon = filter.icon
+                const isActive = activeFilter === filter.value
+                return (
+                  <button
+                    key={filter.value}
+                    type="button"
+                    aria-pressed={isActive}
+                    onClick={() => setActiveFilter(filter.value)}
                     className={cn(
-                      "flex size-7 shrink-0 items-center justify-center rounded-md",
-                      isActive ? "text-primary" : "text-muted-foreground",
+                      "flex min-w-0 items-center gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors",
+                      isActive
+                        ? "border-primary/45 bg-primary/9 text-foreground"
+                        : "border-transparent bg-transparent text-muted-foreground hover:border-border hover:bg-muted/45 hover:text-foreground",
                     )}
                   >
-                    <Icon aria-hidden="true" className="size-4" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-[11px]">
-                      {filter.label}
+                    <span
+                      className={cn(
+                        "flex size-7 shrink-0 items-center justify-center rounded-md",
+                        isActive ? "text-primary" : "text-muted-foreground",
+                      )}
+                    >
+                      <Icon aria-hidden="true" className="size-4" />
                     </span>
-                    <span className="font-mono text-base font-semibold leading-5 text-foreground">
-                      {counts[filter.value]}
+                    <span className="min-w-0">
+                      <span className="block truncate text-[11px]">
+                        {filter.label}
+                      </span>
+                      <span className="font-mono text-base font-semibold leading-5 text-foreground">
+                        {counts[filter.value]}
+                      </span>
                     </span>
+                  </button>
+                )
+              })}
+            </section>
+
+            {error && tasks.length > 0 ? (
+              <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+                <AlertCircle aria-hidden="true" className="size-4 shrink-0" />
+                <p className="min-w-0 flex-1 truncate">{error}</p>
+                <Button type="button" size="sm" variant="ghost" onClick={retry}>
+                  重试
+                </Button>
+              </div>
+            ) : null}
+
+            <section className="console-panel overflow-hidden rounded-xl border border-border bg-card/72">
+              <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-4 sm:px-5">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="section-mark flex size-9 shrink-0 items-center justify-center rounded-md">
+                    <ListTodo aria-hidden="true" className="size-4" />
                   </span>
-                </button>
-              )
-            })}
-          </section>
-
-          {error && tasks.length > 0 ? (
-            <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
-              <AlertCircle aria-hidden="true" className="size-4 shrink-0" />
-              <p className="min-w-0 flex-1 truncate">{error}</p>
-              <Button type="button" size="sm" variant="ghost" onClick={retry}>
-                重试
-              </Button>
-            </div>
-          ) : null}
-
-          <section className="console-panel overflow-hidden rounded-xl border border-border bg-card/72">
-            <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-4 sm:px-5">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="section-mark flex size-9 shrink-0 items-center justify-center rounded-md">
-                  <ListTodo aria-hidden="true" className="size-4" />
-                </span>
-                <div className="min-w-0">
-                  <h2 className="text-sm font-semibold sm:text-base">任务列表</h2>
-                  <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground sm:text-xs">
-                    <Radio aria-hidden="true" className="size-3" />
-                    WebSocket 状态实时同步
-                  </p>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-semibold sm:text-base">任务列表</h2>
+                    <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground sm:text-xs">
+                      <Radio aria-hidden="true" className="size-3" />
+                      WebSocket 状态实时同步
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <span className="font-mono text-xs text-muted-foreground">
-                {filteredTasks.length} 条
-              </span>
-            </div>
-
-            {isLoading ? (
-              <TaskListSkeleton />
-            ) : error && tasks.length === 0 ? (
-              <TaskListError error={error} onRetry={retry} />
-            ) : filteredTasks.length === 0 ? (
-              <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8 text-center">
-                <span className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                  <ListTodo aria-hidden="true" className="size-5" />
+                <span className="font-mono text-xs text-muted-foreground">
+                  {filteredTasks.length} 条
                 </span>
-                <div>
-                  <h3 className="text-sm font-medium">暂无匹配任务</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    新任务会从群聊创建并实时出现在这里。
-                  </p>
-                </div>
               </div>
-            ) : (
-              <TaskList tasks={filteredTasks} />
-            )}
-          </section>
-        </div>
-      </main>
+
+              {isLoading ? (
+                <TaskListSkeleton />
+              ) : error && tasks.length === 0 ? (
+                <TaskListError error={error} onRetry={retry} />
+              ) : filteredTasks.length === 0 ? (
+                <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8 text-center">
+                  <span className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                    <ListTodo aria-hidden="true" className="size-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-medium">暂无匹配任务</h3>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      新任务会从群聊创建并实时出现在这里。
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <TaskList tasks={filteredTasks} />
+              )}
+            </section>
+          </div>
+        </main>
+      </ErrorBoundary>
     </div>
   )
 }

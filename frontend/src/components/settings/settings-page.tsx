@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
+import { ErrorBoundary } from "@/components/error-boundary"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -75,162 +76,164 @@ export function SettingsPage() {
     <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[232px_minmax(0,1fr)]">
       <AppSidebar connectionStatus="online" activeItem="settings" />
 
-      <main className="console-main px-4 py-5 sm:px-6 md:px-8 md:py-8 xl:px-10">
-        <div className="mx-auto flex w-full max-w-[1520px] flex-col gap-7">
-          {/* Header */}
-          <header className="flex items-center justify-between gap-4">
-            <div className="flex min-w-0 flex-col gap-1">
-              <h1 className="text-[1.75rem] font-semibold tracking-[-0.025em]">
-                模型设置
-              </h1>
-              <p className="truncate text-xs text-muted-foreground sm:text-sm">
-                模型配置与 Provider 状态管理
-              </p>
-            </div>
-            <Badge className="connection-chip" variant="outline">
-              <Settings aria-hidden="true" className="mr-1 size-3" />
-              {models.length} 个模型
-            </Badge>
-          </header>
-
-          {/* Provider key status */}
-          <section aria-label="Provider 密钥状态" className="flex flex-col gap-3">
-            <div className="flex items-end justify-between gap-4">
-              <div>
-                <h2 className="text-sm font-semibold">Provider 状态</h2>
-                <p className="mt-1 text-xs text-muted-foreground">API 密钥可用性概览</p>
+      <ErrorBoundary>
+        <main className="console-main px-4 py-5 sm:px-6 md:px-8 md:py-8 xl:px-10">
+          <div className="mx-auto flex w-full max-w-[1520px] flex-col gap-7">
+            {/* Header */}
+            <header className="flex items-center justify-between gap-4">
+              <div className="flex min-w-0 flex-col gap-1">
+                <h1 className="text-[1.75rem] font-semibold tracking-[-0.025em]">
+                  模型设置
+                </h1>
+                <p className="truncate text-xs text-muted-foreground sm:text-sm">
+                  模型配置与 Provider 状态管理
+                </p>
               </div>
-              <span className="font-mono text-[11px] text-muted-foreground">{providers.length} SOURCES</span>
-            </div>
-            {isLoading ? (
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <Skeleton key={i} className="h-16 rounded-xl" />
-                ))}
-              </div>
-            ) : (
-              <div className="console-panel grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-card/70 sm:grid-cols-3 lg:grid-cols-5">
-                {providers.map((p) => (
-                  <div
-                    key={p.provider}
-                    className={cn(
-                      "flex min-h-16 items-center gap-3 border-r border-b border-border/75 px-3 py-3 transition-colors lg:border-b-0",
-                      p.configured
-                        ? "bg-emerald-500/5"
-                        : "bg-transparent",
-                    )}
-                  >
-                    {p.configured ? (
-                      <ShieldCheck
-                        aria-hidden="true"
-                        className="size-5 shrink-0 text-emerald-400"
-                      />
-                    ) : (
-                      <ShieldX
-                        aria-hidden="true"
-                        className="size-5 shrink-0 text-muted-foreground"
-                      />
-                    )}
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-semibold">
-                        {providerDisplayName(p.provider)}
-                      </p>
-                      <p
-                        className={cn(
-                          "text-[11px]",
-                          p.configured
-                            ? "text-emerald-400"
-                            : "text-muted-foreground",
-                        )}
-                      >
-                        {p.configured ? "已配置" : "未配置"}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
+              <Badge className="connection-chip" variant="outline">
+                <Settings aria-hidden="true" className="mr-1 size-3" />
+                {models.length} 个模型
+              </Badge>
+            </header>
 
-          {/* Error banner */}
-          {error && models.length > 0 ? (
-            <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
-              <AlertCircle aria-hidden="true" className="size-4 shrink-0" />
-              <p className="min-w-0 flex-1 truncate">{error}</p>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={retry}
-              >
-                重试
-              </Button>
-            </div>
-          ) : null}
-
-          {/* Model list */}
-          <section aria-label="模型配置列表">
-            <div className="console-panel overflow-hidden rounded-xl border border-border bg-card/72">
-              <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-4 sm:px-5">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="section-mark flex size-9 shrink-0 items-center justify-center rounded-md">
-                    <Cpu aria-hidden="true" className="size-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <h2 className="text-sm font-semibold sm:text-base">
-                      模型列表
-                    </h2>
-                    <p className="text-[11px] text-muted-foreground sm:text-xs">
-                      来自 models.yaml 配置
-                    </p>
-                  </div>
+            {/* Provider key status */}
+            <section aria-label="Provider 密钥状态" className="flex flex-col gap-3">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <h2 className="text-sm font-semibold">Provider 状态</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">API 密钥可用性概览</p>
                 </div>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {models.length} 个
-                </span>
+                <span className="font-mono text-[11px] text-muted-foreground">{providers.length} SOURCES</span>
               </div>
-
               {isLoading ? (
-                <ModelListSkeleton />
-              ) : error && models.length === 0 ? (
-                <ModelListError error={error} onRetry={retry} />
-              ) : models.length === 0 ? (
-                <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8 text-center">
-                  <span className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-                    <Cpu aria-hidden="true" className="size-5" />
-                  </span>
-                  <div>
-                    <h3 className="text-sm font-medium">暂无模型配置</h3>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      请检查 config/models.yaml 文件。
-                    </p>
-                  </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Skeleton key={i} className="h-16 rounded-xl" />
+                  ))}
                 </div>
               ) : (
-                <div className="grid gap-px bg-border/40 sm:grid-cols-1 lg:grid-cols-2">
-                  {models.map((model) => (
-                    <ModelCard
-                      key={model.name}
-                      model={model}
-                      testState={
-                        testStates[model.name] ?? { status: "idle" }
-                      }
-                      onTest={() => testModel(model.name)}
-                      providerConfigured={
-                        providers.find(
-                          (p) =>
-                            p.provider.toLowerCase() ===
-                            model.provider.toLowerCase(),
-                        )?.configured ?? false
-                      }
-                    />
+                <div className="console-panel grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-card/70 sm:grid-cols-3 lg:grid-cols-5">
+                  {providers.map((p) => (
+                    <div
+                      key={p.provider}
+                      className={cn(
+                        "flex min-h-16 items-center gap-3 border-r border-b border-border/75 px-3 py-3 transition-colors lg:border-b-0",
+                        p.configured
+                          ? "bg-emerald-500/5"
+                          : "bg-transparent",
+                      )}
+                    >
+                      {p.configured ? (
+                        <ShieldCheck
+                          aria-hidden="true"
+                          className="size-5 shrink-0 text-emerald-400"
+                        />
+                      ) : (
+                        <ShieldX
+                          aria-hidden="true"
+                          className="size-5 shrink-0 text-muted-foreground"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-semibold">
+                          {providerDisplayName(p.provider)}
+                        </p>
+                        <p
+                          className={cn(
+                            "text-[11px]",
+                            p.configured
+                              ? "text-emerald-400"
+                              : "text-muted-foreground",
+                          )}
+                        >
+                          {p.configured ? "已配置" : "未配置"}
+                        </p>
+                      </div>
+                    </div>
                   ))}
                 </div>
               )}
-            </div>
-          </section>
-        </div>
-      </main>
+            </section>
+
+            {/* Error banner */}
+            {error && models.length > 0 ? (
+              <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+                <AlertCircle aria-hidden="true" className="size-4 shrink-0" />
+                <p className="min-w-0 flex-1 truncate">{error}</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={retry}
+                >
+                  重试
+                </Button>
+              </div>
+            ) : null}
+
+            {/* Model list */}
+            <section aria-label="模型配置列表">
+              <div className="console-panel overflow-hidden rounded-xl border border-border bg-card/72">
+                <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-4 sm:px-5">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="section-mark flex size-9 shrink-0 items-center justify-center rounded-md">
+                      <Cpu aria-hidden="true" className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                      <h2 className="text-sm font-semibold sm:text-base">
+                        模型列表
+                      </h2>
+                      <p className="text-[11px] text-muted-foreground sm:text-xs">
+                        来自 models.yaml 配置
+                      </p>
+                    </div>
+                  </div>
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {models.length} 个
+                  </span>
+                </div>
+
+                {isLoading ? (
+                  <ModelListSkeleton />
+                ) : error && models.length === 0 ? (
+                  <ModelListError error={error} onRetry={retry} />
+                ) : models.length === 0 ? (
+                  <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8 text-center">
+                    <span className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+                      <Cpu aria-hidden="true" className="size-5" />
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-medium">暂无模型配置</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        请检查 config/models.yaml 文件。
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-px bg-border/40 sm:grid-cols-1 lg:grid-cols-2">
+                    {models.map((model) => (
+                      <ModelCard
+                        key={model.name}
+                        model={model}
+                        testState={
+                          testStates[model.name] ?? { status: "idle" }
+                        }
+                        onTest={() => testModel(model.name)}
+                        providerConfigured={
+                          providers.find(
+                            (p) =>
+                              p.provider.toLowerCase() ===
+                              model.provider.toLowerCase(),
+                          )?.configured ?? false
+                        }
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        </main>
+      </ErrorBoundary>
     </div>
   )
 }

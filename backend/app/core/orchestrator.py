@@ -21,7 +21,7 @@ from app.models import (
     TaskStatus,
     TaskStep,
 )
-from app.schemas import AgentStatusRead, MessageRead, TaskRead
+from app.schemas import AgentStatusRead, MessageRead, TaskRead, TaskStepEventPayload
 from app.services import litellm_service
 from app.services.litellm_service import ChatCompletionResult
 from app.websocket import WebSocketManager, create_event, websocket_manager
@@ -201,6 +201,10 @@ class AgentOrchestrator:
             )
             await self.update_agent_status(manager, "idle")
 
+            # TODO: When migrating to PostgreSQL + Redis queue, replace this
+            # sequential worker loop with asyncio.gather() using independent
+            # DB sessions per worker.  SQLite does not support concurrent
+            # writes, so workers must run sequentially for now.
             worker_results: list[dict[str, object]] = []
             for subtask in plan.subtasks:
                 step = None
@@ -495,17 +499,7 @@ class AgentOrchestrator:
             task.workspace_id,
             create_event(
                 "task.step_changed",
-                {
-                    "id": step.id,
-                    "task_id": step.task_id,
-                    "agent_id": step.agent_id,
-                    "step_name": step.step_name,
-                    "input": step.input,
-                    "output": step.output,
-                    "status": step.status,
-                    "started_at": step.started_at,
-                    "finished_at": step.finished_at,
-                },
+                TaskStepEventPayload.model_validate(step),
             ),
         )
         return step
@@ -529,12 +523,14 @@ class AgentOrchestrator:
             latency_ms = completion.latency_ms
             call_status = "completed"
             error_message = None
+            call_cost = completion.cost
         else:
             model_name, provider, latency_ms = self._failed_call_details(agent, error)
             prompt_tokens = 0
             completion_tokens = 0
             call_status = "failed"
             error_message = self._error_message(error)
+            call_cost = Decimal("0")
 
         model_call = ModelCall(
             task_id=task.id,
@@ -543,7 +539,7 @@ class AgentOrchestrator:
             provider=provider,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
-            cost=Decimal("0"),
+            cost=call_cost,
             latency_ms=latency_ms,
             status=call_status,
             error_message=error_message,

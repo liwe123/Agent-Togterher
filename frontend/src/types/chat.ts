@@ -2,6 +2,7 @@ import type { Agent, ApiResponse } from "@/types/agent"
 
 export type SenderType = "user" | "agent" | "system"
 export type MessageType = "normal" | "task" | "receipt" | "error"
+// "receipt" is reserved for a future read-receipt feature
 export type TaskStatus =
   | "pending"
   | "running"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 
 import type {
   Agent,
@@ -10,8 +10,8 @@ import type {
 } from "@/types/agent"
 import type { Workspace } from "@/types/chat"
 
-import { selectConsoleAgents } from "@/lib/agent-console-data"
-import { requestData, websocketBaseUrl } from "@/lib/task-api"
+import { requestData } from "@/lib/task-api"
+import { useWorkspaceSocket } from "@/hooks/use-workspace-socket"
 
 export function useAgentConsole() {
   const [agents, setAgents] = useState<Agent[]>([])
@@ -22,12 +22,17 @@ export function useAgentConsole() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [requestVersion, setRequestVersion] = useState(0)
+  const fetchedRef = useRef(false)
 
   const retry = useCallback(() => {
+    fetchedRef.current = false
     setRequestVersion((version) => version + 1)
   }, [])
 
   useEffect(() => {
+    if (fetchedRef.current) return
+    fetchedRef.current = true
+
     const controller = new AbortController()
 
     async function loadAgents() {
@@ -47,9 +52,8 @@ export function useAgentConsole() {
           `/api/agents?workspace_id=${currentWorkspace.id}`,
           { signal: controller.signal },
         )
-        const selected = selectConsoleAgents(agentsData, currentWorkspace.id)
-        setWorkspaceId(selected.workspaceId)
-        setAgents(selected.agents)
+        setWorkspaceId(currentWorkspace.id)
+        setAgents(agentsData)
       } catch (requestError) {
         if ((requestError as Error).name !== "AbortError") {
           setError(
@@ -70,82 +74,45 @@ export function useAgentConsole() {
     return () => controller.abort()
   }, [requestVersion])
 
-  useEffect(() => {
-    if (workspaceId === null) {
-      return
-    }
+  useWorkspaceSocket({
+    workspaceId,
+    onEvent: useCallback((event) => {
+      const e = event as WorkspaceEvent
 
-    let socket: WebSocket | null = null
-    let retryTimer: ReturnType<typeof setTimeout> | null = null
-    let shouldReconnect = true
-
-    function connect() {
-      setConnectionStatus("connecting")
-      socket = new WebSocket(
-        `${websocketBaseUrl}/ws/workspaces/${workspaceId}`,
-      )
-
-      socket.onopen = () => setConnectionStatus("online")
-      socket.onerror = () => setConnectionStatus("offline")
-      socket.onclose = () => {
-        setConnectionStatus("offline")
-        if (shouldReconnect) {
-          retryTimer = setTimeout(connect, 3000)
-        }
+      if (e.type === "agent.status_changed") {
+        const payload = e.payload
+        setAgents((currentAgents) =>
+          currentAgents.map((agent) =>
+            agent.id === payload.id
+              ? {
+                  ...agent,
+                  status: payload.status,
+                  last_active_at: payload.last_active_at,
+                }
+              : agent,
+          ),
+        )
       }
-      socket.onmessage = (message) => {
-        let event: WorkspaceEvent
-        try {
-          event = JSON.parse(message.data) as WorkspaceEvent
-        } catch {
-          setError("收到无法解析的控制台实时消息。")
-          return
-        }
 
-        if (event.type === "agent.status_changed") {
-          const payload = event.payload
-          setAgents((currentAgents) =>
-            currentAgents.map((agent) =>
-              agent.id === payload.id
-                ? {
-                    ...agent,
-                    status: payload.status,
-                    last_active_at: payload.last_active_at,
-                  }
-                : agent,
-            ),
-          )
-        }
-
-        if (
-          event.type === "message.created" &&
-          event.payload.sender_type === "agent" &&
-          event.payload.sender_id !== null
-        ) {
-          const payload = event.payload
-          setRecentOutputs((outputs) => [
-            {
-              id: payload.id,
-              agentId: payload.sender_id as number,
-              content: payload.content,
-              createdAt: payload.created_at,
-            },
-            ...outputs.filter((output) => output.id !== payload.id),
-          ].slice(0, 4))
-        }
+      if (
+        e.type === "message.created" &&
+        e.payload.sender_type === "agent" &&
+        e.payload.sender_id !== null
+      ) {
+        const payload = e.payload
+        setRecentOutputs((outputs) => [
+          {
+            id: payload.id,
+            agentId: payload.sender_id as number,
+            content: payload.content,
+            createdAt: payload.created_at,
+          },
+          ...outputs.filter((output) => output.id !== payload.id),
+        ].slice(0, 4))
       }
-    }
-
-    connect()
-
-    return () => {
-      shouldReconnect = false
-      if (retryTimer !== null) {
-        clearTimeout(retryTimer)
-      }
-      socket?.close()
-    }
-  }, [workspaceId])
+    }, []),
+    onStatusChange: setConnectionStatus,
+  })
 
   return {
     agents,

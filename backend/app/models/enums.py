@@ -12,7 +12,7 @@ class SenderType(StrEnum):
 class MessageType(StrEnum):
     NORMAL = "normal"
     TASK = "task"
-    RECEIPT = "receipt"
+    RECEIPT = "receipt"  # Reserved for future read-receipt feature
     ERROR = "error"
 
 

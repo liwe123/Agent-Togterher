@@ -117,6 +117,20 @@ class ModelCallRead(BaseModel):
         return self.prompt_tokens + self.completion_tokens
 
 
+class TaskStepEventPayload(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    task_id: int
+    agent_id: int | None = None
+    step_name: str
+    input: str | None = None
+    output: str | None = None
+    status: str
+    started_at: datetime | None = None
+    finished_at: datetime | None = None
+
+
 class TaskTokenUsageRead(BaseModel):
     prompt_tokens: int
     completion_tokens: int
