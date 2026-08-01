@@ -292,6 +292,27 @@ def is_provider_configured(provider: str) -> bool:
     return _get_api_key(provider) is not None
 
 
+async def get_db_api_keys(session) -> dict[str, str]:
+    """Load all provider API keys stored in the database."""
+    from app.models import ProviderCredential
+    from sqlalchemy import select as sa_select
+    rows = (await session.execute(sa_select(ProviderCredential))).scalars().all()
+    return {row.provider: row.api_key for row in rows}
+
+
+async def is_provider_configured_async(provider: str, session=None) -> bool:
+    """Return whether a provider has an API key (DB or env)."""
+    if session is not None:
+        from app.models import ProviderCredential
+        from sqlalchemy import select as sa_select
+        row = (await session.execute(
+            sa_select(ProviderCredential).where(ProviderCredential.provider == provider)
+        )).scalar_one_or_none()
+        if row is not None and row.api_key.strip():
+            return True
+    return is_provider_configured(provider)
+
+
 def _import_acompletion() -> CompletionCallable:
     try:
         from litellm import acompletion
@@ -384,6 +405,7 @@ async def chat_completion(
     model_name: str,
     messages: Sequence[Message],
     temperature: float = 0.7,
+    api_keys: dict[str, str] | None = None,
 ) -> ChatCompletionResult:
     """Call a configured LiteLLM model, falling back on provider failures."""
     requested_model = model_name.strip()
@@ -399,7 +421,12 @@ async def chat_completion(
     started_at = perf_counter()
 
     for attempt_index, model in enumerate(chain):
-        api_key = _get_api_key(model.provider)
+        # Check DB keys first, then env
+        api_key = None
+        if api_keys:
+            api_key = api_keys.get(model.provider)
+        if api_key is None:
+            api_key = _get_api_key(model.provider)
         attempt_started_at = perf_counter()
         try:
             if model.provider in _PROVIDER_KEY_FIELDS and api_key is None:

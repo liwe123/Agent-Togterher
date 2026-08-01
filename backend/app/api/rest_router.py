@@ -4,6 +4,7 @@ from app.api.v1.endpoints.agents import router as agents_router
 from app.api.v1.endpoints.conversations import router as conversations_router
 from app.api.v1.endpoints.messages import router as messages_router
 from app.api.v1.endpoints.models import router as models_router
+from app.api.v1.endpoints.provider_keys import router as provider_keys_router
 from app.api.v1.endpoints.tasks import router as tasks_router
 from app.api.v1.endpoints.workspaces import router as workspaces_router
 from app.schemas import ErrorResponse
@@ -22,3 +23,4 @@ rest_api_router.include_router(conversations_router)
 rest_api_router.include_router(messages_router)
 rest_api_router.include_router(tasks_router)
 rest_api_router.include_router(models_router)
+rest_api_router.include_router(provider_keys_router)

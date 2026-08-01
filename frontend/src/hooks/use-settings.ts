@@ -6,6 +6,7 @@ import { requestData } from "@/lib/task-api"
 import type {
   ModelConfig,
   ModelTestResult,
+  ProviderKeyStatus,
   ProviderStatus,
   TestState,
 } from "@/types/settings"
@@ -13,6 +14,7 @@ import type {
 export function useSettings() {
   const [models, setModels] = useState<ModelConfig[]>([])
   const [providers, setProviders] = useState<ProviderStatus[]>([])
+  const [providerKeys, setProviderKeys] = useState<ProviderKeyStatus[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -26,12 +28,14 @@ export function useSettings() {
     setIsLoading(true)
     setError(null)
     try {
-      const [modelsData, providersData] = await Promise.all([
+      const [modelsData, providersData, providerKeysData] = await Promise.all([
         requestData<ModelConfig[]>("/api/models/config"),
         requestData<ProviderStatus[]>("/api/models/providers/status"),
+        requestData<ProviderKeyStatus[]>("/api/provider-keys"),
       ])
       setModels(modelsData)
       setProviders(providersData)
+      setProviderKeys(providerKeysData)
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载设置失败")
     } finally {
@@ -75,13 +79,56 @@ export function useSettings() {
     }
   }, [])
 
+  const saveProviderKey = useCallback(
+    async (provider: string, apiKey: string) => {
+      await requestData<ProviderKeyStatus>(
+        `/api/provider-keys/${provider}`,
+        {
+          method: "PUT",
+          body: JSON.stringify({ api_key: apiKey }),
+        },
+      )
+      setProviderKeys((prev) => {
+        const exists = prev.some(
+          (p) => p.provider.toLowerCase() === provider.toLowerCase(),
+        )
+        if (exists) {
+          return prev.map((p) =>
+            p.provider.toLowerCase() === provider.toLowerCase()
+              ? { ...p, configured: true }
+              : p,
+          )
+        }
+        return [...prev, { provider, configured: true }]
+      })
+    },
+    [],
+  )
+
+  const removeProviderKey = useCallback(async (provider: string) => {
+    await requestData<ProviderKeyStatus>(
+      `/api/provider-keys/${provider}`,
+      { method: "DELETE" },
+    )
+    setProviderKeys((prev) =>
+      prev.map((p) =>
+        p.provider.toLowerCase() === provider.toLowerCase()
+          ? { ...p, configured: false }
+          : p,
+      ),
+    )
+  }, [])
+
   return {
     models,
     providers,
+    providerKeys,
     isLoading,
     error,
     retry,
     testStates,
     testModel,
+    saveProviderKey,
+    removeProviderKey,
   }
 }

@@ -85,6 +85,7 @@ async def generate_plan(
     manager: Agent,
     task_description: str,
     available_agent_names: Sequence[str],
+    api_keys: dict[str, str] | None = None,
 ) -> ChatCompletionResult:
     """Ask the project architect to return a strict 1-3 subtask JSON plan."""
     available = ", ".join(sorted(set(available_agent_names)))
@@ -120,6 +121,7 @@ async def generate_plan(
             {"role": "user", "content": user_prompt},
         ],
         temperature=0.2,
+        api_keys=api_keys,
     )
 
 

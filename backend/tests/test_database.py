@@ -79,6 +79,13 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "error_message",
             "created_at",
         },
+        "provider_credentials": {
+            "id",
+            "provider",
+            "api_key",
+            "created_at",
+            "updated_at",
+        },
     }
 
     assert set(Base.metadata.tables) == set(expected_columns)

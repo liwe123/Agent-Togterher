@@ -254,6 +254,7 @@ def test_task_run_endpoint_executes_agent_and_returns_result(
             {"role": "system", "content": "Test carefully."},
             {"role": "user", "content": "@Tester Execute this task"},
         ],
+        api_keys={},
     )
     assert completed["status"] == "completed"
     assert completed["result"] == "Task executed successfully"
@@ -388,6 +389,7 @@ def test_model_endpoints(api_client: TestClient) -> None:
     model_test.assert_awaited_once_with(
         "openai/test-model",
         [{"role": "user", "content": "Ping"}],
+        api_keys={},
     )
     assert result == {
         "requested_model": "openai/test-model",

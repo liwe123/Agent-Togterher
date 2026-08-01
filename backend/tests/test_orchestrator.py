@@ -152,6 +152,7 @@ async def test_run_task_completes_and_persists_result(orchestrator_session) -> N
                 "content": "Implement the requested endpoint and report the result.",
             },
         ],
+        api_keys={},
     )
     await orchestrator_session.refresh(agent)
     step = await orchestrator_session.scalar(

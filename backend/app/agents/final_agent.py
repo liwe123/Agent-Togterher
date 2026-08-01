@@ -15,6 +15,7 @@ async def build_final_result(
     plan: ManagerPlan,
     worker_results: Sequence[dict[str, object]],
     review_result: str,
+    api_keys: dict[str, str] | None = None,
 ) -> ChatCompletionResult:
     user_prompt = (
         "请作为项目总设计师汇总 Worker 执行结果和测试专员审核。"
@@ -32,6 +33,7 @@ async def build_final_result(
             {"role": "user", "content": user_prompt},
         ],
         temperature=0.3,
+        api_keys=api_keys,
     )
 
 

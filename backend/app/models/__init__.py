@@ -5,6 +5,7 @@ from app.models.conversation import Conversation
 from app.models.enums import MessageType, SenderType, TaskStatus
 from app.models.message import Message
 from app.models.model_call import ModelCall
+from app.models.provider_credential import ProviderCredential
 from app.models.task import Task, TaskStep
 from app.models.workspace import Workspace
 
@@ -14,6 +15,7 @@ __all__ = [
     "Message",
     "MessageType",
     "ModelCall",
+    "ProviderCredential",
     "SenderType",
     "Task",
     "TaskStatus",

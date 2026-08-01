@@ -88,7 +88,9 @@ async def get_model_config() -> SuccessResponse[list[ModelConfigInfo]]:
     "/providers/status",
     response_model=SuccessResponse[list[ProviderStatusInfo]],
 )
-async def get_providers_status() -> SuccessResponse[list[ProviderStatusInfo]]:
+async def get_providers_status(
+    session: AsyncSession = Depends(get_db),
+) -> SuccessResponse[list[ProviderStatusInfo]]:
     """Return API-key configuration status per provider (never the key)."""
     # Collect providers from YAML + a fixed list so the UI always shows all.
     configs = litellm_service.get_model_configs()
@@ -97,7 +99,7 @@ async def get_providers_status() -> SuccessResponse[list[ProviderStatusInfo]]:
         p = cfg.provider.strip().lower()
         providers.setdefault(p, False)
     for p in list(providers):
-        providers[p] = _provider_is_configured(p)
+        providers[p] = await litellm_service.is_provider_configured_async(p, session=session)
     items = [
         ProviderStatusInfo(provider=p, configured=c)
         for p, c in providers.items()
@@ -123,9 +125,11 @@ async def test_model(
     ):
         raise AppError(404, "Workspace not found")
     try:
+        db_api_keys = await litellm_service.get_db_api_keys(session)
         completion = await litellm_service.chat_completion(
             payload.model_name,
             [{"role": "user", "content": payload.prompt}],
+            api_keys=db_api_keys,
         )
     except litellm_service.ModelConfigurationError as exc:
         raise AppError(422, str(exc)) from exc

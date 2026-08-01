@@ -1,16 +1,22 @@
 "use client"
 
+import { useMemo, useState } from "react"
+
 import {
   AlertCircle,
   CheckCircle2,
   ChevronRight,
   Clock,
   Cpu,
+  Eye,
+  EyeOff,
   FlaskConical,
   LoaderCircle,
+  Save,
   Settings,
   ShieldCheck,
   ShieldX,
+  Trash2,
   XCircle,
   Zap,
 } from "lucide-react"
@@ -65,12 +71,99 @@ export function SettingsPage() {
   const {
     models,
     providers,
+    providerKeys,
     isLoading,
     error,
     retry,
     testStates,
     testModel,
+    saveProviderKey,
+    removeProviderKey,
   } = useSettings()
+
+  // Local state for API key editor
+  const [keyInputs, setKeyInputs] = useState<Record<string, string>>({})
+  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({})
+  const [savingKeys, setSavingKeys] = useState<Record<string, boolean>>({})
+  const [keyErrors, setKeyErrors] = useState<Record<string, string | null>>({})
+
+  // Merge env-var provider status with stored key status for the tiles.
+  // A provider is "configured" if either source says it is.
+  const mergedProviders = useMemo(() => {
+    const map = new Map<string, boolean>()
+    for (const p of providers) {
+      map.set(p.provider.toLowerCase(), p.configured)
+    }
+    for (const pk of providerKeys) {
+      if (pk.configured) {
+        map.set(pk.provider.toLowerCase(), true)
+      }
+    }
+    return Array.from(map.entries()).map(([provider, configured]) => ({
+      provider,
+      configured,
+    }))
+  }, [providers, providerKeys])
+
+  // Combined unique provider list for the API key editor
+  const allProviders = useMemo(() => {
+    const seen = new Set<string>()
+    const result: { provider: string; configured: boolean }[] = []
+    for (const pk of providerKeys) {
+      const key = pk.provider.toLowerCase()
+      if (!seen.has(key)) {
+        seen.add(key)
+        result.push(pk)
+      }
+    }
+    for (const p of providers) {
+      const key = p.provider.toLowerCase()
+      if (!seen.has(key)) {
+        seen.add(key)
+        result.push(p)
+      }
+    }
+    return result
+  }, [providerKeys, providers])
+
+  const handleSaveKey = async (provider: string) => {
+    const apiKey = keyInputs[provider]?.trim()
+    if (!apiKey) return
+    setSavingKeys((prev) => ({ ...prev, [provider]: true }))
+    setKeyErrors((prev) => ({ ...prev, [provider]: null }))
+    try {
+      await saveProviderKey(provider, apiKey)
+      setKeyInputs((prev) => ({ ...prev, [provider]: "" }))
+    } catch (err) {
+      setKeyErrors((prev) => ({
+        ...prev,
+        [provider]: err instanceof Error ? err.message : "保存失败",
+      }))
+    } finally {
+      setSavingKeys((prev) => ({ ...prev, [provider]: false }))
+    }
+  }
+
+  const handleRemoveKey = async (provider: string) => {
+    setSavingKeys((prev) => ({ ...prev, [provider]: true }))
+    setKeyErrors((prev) => ({ ...prev, [provider]: null }))
+    try {
+      await removeProviderKey(provider)
+      setKeyInputs((prev) => ({ ...prev, [provider]: "" }))
+    } catch (err) {
+      setKeyErrors((prev) => ({
+        ...prev,
+        [provider]: err instanceof Error ? err.message : "删除失败",
+      }))
+    } finally {
+      setSavingKeys((prev) => ({ ...prev, [provider]: false }))
+    }
+  }
+
+  const isProviderConfigured = (provider: string) =>
+    mergedProviders.find(
+      (p) => p.provider.toLowerCase() === provider.toLowerCase(),
+    )?.configured ?? false
 
   return (
     <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[232px_minmax(0,1fr)]">
@@ -102,7 +195,7 @@ export function SettingsPage() {
                   <h2 className="text-sm font-semibold">Provider 状态</h2>
                   <p className="mt-1 text-xs text-muted-foreground">API 密钥可用性概览</p>
                 </div>
-                <span className="font-mono text-[11px] text-muted-foreground">{providers.length} SOURCES</span>
+                <span className="font-mono text-[11px] text-muted-foreground">{mergedProviders.length} SOURCES</span>
               </div>
               {isLoading ? (
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -112,7 +205,7 @@ export function SettingsPage() {
                 </div>
               ) : (
                 <div className="console-panel grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-card/70 sm:grid-cols-3 lg:grid-cols-5">
-                  {providers.map((p) => (
+                  {mergedProviders.map((p) => (
                     <div
                       key={p.provider}
                       className={cn(
@@ -152,6 +245,139 @@ export function SettingsPage() {
                   ))}
                 </div>
               )}
+            </section>
+
+            {/* API Key management */}
+            <section aria-label="API Key 管理" className="flex flex-col gap-3">
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <h2 className="text-sm font-semibold">API Key 管理</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">管理各 Provider 的 API 密钥</p>
+                </div>
+                <span className="font-mono text-[11px] text-muted-foreground">{allProviders.length} PROVIDERS</span>
+              </div>
+              <div className="console-panel overflow-hidden rounded-xl border border-border bg-card/72">
+                {isLoading ? (
+                  <div className="space-y-0 divide-y divide-border">
+                    {Array.from({ length: 4 }, (_, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-3 sm:px-5">
+                        <Skeleton className="h-5 w-24" />
+                        <Skeleton className="h-9 flex-1 rounded-lg" />
+                        <Skeleton className="h-8 w-14 rounded-lg" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {allProviders.map((p) => {
+                      const configured = isProviderConfigured(p.provider)
+                      const isSaving = savingKeys[p.provider] ?? false
+                      const err = keyErrors[p.provider] ?? null
+                      const showKey = showKeys[p.provider] ?? false
+
+                      return (
+                        <div
+                          key={p.provider}
+                          className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:gap-3 sm:px-5"
+                        >
+                          {/* Provider label */}
+                          <span className="min-w-0 shrink-0 text-sm font-semibold sm:w-28">
+                            {providerDisplayName(p.provider)}
+                          </span>
+
+                          {/* Input + buttons */}
+                          <div className="flex min-w-0 flex-1 items-center gap-2">
+                            <div className="relative flex-1">
+                              <input
+                                type={showKey ? "text" : "password"}
+                                value={keyInputs[p.provider] ?? ""}
+                                onChange={(e) =>
+                                  setKeyInputs((prev) => ({
+                                    ...prev,
+                                    [p.provider]: e.target.value,
+                                  }))
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault()
+                                    handleSaveKey(p.provider)
+                                  }
+                                }}
+                                placeholder={
+                                  configured ? "••••••••" : "输入 API Key…"
+                                }
+                                disabled={isSaving}
+                                className={cn(
+                                  "w-full rounded-lg border bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-primary-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50",
+                                  configured
+                                    ? "border-[oklch(0.72_0.15_155)]"
+                                    : "border-[oklch(0.31_0.018_70)]",
+                                )}
+                              />
+                              {/* Eye toggle */}
+                              <button
+                                type="button"
+                                aria-label={showKey ? "隐藏密钥" : "显示密钥"}
+                                onClick={() =>
+                                  setShowKeys((prev) => ({
+                                    ...prev,
+                                    [p.provider]: !prev[p.provider],
+                                  }))
+                                }
+                                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
+                              >
+                                {showKey ? (
+                                  <EyeOff aria-hidden="true" className="size-4" />
+                                ) : (
+                                  <Eye aria-hidden="true" className="size-4" />
+                                )}
+                              </button>
+                            </div>
+
+                            {/* Save button */}
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              disabled={isSaving || !keyInputs[p.provider]?.trim()}
+                              onClick={() => handleSaveKey(p.provider)}
+                            >
+                              {isSaving ? (
+                                <LoaderCircle
+                                  aria-hidden="true"
+                                  className="size-3.5 animate-spin"
+                                />
+                              ) : (
+                                <Save aria-hidden="true" className="size-3.5" />
+                              )}
+                              <span className="hidden sm:inline">保存</span>
+                            </Button>
+
+                            {/* Delete button */}
+                            {configured && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="ghost"
+                                disabled={isSaving}
+                                onClick={() => handleRemoveKey(p.provider)}
+                                className="text-muted-foreground hover:text-destructive"
+                              >
+                                <Trash2 aria-hidden="true" className="size-3.5" />
+                              </Button>
+                            )}
+                          </div>
+
+                          {/* Error message */}
+                          {err && (
+                            <p className="text-[11px] text-destructive">{err}</p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
             </section>
 
             {/* Error banner */}
@@ -218,13 +444,7 @@ export function SettingsPage() {
                           testStates[model.name] ?? { status: "idle" }
                         }
                         onTest={() => testModel(model.name)}
-                        providerConfigured={
-                          providers.find(
-                            (p) =>
-                              p.provider.toLowerCase() ===
-                              model.provider.toLowerCase(),
-                          )?.configured ?? false
-                        }
+                        providerConfigured={isProviderConfigured(model.provider)}
                       />
                     ))}
                   </div>
