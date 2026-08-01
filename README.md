@@ -1,102 +1,98 @@
-# Agent Console
+# Agent Console · 多智能体协同运行台
 
-Agent Console is a local-first multi-agent collaboration dashboard. It combines a
-Next.js frontend, a FastAPI backend, SQLite persistence, LiteLLM model routing,
-and workspace-scoped WebSocket events so a user can chat with agents, dispatch
-tasks, observe execution, and inspect model-call traces.
+Agent Console 是一个本地优先的多 Agent 协作控制台，集成 Next.js 前端、
+FastAPI 后端、SQLite 持久化、LiteLLM 模型路由和按工作区隔离的 WebSocket
+实时事件，让用户可以群聊派发任务、观察执行过程和检查模型调用链路。
 
-The project is an MVP for a coordinated agent workspace rather than a marketing
-site. The first screen is the operational console: agent status, chat, task
-execution, model settings, and contact-style agent directory views.
+项目定位为协调型 Agent 工作台的 MVP，而非营销站点。首屏即为运控台：
+Agent 状态、群聊、任务执行、模型设置和通讯录式 Agent 编队视图。
 
-## Features
+## 功能特性
 
-- Multi-agent dashboard with seeded roles:
-  - Project Architect
-  - Agent Engineer
-  - Frontend Designer
-  - Knowledge Manager
-  - QA Engineer
-  - Operations Engineer
-- Chat workflow with `@Agent` mentions and automatic task creation.
-- Task execution lifecycle:
-  - `pending`
-  - `running`
-  - `completed`
-  - `failed`
-- Single-agent execution path for directly assigned work.
-- Manager-led multi-agent workflow:
-  - manager planning
-  - worker execution
-  - QA review
-  - final summary
-- LiteLLM-backed model abstraction with provider fallback.
-- Workspace-scoped WebSocket events for messages, tasks, steps, agent status,
-  model calls, and errors.
-- SQLite persistence with startup schema creation and idempotent seed data.
-- Recovery hardening for unfinished tasks after process restart.
-- Fallback failure persistence when the active SQLAlchemy session becomes
-  invalid during task failure handling.
-- Frontend data guards for non-standard API error responses.
-- Per-workspace concurrency control (max 3 running tasks, HTTP 429 on overflow).
-- Model call cost tracking extracted from LiteLLM provider responses.
-- React Error Boundary with fallback UI on all page components.
-- Shared WebSocket connection hook eliminating duplicated reconnect logic.
-- Deduplicated task state helpers (`taskTimestamp`, `taskStatusRank`,
-  `shouldApplyTaskStatus`) extracted to shared utilities.
-- Strict Mode double-fetch guard (`fetchedRef`) on all data-loading hooks.
-- Centralized frontend constants for reconnect delays, list limits, and
-  refresh intervals.
-- Pydantic schema for `task.step_changed` WebSocket events (replaces raw dict).
-- Frontend unit tests using Node's built-in test runner (28 tests).
+- 多 Agent 面板，预置 6 个角色：
+  - 项目总设计师（Project Architect）
+  - Agent 工程师（Agent Engineer）
+  - 前端设计师（Frontend Designer）
+  - 知识库管理员（Knowledge Manager）
+  - 测试专员（QA Engineer）
+  - 运维（Operations Engineer）
+- 群聊工作流，支持 `@Agent` 提及自动创建任务。
+- 任务执行生命周期：
+  - `pending`（等待处理）
+  - `running`（进行中）
+  - `completed`（已完成）
+  - `failed`（失败）
+- 单 Agent 直调路径，用于直接派发的任务。
+- Manager 主导的多 Agent 流水线：
+  - Manager 任务拆解
+  - Worker 执行
+  - 测试专员审核
+  - Manager 最终汇总
+- LiteLLM 模型抽象层，支持 provider 降级链。
+- 按工作区隔离的 WebSocket 事件：消息、任务、步骤、Agent 状态、
+  模型调用和错误。
+- SQLite 持久化，启动自动建表，幂等种子数据。
+- 进程重启后自动恢复未完成的任务。
+- 失效 SQLAlchemy 会话的 fallback 失败持久化。
+- 前端对非标准 API 错误响应的数据守卫。
+- 按工作区的并发控制（最多 3 个进行中任务，超出返回 429）。
+- 从 LiteLLM 响应中提取模型调用成本并记录到 `ModelCall.cost`。
+- React Error Boundary 覆盖全部 5 个页面组件，含本地化 fallback UI。
+- 共用 WebSocket 连接 Hook，消除 4 处重复的重连逻辑。
+- 任务状态工具函数去重（`taskTimestamp`、`taskStatusRank`、
+  `shouldApplyTaskStatus`），提取到共享模块。
+- 全部数据加载 Hook 添加 `fetchedRef` 防护（React StrictMode 双重请求）。
+- 前端常量集中管理（重连延迟、列表上限、刷新间隔等）。
+- `task.step_changed` WebSocket 事件使用 Pydantic Schema 替代手写字典。
+- 前端单元测试覆盖（28 个测试）。
 
-## Tech Stack
+## 技术栈
 
-| Layer | Technology |
+| 层 | 技术 |
 | --- | --- |
-| Frontend | Next.js App Router, React, TypeScript, Tailwind CSS, shadcn-style UI primitives |
-| Backend | FastAPI, Python, SQLAlchemy asyncio, Pydantic |
-| Database | SQLite with `aiosqlite` |
-| Model calls | LiteLLM |
-| Realtime | WebSocket |
-| Local orchestration | Docker Compose |
-| Tests | pytest, Node test runner, ESLint, Next production build |
+| 前端 | Next.js App Router、React、TypeScript、Tailwind CSS、shadcn 风格 UI 原语 |
+| 后端 | FastAPI、Python、SQLAlchemy asyncio、Pydantic |
+| 数据库 | SQLite + `aiosqlite` |
+| 模型调用 | LiteLLM |
+| 实时通信 | WebSocket |
+| 本地编排 | Docker Compose |
+| 测试 | pytest、Node test runner、ESLint、Next 生产构建 |
 
-## Repository Layout
+## 目录结构
 
 ```text
 .
 |-- backend/
 |   |-- app/
-|   |   |-- agents/        # Manager, worker, reviewer, and final-agent prompts
-|   |   |-- api/           # REST endpoints and error wrappers
-|   |   |-- core/          # MessageHub, orchestrator, config
-|   |   |-- db/            # Async session, schema init, seed data
-|   |   |-- models/        # SQLAlchemy models
-|   |   |-- schemas/       # Pydantic request/response schemas
-|   |   |-- services/      # LiteLLM integration
-|   |   `-- websocket/     # Workspace WebSocket routing and manager
-|   `-- tests/             # Backend pytest suite (37 tests)
+|   |   |-- agents/        # Manager、Worker、Review、Final Agent 提示词
+|   |   |-- api/           # REST 接口与错误包装
+|   |   |-- core/          # MessageHub、Orchestrator、Config
+|   |   |-- db/            # 异步会话、Schema 初始化、种子数据
+|   |   |-- models/        # SQLAlchemy 模型
+|   |   |-- schemas/       # Pydantic 请求/响应 Schema
+|   |   |-- services/      # LiteLLM 集成
+|   |   `-- websocket/     # 工作区 WebSocket 路由与管理器
+|   `-- tests/             # 后端 pytest 测试套件（37 个测试）
 |-- config/
-|   `-- models.yaml        # Model aliases and fallback configuration
+|   `-- models.yaml        # 模型别名与降级配置
 |-- docs/
 |   |-- api-examples.md
 |   `-- websocket.md
 |-- frontend/
-|   |-- src/app/           # Next.js routes
-|   |-- src/components/    # Console, chat, task, settings, error-boundary
-|   |-- src/hooks/         # Data loading, WebSocket, and shared workspace socket
-|   |-- src/lib/           # API client, formatters, task utils, constants
-|   |-- src/types/         # Frontend TypeScript models
-|   `-- tests/             # Node test runner tests (28 tests)
+|   |-- src/app/           # Next.js 路由
+|   |-- src/components/    # 控制台、群聊、任务、设置、ErrorBoundary
+|   |-- src/hooks/         # 数据加载、WebSocket、共用 Workspace Socket
+|   |-- src/lib/           # API 客户端、格式化、任务工具函数、常量
+|   |-- src/types/         # 前端 TypeScript 类型
+|   `-- tests/             # Node test runner 测试（28 个测试）
 |-- docker-compose.yml
 |-- .env.example
 `-- HANDOFF.md
 ```
 
-## Quick Start With Docker
+## Docker 快速启动
 
-Prerequisites:
+前置条件：
 
 - Docker Desktop
 - Git
@@ -107,17 +103,17 @@ Copy-Item .env.example .env
 docker compose up --build
 ```
 
-Open:
+打开：
 
-- Frontend: http://localhost:3000
-- Backend docs: http://localhost:8000/docs
-- Health check: http://localhost:8000/api/v1/health
+- 前端：http://localhost:3000
+- 后端文档：http://localhost:8000/docs
+- 健康检查：http://localhost:8000/api/v1/health
 
-The backend creates the SQLite schema and seed data on startup.
+后端在启动时自动创建 SQLite Schema 和种子数据。
 
-## Local Development
+## 本地开发
 
-### Backend
+### 后端
 
 ```powershell
 Set-Location E:\Agents\backend
@@ -127,9 +123,9 @@ pip install -r requirements-dev.txt
 uvicorn app.main:app --reload --port 8000
 ```
 
-### Frontend
+### 前端
 
-Open a second terminal:
+打开第二个终端：
 
 ```powershell
 Set-Location E:\Agents\frontend
@@ -137,52 +133,52 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:3000.
+打开 http://localhost:3000。
 
-## Environment Variables
+## 环境变量
 
-Start from `.env.example`.
+从 `.env.example` 开始配置。
 
-| Variable | Default | Purpose |
+| 变量 | 默认值 | 用途 |
 | --- | --- | --- |
-| `APP_NAME` | `Agent Console API` | Backend service name |
-| `APP_ENV` | `development` | Runtime environment |
-| `API_V1_PREFIX` | `/api/v1` | Health/versioned API prefix |
-| `CORS_ORIGINS` | localhost and 127.0.0.1 frontend origins | Allowed browser origins |
-| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8000` | Frontend-to-backend API URL |
-| `DATABASE_URL` | `sqlite+aiosqlite:///./data/agent_console.db` | Backend database URL |
-| `REDIS_URL` | `redis://localhost:6379/0` | Local Redis URL reserved for queue/cache work |
-| `COMPOSE_REDIS_URL` | `redis://redis:6379/0` | Docker-internal Redis URL |
-| `MODELS_CONFIG_PATH` | `config/models.yaml` | LiteLLM model alias config |
-| `MODEL_REQUEST_TIMEOUT_SECONDS` | `60` | Per-provider model-call timeout |
-| `OPENAI_API_KEY` | empty | Optional OpenAI credential |
-| `ANTHROPIC_API_KEY` | empty | Optional Anthropic credential |
-| `GEMINI_API_KEY` | empty | Optional Gemini credential |
-| `DEEPSEEK_API_KEY` | empty | Optional DeepSeek credential |
-| `DASHSCOPE_API_KEY` | empty | Optional DashScope credential |
-| `QWEN_API_KEY` | empty | Optional Qwen credential |
+| `APP_NAME` | `Agent Console API` | 后端服务名称 |
+| `APP_ENV` | `development` | 运行环境 |
+| `API_V1_PREFIX` | `/api/v1` | 健康检查/版本化 API 前缀 |
+| `CORS_ORIGINS` | localhost 及 127.0.0.1 前端来源 | 允许的浏览器跨域来源 |
+| `NEXT_PUBLIC_API_BASE_URL` | `http://localhost:8000` | 前端到后端的 API 地址 |
+| `DATABASE_URL` | `sqlite+aiosqlite:///./data/agent_console.db` | 后端数据库地址 |
+| `REDIS_URL` | `redis://localhost:6379/0` | 本地 Redis 地址（为队列/缓存预留） |
+| `COMPOSE_REDIS_URL` | `redis://redis:6379/0` | Docker 内部 Redis 地址 |
+| `MODELS_CONFIG_PATH` | `config/models.yaml` | LiteLLM 模型别名配置 |
+| `MODEL_REQUEST_TIMEOUT_SECONDS` | `60` | 单次模型调用超时时间 |
+| `OPENAI_API_KEY` | 空 | OpenAI 凭证（可选） |
+| `ANTHROPIC_API_KEY` | 空 | Anthropic 凭证（可选） |
+| `GEMINI_API_KEY` | 空 | Gemini 凭证（可选） |
+| `DEEPSEEK_API_KEY` | 空 | DeepSeek 凭证（可选） |
+| `DASHSCOPE_API_KEY` | 空 | DashScope 凭证（可选） |
+| `QWEN_API_KEY` | 空 | Qwen 凭证（可选） |
 
-Keep real credentials in `.env` only. Do not commit `.env`.
+真实凭证仅写入 `.env`，不要提交 `.env`。
 
-## Model Configuration
+## 模型配置
 
-Model aliases are defined in `config/models.yaml`. Agents store a model alias such
-as `manager_model`, `code_model`, `review_model`, or `writing_model`. The backend
-resolves the alias through LiteLLM and follows the configured fallback chain when
-the primary provider is missing credentials, times out, or returns an error.
+模型别名在 `config/models.yaml` 中定义。Agent 存储模型别名（如
+`manager_model`、`code_model`、`review_model`、`writing_model`）。
+后端通过 LiteLLM 解析别名，并在主 provider 缺少凭证、超时或返回错误时
+按配置的降级链依次尝试。
 
-If all provider attempts fail, the failure is stored in `model_calls`, surfaced to
-the task, and sent to connected WebSocket clients.
+如果所有 provider 尝试均失败，失败信息将存入 `model_calls`，呈现到任务中，
+并发送给连接的 WebSocket 客户端。
 
-## API And Realtime Events
+## API 与实时事件
 
-Stable health endpoint:
+健康检查端点：
 
 ```text
 GET /api/v1/health
 ```
 
-Business endpoints are mounted under `/api`, including:
+业务端点挂载在 `/api` 下，包括：
 
 - `/api/workspaces`
 - `/api/agents`
@@ -194,13 +190,13 @@ Business endpoints are mounted under `/api`, including:
 - `/api/models`
 - `/api/models/test`
 
-Workspace WebSocket route:
+工作区 WebSocket 路由：
 
 ```text
 ws://localhost:8000/ws/workspaces/{workspace_id}
 ```
 
-Important event types:
+主要事件类型：
 
 - `message.created`
 - `task.status_changed`
@@ -209,93 +205,84 @@ Important event types:
 - `model.call_finished`
 - `error`
 
-## Testing
+## 测试
 
-Run backend checks:
+运行后端检查：
 
 ```powershell
 Set-Location E:\Agents\backend
 python -m compileall -q app tests
-python -m pytest -q             # 37 tests
+python -m pytest -q             # 37 个测试
 ```
 
-Run frontend checks:
+运行前端检查：
 
 ```powershell
 Set-Location E:\Agents\frontend
-npm test                        # 28 tests
+npm test                        # 28 个测试
 npm run lint
 npm run build
 ```
 
-Known local note: on this Windows environment, pytest can emit temporary
-directory cleanup warnings such as `WinError 145` after successful test runs. The
-important signal is the command exit code and pytest pass count.
+已知本地说明：在此 Windows 环境下，pytest 可能在测试成功运行后输出临时
+目录清理警告（如 `WinError 145`）。重要信号是命令退出码和 pytest 通过数。
 
-## Current Hardening
+## 当前加固情况
 
-Recent robustness work includes:
+### 健壮性
 
-- Bounded list loading for tasks, messages, and conversations.
-- Stale WebSocket event guards on the frontend.
-- Observable background task dispatch.
-- Atomic `pending -> running` task claims.
-- Model-call timeout handling.
-- Startup recovery for unfinished `pending` and interrupted `running` tasks.
-- Fallback failure persistence when the active task execution session is invalid.
-- Safer frontend API error normalization for non-envelope error bodies.
-- Workspace-aligned Agent Console loading and WebSocket subscription.
+- 任务、消息、会话列表的分页上限。
+- 前端对过期 WebSocket 事件的守卫。
+- 可观测的后台任务派发。
+- 原子化的 `pending -> running` 任务认领。
+- 模型调用超时处理。
+- 启动时恢复未完成的 `pending` 和中断的 `running` 任务。
+- 失效 SQLAlchemy 会话的 fallback 失败持久化。
+- 前端对非标准 API 错误体的安全归一化处理。
+- 按工作区对齐的 Agent Console 加载和 WebSocket 订阅。
 
-Recent code-quality improvements:
+### 代码质量
 
-- Shared `useWorkspaceSocket` hook extracted from four duplicated WebSocket
-  connection implementations.
-- `taskTimestamp`, `taskStatusRank`, and `shouldApplyTaskStatus` deduplicated
-  into `lib/task-utils.ts` from `useChat` and `useTasks`.
-- Dead code removed: `SystemStatus`, `SoftwareDock` placeholder, and
-  redundant `selectConsoleAgents` filter.
-- `ErrorBoundary` component wrapping all five page components with a
-  localized fallback UI and retry action.
-- Centralized constants (`RECONNECT_DELAY_MS`, `TASK_REFRESH_DELAY_MS`,
-  `MESSAGE_LIST_LIMIT`, `TASK_LIST_LIMIT`, `CONVERSATION_LIST_LIMIT`) in
-  `lib/constants.ts`.
-- `fetchedRef` StrictMode double-fetch guard applied to all data-loading
-  hooks.
-- `TaskStepEventPayload` Pydantic schema replacing a hand-written dict in
-  `task.step_changed` WebSocket events.
-- Per-workspace concurrent-task cap (max 3 running tasks; 429 on overflow).
-- Model-call cost extracted from LiteLLM provider responses and persisted in
-  `ModelCall.cost`.
-- `MessageType.receipt` annotated as reserved for future use.
-- Frontend test coverage expanded from 2 to 28 tests, covering shared task
-  utilities, formatting helpers, and the API client success path.
+- 共用 `useWorkspaceSocket` Hook，从 4 处重复的 WebSocket 连接实现中提取。
+- `taskTimestamp`、`taskStatusRank`、`shouldApplyTaskStatus` 从
+  `useChat` 和 `useTasks` 中去重，提取到 `lib/task-utils.ts`。
+- 移除死代码：`SystemStatus`、`SoftwareDock` 占位组件，以及冗余的
+  `selectConsoleAgents` 过滤函数。
+- `ErrorBoundary` 组件包裹全部 5 个页面组件，含本地化 fallback UI 和重试按钮。
+- 常量集中管理（`RECONNECT_DELAY_MS`、`TASK_REFRESH_DELAY_MS`、
+  `MESSAGE_LIST_LIMIT`、`TASK_LIST_LIMIT`、`CONVERSATION_LIST_LIMIT`）
+  于 `lib/constants.ts`。
+- `fetchedRef` StrictMode 双重请求防护覆盖全部数据加载 Hook。
+- `TaskStepEventPayload` Pydantic Schema 替换 `task.step_changed` 中的
+  手写字典。
+- 按工作区并发任务上限（最多 3 个进行中任务，超出返回 429）。
+- 从 LiteLLM 响应提取模型调用成本，写入 `ModelCall.cost`。
+- `MessageType.receipt` 标注为未来功能预留。
+- 前端测试覆盖从 2 个扩展到 28 个，覆盖共享任务工具函数、格式化辅助函数
+  和 API 客户端成功路径。
 
-## GitHub Publishing
+## 代码仓库
 
-This repository is published at https://github.com/liwe123/Agent-Togterher.
+本仓库发布于 https://github.com/liwe123/Agent-Togterher。
 
-To push changes:
+推送变更：
 
 ```powershell
 Set-Location E:\Agents
 git push -u origin main
 ```
 
-## Roadmap
+## 路线图
 
-- Add Alembic migrations before schema changes become frequent.
-- Replace in-process background dispatch with a durable Redis-backed worker
-  queue.
-- Parallelize worker execution in the multi-agent workflow (currently
-  sequential due to SQLite write constraints; a `TODO` in `core/orchestrator.py`
-  marks the `asyncio.gather` change for the PostgreSQL migration).
-- Add Redis Pub/Sub or another shared event bus for multi-process WebSocket
-  broadcasts.
-- Add retry/review loops for worker output that fails QA review.
-- Expand frontend tests around WebSocket reconnection, hook state transitions,
-  and end-to-end chat/task flows.
+- 在 Schema 变更频繁前引入 Alembic 迁移。
+- 将进程内后台派发替换为持久化的 Redis 消息队列 Worker。
+- 多 Agent 工作流中 Worker 阶段并行化（当前因 SQLite 写入限制为串行；
+  `core/orchestrator.py` 中有 `TODO` 标记了迁移 PostgreSQL 后的
+  `asyncio.gather` 改造点）。
+- 引入 Redis Pub/Sub 或其他共享事件总线以支持多进程 WebSocket 广播。
+- 增加 Worker 输出未通过 QA 审核时的重试/复核循环。
+- 扩展前端测试覆盖 WebSocket 重连、Hook 状态转换以及端到端群聊/任务流程。
 
-## License
+## 许可证
 
-No license has been selected yet. Add one before publishing this repository
-publicly.
+尚未选择许可证。公开发布前请添加许可证。
