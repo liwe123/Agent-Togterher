@@ -38,7 +38,17 @@ execution, model settings, and contact-style agent directory views.
 - Fallback failure persistence when the active SQLAlchemy session becomes
   invalid during task failure handling.
 - Frontend data guards for non-standard API error responses.
-- Basic frontend unit tests using Node's built-in test runner.
+- Per-workspace concurrency control (max 3 running tasks, HTTP 429 on overflow).
+- Model call cost tracking extracted from LiteLLM provider responses.
+- React Error Boundary with fallback UI on all page components.
+- Shared WebSocket connection hook eliminating duplicated reconnect logic.
+- Deduplicated task state helpers (`taskTimestamp`, `taskStatusRank`,
+  `shouldApplyTaskStatus`) extracted to shared utilities.
+- Strict Mode double-fetch guard (`fetchedRef`) on all data-loading hooks.
+- Centralized frontend constants for reconnect delays, list limits, and
+  refresh intervals.
+- Pydantic schema for `task.step_changed` WebSocket events (replaces raw dict).
+- Frontend unit tests using Node's built-in test runner (28 tests).
 
 ## Tech Stack
 
@@ -66,7 +76,7 @@ execution, model settings, and contact-style agent directory views.
 |   |   |-- schemas/       # Pydantic request/response schemas
 |   |   |-- services/      # LiteLLM integration
 |   |   `-- websocket/     # Workspace WebSocket routing and manager
-|   `-- tests/             # Backend pytest suite
+|   `-- tests/             # Backend pytest suite (37 tests)
 |-- config/
 |   `-- models.yaml        # Model aliases and fallback configuration
 |-- docs/
@@ -74,11 +84,11 @@ execution, model settings, and contact-style agent directory views.
 |   `-- websocket.md
 |-- frontend/
 |   |-- src/app/           # Next.js routes
-|   |-- src/components/    # Console, chat, task, settings, contact UI
-|   |-- src/hooks/         # Data loading and WebSocket hooks
-|   |-- src/lib/           # API client and frontend helpers
+|   |-- src/components/    # Console, chat, task, settings, error-boundary
+|   |-- src/hooks/         # Data loading, WebSocket, and shared workspace socket
+|   |-- src/lib/           # API client, formatters, task utils, constants
 |   |-- src/types/         # Frontend TypeScript models
-|   `-- tests/             # Node test runner tests
+|   `-- tests/             # Node test runner tests (28 tests)
 |-- docker-compose.yml
 |-- .env.example
 `-- HANDOFF.md
@@ -206,14 +216,14 @@ Run backend checks:
 ```powershell
 Set-Location E:\Agents\backend
 python -m compileall -q app tests
-python -m pytest -q
+python -m pytest -q             # 37 tests
 ```
 
 Run frontend checks:
 
 ```powershell
 Set-Location E:\Agents\frontend
-npm test
+npm test                        # 28 tests
 npm run lint
 npm run build
 ```
@@ -236,37 +246,54 @@ Recent robustness work includes:
 - Safer frontend API error normalization for non-envelope error bodies.
 - Workspace-aligned Agent Console loading and WebSocket subscription.
 
+Recent code-quality improvements:
+
+- Shared `useWorkspaceSocket` hook extracted from four duplicated WebSocket
+  connection implementations.
+- `taskTimestamp`, `taskStatusRank`, and `shouldApplyTaskStatus` deduplicated
+  into `lib/task-utils.ts` from `useChat` and `useTasks`.
+- Dead code removed: `SystemStatus`, `SoftwareDock` placeholder, and
+  redundant `selectConsoleAgents` filter.
+- `ErrorBoundary` component wrapping all five page components with a
+  localized fallback UI and retry action.
+- Centralized constants (`RECONNECT_DELAY_MS`, `TASK_REFRESH_DELAY_MS`,
+  `MESSAGE_LIST_LIMIT`, `TASK_LIST_LIMIT`, `CONVERSATION_LIST_LIMIT`) in
+  `lib/constants.ts`.
+- `fetchedRef` StrictMode double-fetch guard applied to all data-loading
+  hooks.
+- `TaskStepEventPayload` Pydantic schema replacing a hand-written dict in
+  `task.step_changed` WebSocket events.
+- Per-workspace concurrent-task cap (max 3 running tasks; 429 on overflow).
+- Model-call cost extracted from LiteLLM provider responses and persisted in
+  `ModelCall.cost`.
+- `MessageType.receipt` annotated as reserved for future use.
+- Frontend test coverage expanded from 2 to 28 tests, covering shared task
+  utilities, formatting helpers, and the API client success path.
+
 ## GitHub Publishing
 
-This repository currently has no configured Git remote. To publish manually after
-creating a GitHub repository:
+This repository is published at https://github.com/liwe123/Agent-Togterher.
+
+To push changes:
 
 ```powershell
 Set-Location E:\Agents
-git remote add origin https://github.com/<owner>/<repo>.git
 git push -u origin main
 ```
-
-If you prefer GitHub CLI:
-
-```powershell
-winget install --id GitHub.cli
-gh auth login
-gh repo create agent-console --private --source=. --remote=origin --push
-```
-
-Use `--public` instead of `--private` only if the code and configuration are safe
-to publish publicly.
 
 ## Roadmap
 
 - Add Alembic migrations before schema changes become frequent.
 - Replace in-process background dispatch with a durable Redis-backed worker
   queue.
+- Parallelize worker execution in the multi-agent workflow (currently
+  sequential due to SQLite write constraints; a `TODO` in `core/orchestrator.py`
+  marks the `asyncio.gather` change for the PostgreSQL migration).
 - Add Redis Pub/Sub or another shared event bus for multi-process WebSocket
   broadcasts.
 - Add retry/review loops for worker output that fails QA review.
-- Expand frontend tests around chat, task updates, and WebSocket reducers.
+- Expand frontend tests around WebSocket reconnection, hook state transitions,
+  and end-to-end chat/task flows.
 
 ## License
 
