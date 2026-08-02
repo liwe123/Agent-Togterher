@@ -10,7 +10,7 @@
   <img src="https://img.shields.io/badge/status-MVP-oklch(0.76%200.16%2065)?style=flat" alt="MVP">
   <img src="https://img.shields.io/badge/python-3.11+-blue?style=flat" alt="Python">
   <img src="https://img.shields.io/badge/next-16-black?style=flat" alt="Next.js">
-  <img src="https://img.shields.io/badge/tests-37%20%2B%2028%20passing-oklch(0.72%200.15%20155)?style=flat" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-40%20%2B%2028%20passing-oklch(0.72%200.15%20155)?style=flat" alt="Tests">
   <img src="https://img.shields.io/badge/license-TBD-lightgrey?style=flat" alt="License">
 </p>
 
@@ -79,6 +79,29 @@ Manager 汇总 ──→ 最终结果回到群聊
 每个 Agent 有自己的 system prompt，模型可独立配置。`config/models.yaml` 定义
 了降级链 — 主 Provider 挂了自动切备用，切成功了会标 `fallback_used: true`。
 
+## 模型与密钥管理
+
+前端「设置」页（`/settings`）内置完整的模型管理能力，无需改配置文件：
+
+**API Key 管理** — 直接在前端填入各 Provider 的密钥，存进数据库，无需重启
+服务。密钥解析优先级：**数据库 > 环境变量**。已配置的 Key 永远不回传前端，
+只有 `configured` 布尔状态。
+
+```
+PUT    /api/provider-keys/{provider}   保存密钥
+DELETE /api/provider-keys/{provider}   删除密钥
+```
+
+**自定义模型** — 不再局限于 `models.yaml` 的 5 个预设模型。可以添加任意
+`provider/model` 组合（如 `openai/gpt-4o`、`anthropic/claude-sonnet-4`），
+支持配置 fallback 降级链，添加后立即可测试连通性、可被 Agent 绑定使用。
+
+```
+GET/POST/DELETE   /api/custom-models    自定义模型增删查
+```
+
+支持的 Provider：OpenAI、Anthropic、Gemini、DeepSeek、Qwen（DashScope）。
+
 ## 设计哲学
 
 深色暖石墨底，信号琥珀只标记"现在看这里"。没有紫蓝渐变，没有霓虹描边，
@@ -109,6 +132,11 @@ error                 → 错误横幅弹出
 
 ## 一分钟跑起来
 
+**Windows 一键启动**（推荐）— 双击 `start.bat` 或运行 `start.ps1`，
+自动复制 `.env`、启动服务、等待就绪后打开浏览器。
+
+或手动：
+
 ```powershell
 Copy-Item .env.example .env
 docker compose up --build
@@ -119,12 +147,13 @@ docker compose up --build
 - 健康检查 → http://localhost:8000/api/v1/health
 
 打开浏览器，默认工作区和 6 个 Agent 已就位。输入 `@项目总设计师 帮我...` 回车。
+API Key 直接在 `/settings` 页面填入即可，无需重启。
 
 ## 质量基线
 
 | 项 | 状态 |
 | --- | --- |
-| 后端 pytest | 37 passed |
+| 后端 pytest | 40 passed |
 | 前端 Node test | 28 passed |
 | ESLint | 0 errors / 0 warnings |
 | TypeScript + Next build | 编译通过 |
@@ -160,6 +189,16 @@ Alembic 在 Schema 变频繁之前引入即可。
 - `TaskStepEventPayload` — 手写 dict 换成 Pydantic Schema，和其他事件一致
 - 模型成本 — `ModelCall.cost` 以前恒为 0，现在从 LiteLLM 响应提取
 - 测试 — 前端从 2 个涨到 28 个
+
+### 下一轮（本轮）
+
+- **用户管理 API Key** — `ProviderCredential` 表 + `/api/provider-keys` 三接口，
+  前端设置页可直接填入/删除密钥，数据库优先于环境变量解析
+- **自定义模型接入** — `CustomModelConfig` 表 + `/api/custom-models` 三接口，
+  前端可添加任意 `provider/model` 组合并配置 fallback，无需改 YAML
+- **API Key 显示修复** — 修复眼睛图标切换失效的 BUG（`undefined` 与 React 批处理冲突），
+  保存后清空明文输入
+- 测试 — 后端 37 → 40（新增自定义模型 CRUD、解析、集成覆盖）
 
 ## 路线图
 
