@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import { requestData } from "@/lib/task-api"
 import type {
+  CustomModelConfig,
   ModelConfig,
   ModelTestResult,
   ProviderKeyStatus,
@@ -15,6 +16,7 @@ export function useSettings() {
   const [models, setModels] = useState<ModelConfig[]>([])
   const [providers, setProviders] = useState<ProviderStatus[]>([])
   const [providerKeys, setProviderKeys] = useState<ProviderKeyStatus[]>([])
+  const [customModels, setCustomModels] = useState<CustomModelConfig[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -28,14 +30,19 @@ export function useSettings() {
     setIsLoading(true)
     setError(null)
     try {
-      const [modelsData, providersData, providerKeysData] = await Promise.all([
-        requestData<ModelConfig[]>("/api/models/config"),
-        requestData<ProviderStatus[]>("/api/models/providers/status"),
-        requestData<ProviderKeyStatus[]>("/api/provider-keys"),
-      ])
+      const [modelsData, providersData, providerKeysData, customModelsData] =
+        await Promise.all([
+          requestData<ModelConfig[]>("/api/models/config"),
+          requestData<ProviderStatus[]>("/api/models/providers/status"),
+          requestData<ProviderKeyStatus[]>("/api/provider-keys"),
+          requestData<CustomModelConfig[]>("/api/custom-models").catch(
+            () => [] as CustomModelConfig[],
+          ),
+        ])
       setModels(modelsData)
       setProviders(providersData)
       setProviderKeys(providerKeysData)
+      setCustomModels(customModelsData)
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载设置失败")
     } finally {
@@ -119,10 +126,39 @@ export function useSettings() {
     )
   }, [])
 
+  const addCustomModel = useCallback(
+    async (config: {
+      name: string
+      provider: string
+      model: string
+      purpose?: string
+      fallback_model?: string | null
+    }) => {
+      const created = await requestData<CustomModelConfig>(
+        "/api/custom-models",
+        {
+          method: "POST",
+          body: JSON.stringify(config),
+        },
+      )
+      setCustomModels((prev) => [...prev, created])
+      return created
+    },
+    [],
+  )
+
+  const deleteCustomModel = useCallback(async (name: string) => {
+    await requestData(`/api/custom-models/${encodeURIComponent(name)}`, {
+      method: "DELETE",
+    })
+    setCustomModels((prev) => prev.filter((m) => m.name !== name))
+  }, [])
+
   return {
     models,
     providers,
     providerKeys,
+    customModels,
     isLoading,
     error,
     retry,
@@ -130,5 +166,7 @@ export function useSettings() {
     testModel,
     saveProviderKey,
     removeProviderKey,
+    addCustomModel,
+    deleteCustomModel,
   }
 }

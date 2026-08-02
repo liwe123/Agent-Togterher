@@ -8,6 +8,14 @@ export interface ModelConfig {
   fallback_model: string | null
 }
 
+export interface CustomModelConfig {
+  name: string
+  provider: string
+  model: string
+  purpose: string
+  fallback_model: string | null
+}
+
 export interface ProviderStatus {
   provider: string
   configured: boolean

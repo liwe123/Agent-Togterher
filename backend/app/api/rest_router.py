@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints.agents import router as agents_router
 from app.api.v1.endpoints.conversations import router as conversations_router
+from app.api.v1.endpoints.custom_models import router as custom_models_router
 from app.api.v1.endpoints.messages import router as messages_router
 from app.api.v1.endpoints.models import router as models_router
 from app.api.v1.endpoints.provider_keys import router as provider_keys_router
@@ -20,6 +21,7 @@ rest_api_router = APIRouter(
 rest_api_router.include_router(workspaces_router)
 rest_api_router.include_router(agents_router)
 rest_api_router.include_router(conversations_router)
+rest_api_router.include_router(custom_models_router)
 rest_api_router.include_router(messages_router)
 rest_api_router.include_router(tasks_router)
 rest_api_router.include_router(models_router)

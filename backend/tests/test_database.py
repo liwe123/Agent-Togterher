@@ -86,6 +86,16 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "created_at",
             "updated_at",
         },
+        "custom_model_configs": {
+            "id",
+            "name",
+            "provider",
+            "model",
+            "purpose",
+            "fallback_model",
+            "created_at",
+            "updated_at",
+        },
     }
 
     assert set(Base.metadata.tables) == set(expected_columns)

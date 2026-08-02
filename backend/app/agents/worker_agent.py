@@ -28,6 +28,7 @@ async def execute_subtask(
     plan: ManagerPlan,
     subtask: ManagerSubtask,
     api_keys: dict[str, str] | None = None,
+    custom_models: dict[str, dict] | None = None,
 ) -> ChatCompletionResult:
     expected_worker = worker_name_for_task_type(subtask.task_type)
     expected_role = WORKER_ROLE_BY_TASK_TYPE[subtask.task_type]
@@ -52,6 +53,7 @@ async def execute_subtask(
         ],
         temperature=0.4,
         api_keys=api_keys,
+        custom_models=custom_models,
     )
 
 

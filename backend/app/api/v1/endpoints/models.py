@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.errors import AppError
 from app.core.config import get_settings
 from app.db.session import get_db
-from app.models import Agent, Workspace
+from app.models import Agent, CustomModelConfig, Workspace
 from app.schemas import (
     ErrorResponse,
     ModelConfigInfo,
@@ -56,6 +56,17 @@ async def list_models(
             provider=config.provider,
             configured=_provider_is_configured(config.provider),
         )
+    custom_rows = (
+        await session.execute(
+            select(CustomModelConfig).order_by(CustomModelConfig.id)
+        )
+    ).scalars().all()
+    for row in custom_rows:
+        models_by_name[row.name] = ModelInfo(
+            name=row.name,
+            provider=row.provider,
+            configured=_provider_is_configured(row.provider),
+        )
     models = [
         models_by_name[name]
         for name in sorted(models_by_name)
@@ -68,8 +79,10 @@ _KNOWN_PROVIDERS = ("openai", "anthropic", "gemini", "deepseek", "qwen")
 
 
 @router.get("/config", response_model=SuccessResponse[list[ModelConfigInfo]])
-async def get_model_config() -> SuccessResponse[list[ModelConfigInfo]]:
-    """Return model role configurations from models.yaml (no API keys)."""
+async def get_model_config(
+    session: AsyncSession = Depends(get_db),
+) -> SuccessResponse[list[ModelConfigInfo]]:
+    """Return model role configurations from models.yaml plus user-defined custom models (no API keys)."""
     configs = litellm_service.get_model_configs()
     items = [
         ModelConfigInfo(
@@ -81,6 +94,21 @@ async def get_model_config() -> SuccessResponse[list[ModelConfigInfo]]:
         )
         for cfg in configs.values()
     ]
+    custom_rows = (
+        await session.execute(
+            select(CustomModelConfig).order_by(CustomModelConfig.id)
+        )
+    ).scalars().all()
+    items.extend(
+        ModelConfigInfo(
+            name=row.name,
+            provider=row.provider,
+            model=row.model,
+            purpose=row.purpose,
+            fallback_model=row.fallback_model,
+        )
+        for row in custom_rows
+    )
     return SuccessResponse(data=items)
 
 

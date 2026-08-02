@@ -153,6 +153,7 @@ async def test_run_task_completes_and_persists_result(orchestrator_session) -> N
             },
         ],
         api_keys={},
+        custom_models={},
     )
     await orchestrator_session.refresh(agent)
     step = await orchestrator_session.scalar(

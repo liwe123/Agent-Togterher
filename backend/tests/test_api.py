@@ -255,6 +255,7 @@ def test_task_run_endpoint_executes_agent_and_returns_result(
             {"role": "user", "content": "@Tester Execute this task"},
         ],
         api_keys={},
+        custom_models={},
     )
     assert completed["status"] == "completed"
     assert completed["result"] == "Task executed successfully"
@@ -418,6 +419,52 @@ def test_model_endpoints(api_client: TestClient) -> None:
         "success": False,
         "error": "LiteLLM unavailable",
     }
+
+
+def test_custom_model_endpoints_and_model_config_integration(
+    api_client: TestClient,
+) -> None:
+    payload = {
+        "name": "my_analyst",
+        "provider": "my-provider",
+        "model": "custom-1",
+        "purpose": "自定义分析模型",
+        "fallback_model": "cheap_model",
+    }
+    created = assert_success(
+        api_client.post("/api/custom-models", json=payload),
+        201,
+    )
+    assert created["name"] == "my_analyst"
+    assert created["purpose"] == "自定义分析模型"
+
+    listed = assert_success(api_client.get("/api/custom-models"))
+    assert [item["name"] for item in listed] == ["my_analyst"]
+
+    duplicate = api_client.post("/api/custom-models", json=payload)
+    assert duplicate.status_code == 409
+    assert "already exists" in duplicate.json()["error"]
+
+    configs = assert_success(api_client.get("/api/models/config"))
+    custom_cfg = next(item for item in configs if item["name"] == "my_analyst")
+    assert custom_cfg["provider"] == "my-provider"
+    assert custom_cfg["model"] == "custom-1"
+    assert custom_cfg["fallback_model"] == "cheap_model"
+
+    models = assert_success(api_client.get("/api/models"))
+    custom_model = next(item for item in models if item["name"] == "my_analyst")
+    assert custom_model["provider"] == "my-provider"
+    assert custom_model["configured"] is False
+
+    deleted = assert_success(api_client.delete("/api/custom-models/my_analyst"))
+    assert deleted == {"deleted": "my_analyst"}
+
+    missing = api_client.delete("/api/custom-models/my_analyst")
+    assert missing.status_code == 404
+    assert "not found" in missing.json()["error"]
+
+    after_delete = assert_success(api_client.get("/api/models/config"))
+    assert all(item["name"] != "my_analyst" for item in after_delete)
 
 
 def test_validation_errors_are_wrapped(api_client: TestClient) -> None:

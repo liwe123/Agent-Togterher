@@ -110,9 +110,15 @@ class AgentOrchestrator:
             )
 
             db_api_keys = await litellm_service.get_db_api_keys(self._session)
+            db_custom_models = await litellm_service.get_db_custom_models(self._session)
 
             try:
-                completion = await self.call_agent_model(task, agent, api_keys=db_api_keys)
+                completion = await self.call_agent_model(
+                    task,
+                    agent,
+                    api_keys=db_api_keys,
+                    custom_models=db_custom_models,
+                )
             except Exception as exc:
                 await self.save_model_call(task, agent, error=exc)
                 raise
@@ -171,6 +177,7 @@ class AgentOrchestrator:
             )
 
             db_api_keys = await litellm_service.get_db_api_keys(self._session)
+            db_custom_models = await litellm_service.get_db_custom_models(self._session)
 
             await self.update_agent_status(manager, "running")
             step = await self.save_task_step(
@@ -188,6 +195,7 @@ class AgentOrchestrator:
                     task.description,
                     [agent.name for agent in workspace_agents],
                     api_keys=db_api_keys,
+                    custom_models=db_custom_models,
                 ),
             )
             plan = manager_agent.parse_manager_plan(manager_completion.content)
@@ -242,6 +250,7 @@ class AgentOrchestrator:
                         plan,
                         subtask,
                         api_keys=db_api_keys,
+                        custom_models=db_custom_models,
                     ),
                 )
                 result = {
@@ -299,6 +308,7 @@ class AgentOrchestrator:
                     plan,
                     worker_results,
                     api_keys=db_api_keys,
+                    custom_models=db_custom_models,
                 ),
             )
             await self.save_task_step(
@@ -336,6 +346,7 @@ class AgentOrchestrator:
                     worker_results,
                     review_completion.content,
                     api_keys=db_api_keys,
+                    custom_models=db_custom_models,
                 ),
             )
             await self.save_task_step(
@@ -461,6 +472,7 @@ class AgentOrchestrator:
         task: Task,
         agent: Agent,
         api_keys: dict[str, str] | None = None,
+        custom_models: dict[str, dict] | None = None,
     ) -> ChatCompletionResult:
         return await litellm_service.chat_completion(
             agent.model_name,
@@ -469,6 +481,7 @@ class AgentOrchestrator:
                 {"role": "user", "content": task.description},
             ],
             api_keys=api_keys,
+            custom_models=custom_models,
         )
 
     async def save_task_step(
@@ -848,6 +861,7 @@ async def call_agent_model(
     task: Task,
     agent: Agent,
     api_keys: dict[str, str] | None = None,
+    custom_models: dict[str, dict] | None = None,
 ) -> ChatCompletionResult:
     """Call the configured Agent model without coupling the caller to HTTP."""
     return await litellm_service.chat_completion(
@@ -857,6 +871,7 @@ async def call_agent_model(
             {"role": "user", "content": task.description},
         ],
         api_keys=api_keys,
+        custom_models=custom_models,
     )
 
 

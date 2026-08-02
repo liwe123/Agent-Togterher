@@ -6,12 +6,14 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronRight,
+  ChevronUp,
   Clock,
   Cpu,
   Eye,
   EyeOff,
   FlaskConical,
   LoaderCircle,
+  Plus,
   Save,
   Settings,
   ShieldCheck,
@@ -28,7 +30,7 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useSettings } from "@/hooks/use-settings"
 import { cn } from "@/lib/utils"
-import type { ModelConfig, TestState } from "@/types/settings"
+import type { CustomModelConfig, ModelConfig, TestState } from "@/types/settings"
 
 /* -------------------------------------------------------------------------- */
 /* Provider display helpers                                                   */
@@ -63,6 +65,9 @@ const roleLabels: Record<string, string> = {
   cheap_model: "低成本模型",
 }
 
+/** Known model purposes, used to populate the custom-model form. */
+const purposeOptions = Object.keys(roleLabels)
+
 /* -------------------------------------------------------------------------- */
 /* Component                                                                  */
 /* -------------------------------------------------------------------------- */
@@ -72,6 +77,7 @@ export function SettingsPage() {
     models,
     providers,
     providerKeys,
+    customModels,
     isLoading,
     error,
     retry,
@@ -79,6 +85,8 @@ export function SettingsPage() {
     testModel,
     saveProviderKey,
     removeProviderKey,
+    addCustomModel,
+    deleteCustomModel,
   } = useSettings()
 
   // Local state for API key editor
@@ -86,6 +94,72 @@ export function SettingsPage() {
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({})
   const [savingKeys, setSavingKeys] = useState<Record<string, boolean>>({})
   const [keyErrors, setKeyErrors] = useState<Record<string, string | null>>({})
+
+  // Local state for the "add custom model" form
+  const [showAddForm, setShowAddForm] = useState(false)
+  const [savingModel, setSavingModel] = useState(false)
+  const [deletingModels, setDeletingModels] = useState<Record<string, boolean>>({})
+  const [modelFormError, setModelFormError] = useState<string | null>(null)
+  const [modelForm, setModelForm] = useState({
+    name: "",
+    provider: "openai",
+    model: "",
+    purpose: "",
+    fallback_model: "",
+  })
+
+  const resetModelForm = () =>
+    setModelForm({
+      name: "",
+      provider: "openai",
+      model: "",
+      purpose: "",
+      fallback_model: "",
+    })
+
+  const handleAddCustomModel = async () => {
+    const name = modelForm.name.trim()
+    const model = modelForm.model.trim()
+    if (!name || !model) {
+      setModelFormError("名称与模型 ID 为必填项")
+      return
+    }
+    setSavingModel(true)
+    setModelFormError(null)
+    try {
+      await addCustomModel({
+        name,
+        provider: modelForm.provider,
+        model,
+        purpose: modelForm.purpose.trim() || undefined,
+        fallback_model: modelForm.fallback_model.trim() || null,
+      })
+      resetModelForm()
+      setShowAddForm(false)
+    } catch (err) {
+      setModelFormError(
+        err instanceof Error ? err.message : "添加自定义模型失败",
+      )
+    } finally {
+      setSavingModel(false)
+    }
+  }
+
+  const handleDeleteCustomModel = async (model: CustomModelConfig) => {
+    if (
+      !window.confirm(
+        `确定删除自定义模型「${model.name}」吗？该操作不可撤销。`,
+      )
+    ) {
+      return
+    }
+    setDeletingModels((prev) => ({ ...prev, [model.name]: true }))
+    try {
+      await deleteCustomModel(model.name)
+    } finally {
+      setDeletingModels((prev) => ({ ...prev, [model.name]: false }))
+    }
+  }
 
   // Merge env-var provider status with stored key status for the tiles.
   // A provider is "configured" if either source says it is.
@@ -125,6 +199,40 @@ export function SettingsPage() {
     }
     return result
   }, [providerKeys, providers])
+
+  // Display list: YAML models first, then custom models.
+  const displayModels = useMemo(() => {
+    const yaml = models.map((m) => ({ ...m, isCustom: false }))
+    const custom = customModels.map((m) => ({ ...m, isCustom: true }))
+    return [...yaml, ...custom]
+  }, [models, customModels])
+
+  // Provider options for the custom-model form.
+  const providerOptions = useMemo(() => {
+    const seen = new Set<string>()
+    const result: string[] = []
+    for (const key of Object.keys(providerLabels)) {
+      const k = key.toLowerCase()
+      if (!seen.has(k)) {
+        seen.add(k)
+        result.push(k)
+      }
+    }
+    for (const p of allProviders) {
+      const k = p.provider.toLowerCase()
+      if (!seen.has(k)) {
+        seen.add(k)
+        result.push(k)
+      }
+    }
+    return result
+  }, [allProviders])
+
+  // Fallback options reference existing model names.
+  const fallbackOptions = useMemo(
+    () => displayModels.map((m) => m.name),
+    [displayModels],
+  )
 
   const handleSaveKey = async (provider: string) => {
     const apiKey = keyInputs[provider]?.trim()
@@ -184,7 +292,7 @@ export function SettingsPage() {
               </div>
               <Badge className="connection-chip" variant="outline">
                 <Settings aria-hidden="true" className="mr-1 size-3" />
-                {models.length} 个模型
+                {models.length + customModels.length} 个模型
               </Badge>
             </header>
 
@@ -319,10 +427,10 @@ export function SettingsPage() {
                                 type="button"
                                 aria-label={showKey ? "隐藏密钥" : "显示密钥"}
                                 onClick={() =>
-                                  setShowKeys((prev) => ({
-                                    ...prev,
-                                    [p.provider]: !prev[p.provider],
-                                  }))
+                                  setShowKeys((prev) => {
+                                    const current = prev[p.provider] ?? false
+                                    return { ...prev, [p.provider]: !current }
+                                  })
                                 }
                                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
                               >
@@ -409,20 +517,20 @@ export function SettingsPage() {
                         模型列表
                       </h2>
                       <p className="text-[11px] text-muted-foreground sm:text-xs">
-                        来自 models.yaml 配置
+                        models.yaml 配置与自定义模型
                       </p>
                     </div>
                   </div>
                   <span className="font-mono text-xs text-muted-foreground">
-                    {models.length} 个
+                    {displayModels.length} 个
                   </span>
                 </div>
 
                 {isLoading ? (
                   <ModelListSkeleton />
-                ) : error && models.length === 0 ? (
+                ) : error && displayModels.length === 0 ? (
                   <ModelListError error={error} onRetry={retry} />
-                ) : models.length === 0 ? (
+                ) : displayModels.length === 0 ? (
                   <div className="flex min-h-64 flex-col items-center justify-center gap-3 p-8 text-center">
                     <span className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
                       <Cpu aria-hidden="true" className="size-5" />
@@ -430,25 +538,215 @@ export function SettingsPage() {
                     <div>
                       <h3 className="text-sm font-medium">暂无模型配置</h3>
                       <p className="mt-1 text-xs text-muted-foreground">
-                        请检查 config/models.yaml 文件。
+                        请检查 config/models.yaml 文件或添加自定义模型。
                       </p>
                     </div>
                   </div>
                 ) : (
                   <div className="grid gap-px bg-border/40 sm:grid-cols-1 lg:grid-cols-2">
-                    {models.map((model) => (
+                    {displayModels.map((model) => (
                       <ModelCard
-                        key={model.name}
+                        key={`${model.isCustom ? "custom" : "yaml"}-${model.name}`}
                         model={model}
+                        isCustom={model.isCustom}
                         testState={
                           testStates[model.name] ?? { status: "idle" }
                         }
                         onTest={() => testModel(model.name)}
+                        onDelete={() => handleDeleteCustomModel(model)}
+                        deleting={deletingModels[model.name] ?? false}
                         providerConfigured={isProviderConfigured(model.provider)}
                       />
                     ))}
                   </div>
                 )}
+
+                {/* Add custom model */}
+                <div className="border-t border-border px-4 py-4 sm:px-5">
+                  {!showAddForm ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowAddForm(true)}
+                    >
+                      <Plus aria-hidden="true" className="size-3.5" />
+                      添加自定义模型
+                    </Button>
+                  ) : (
+                    <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-sm font-semibold">添加自定义模型</h3>
+                          <p className="mt-1 text-[11px] text-muted-foreground">
+                            注册 models.yaml 之外的额外模型配置
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          disabled={savingModel}
+                          onClick={() => {
+                            setShowAddForm(false)
+                            setModelFormError(null)
+                          }}
+                        >
+                          <ChevronUp aria-hidden="true" className="size-3.5" />
+                          收起
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+                        <label className="flex min-w-0 flex-col gap-1.5">
+                          <span className="text-[11px] font-medium text-muted-foreground">
+                            名称 <span className="text-destructive">*</span>
+                          </span>
+                          <input
+                            type="text"
+                            value={modelForm.name}
+                            onChange={(e) =>
+                              setModelForm((prev) => ({
+                                ...prev,
+                                name: e.target.value,
+                              }))
+                            }
+                            placeholder="如 code_model"
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-primary-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                        </label>
+
+                        <label className="flex min-w-0 flex-col gap-1.5">
+                          <span className="text-[11px] font-medium text-muted-foreground">
+                            Provider <span className="text-destructive">*</span>
+                          </span>
+                          <select
+                            value={modelForm.provider}
+                            onChange={(e) =>
+                              setModelForm((prev) => ({
+                                ...prev,
+                                provider: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-primary-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          >
+                            {providerOptions.map((p) => (
+                              <option key={p} value={p}>
+                                {providerDisplayName(p)}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="flex min-w-0 flex-col gap-1.5">
+                          <span className="text-[11px] font-medium text-muted-foreground">
+                            模型 ID <span className="text-destructive">*</span>
+                          </span>
+                          <input
+                            type="text"
+                            value={modelForm.model}
+                            onChange={(e) =>
+                              setModelForm((prev) => ({
+                                ...prev,
+                                model: e.target.value,
+                              }))
+                            }
+                            placeholder="如 gpt-4o-mini"
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-primary-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          />
+                        </label>
+
+                        <label className="flex min-w-0 flex-col gap-1.5">
+                          <span className="text-[11px] font-medium text-muted-foreground">
+                            用途 <span className="text-muted-foreground/60">可选</span>
+                          </span>
+                          <select
+                            value={modelForm.purpose}
+                            onChange={(e) =>
+                              setModelForm((prev) => ({
+                                ...prev,
+                                purpose: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-primary-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          >
+                            <option value="">无</option>
+                            {purposeOptions.map((p) => (
+                              <option key={p} value={p}>
+                                {roleLabels[p]}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label className="flex min-w-0 flex-col gap-1.5">
+                          <span className="text-[11px] font-medium text-muted-foreground">
+                            Fallback <span className="text-muted-foreground/60">可选</span>
+                          </span>
+                          <select
+                            value={modelForm.fallback_model}
+                            onChange={(e) =>
+                              setModelForm((prev) => ({
+                                ...prev,
+                                fallback_model: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-primary-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                          >
+                            <option value="">无</option>
+                            {fallbackOptions.map((name) => (
+                              <option key={name} value={name}>
+                                {roleLabels[name] ?? name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      {modelFormError && (
+                        <p className="text-xs text-destructive">
+                          {modelFormError}
+                        </p>
+                      )}
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          disabled={
+                            savingModel ||
+                            !modelForm.name.trim() ||
+                            !modelForm.provider.trim() ||
+                            !modelForm.model.trim()
+                          }
+                          onClick={handleAddCustomModel}
+                        >
+                          {savingModel ? (
+                            <LoaderCircle
+                              aria-hidden="true"
+                              className="size-3.5 animate-spin"
+                            />
+                          ) : (
+                            <Plus aria-hidden="true" className="size-3.5" />
+                          )}
+                          添加
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          disabled={savingModel}
+                          onClick={() => {
+                            resetModelForm()
+                            setModelFormError(null)
+                          }}
+                        >
+                          重置
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </section>
           </div>
@@ -464,13 +762,19 @@ export function SettingsPage() {
 
 function ModelCard({
   model,
+  isCustom,
   testState,
   onTest,
+  onDelete,
+  deleting,
   providerConfigured,
 }: {
   model: ModelConfig
+  isCustom: boolean
   testState: TestState
   onTest: () => void
+  onDelete: () => void
+  deleting: boolean
   providerConfigured: boolean
 }) {
   const colorClass = purposeColors[model.name] ?? "bg-muted text-muted-foreground"
@@ -489,25 +793,57 @@ function ModelCard({
             {model.name.charAt(0).toUpperCase()}
           </span>
           <div className="min-w-0">
-            <h3 className="truncate text-sm font-semibold">
-              {roleLabels[model.name] ?? model.name}
-            </h3>
+            <div className="flex items-center gap-1.5">
+              <h3 className="truncate text-sm font-semibold">
+                {roleLabels[model.name] ?? model.name}
+              </h3>
+              {isCustom && (
+                <Badge
+                  variant="secondary"
+                  className="shrink-0 px-1.5 text-[10px]"
+                >
+                  自定义
+                </Badge>
+              )}
+            </div>
             <p className="truncate font-mono text-[11px] text-muted-foreground">
               {model.name}
             </p>
           </div>
         </div>
-        <Badge
-          variant="outline"
-          className={cn(
-            "shrink-0 text-[10px]",
-            providerConfigured
-              ? "border-emerald-500/40 text-emerald-400"
-              : "border-orange-500/40 text-orange-400",
+        <div className="flex shrink-0 items-center gap-1.5">
+          {isCustom && (
+            <Button
+              type="button"
+              size="icon-sm"
+              variant="ghost"
+              disabled={deleting}
+              onClick={onDelete}
+              aria-label={`删除自定义模型 ${model.name}`}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              {deleting ? (
+                <LoaderCircle
+                  aria-hidden="true"
+                  className="size-3.5 animate-spin"
+                />
+              ) : (
+                <Trash2 aria-hidden="true" className="size-3.5" />
+              )}
+            </Button>
           )}
-        >
-          {providerConfigured ? "已配置" : "未配置"}
-        </Badge>
+          <Badge
+            variant="outline"
+            className={cn(
+              "shrink-0 text-[10px]",
+              providerConfigured
+                ? "border-emerald-500/40 text-emerald-400"
+                : "border-orange-500/40 text-orange-400",
+            )}
+          >
+            {providerConfigured ? "已配置" : "未配置"}
+          </Badge>
+        </div>
       </div>
 
       {/* Details */}

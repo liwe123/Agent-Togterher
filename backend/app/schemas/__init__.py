@@ -3,6 +3,7 @@
 from app.schemas.agent import AgentCreate, AgentRead, AgentStatusRead, AgentUpdate
 from app.schemas.common import ErrorResponse, SuccessResponse
 from app.schemas.conversation import ConversationCreate, ConversationRead
+from app.schemas.custom_model import CustomModelCreate, CustomModelRead
 from app.schemas.message import MessageCreate, MessageHubRead, MessageRead
 from app.schemas.model import (
     ModelConfigInfo,
@@ -34,6 +35,8 @@ __all__ = [
     "AgentUpdate",
     "ConversationCreate",
     "ConversationRead",
+    "CustomModelCreate",
+    "CustomModelRead",
     "ErrorResponse",
     "MessageCreate",
     "MessageHubRead",

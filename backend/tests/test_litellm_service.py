@@ -176,3 +176,93 @@ def test_settings_load_deepseek_key_from_env_file(tmp_path: Path) -> None:
 
     assert settings.deepseek_api_key is not None
     assert settings.deepseek_api_key.get_secret_value() == "unit-test-deepseek-key"
+
+
+def test_chat_completion_resolves_custom_model_from_db_dict(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = _settings(deepseek_api_key="unit-test-deepseek-key")
+    captured: dict = {}
+
+    async def fake_acompletion(**kwargs):
+        captured.update(kwargs)
+        return {
+            "choices": [{"message": {"content": "custom pong"}}],
+            "usage": {"prompt_tokens": 4, "completion_tokens": 2},
+        }
+
+    monkeypatch.setattr(litellm_service, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        litellm_service, "_import_acompletion", lambda: fake_acompletion
+    )
+    litellm_service.clear_model_config_cache()
+
+    custom_models = {
+        "custom_analyst": {
+            "provider": "deepseek",
+            "model": "deepseek-chat",
+            "purpose": "",
+            "fallback_model": None,
+        }
+    }
+
+    result = asyncio.run(
+        litellm_service.chat_completion(
+            "custom_analyst",
+            [{"role": "user", "content": "analyze"}],
+            temperature=0.2,
+            custom_models=custom_models,
+        )
+    )
+
+    assert result.content == "custom pong"
+    assert result.model_name == "deepseek/deepseek-chat"
+    assert result.provider == "deepseek"
+    assert result.requested_model == "custom_analyst"
+    assert result.usage.total_tokens == 6
+    assert result.fallback_used is False
+    assert captured["model"] == "deepseek/deepseek-chat"
+    assert captured["temperature"] == 0.2
+    assert captured["api_key"] == "unit-test-deepseek-key"
+
+
+def test_chat_completion_does_not_override_yaml_config_with_custom_model(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    settings = _settings(deepseek_api_key="unit-test-deepseek-key")
+    captured: dict = {}
+
+    async def fake_acompletion(**kwargs):
+        captured.update(kwargs)
+        return {
+            "choices": [{"message": {"content": "yaml pong"}}],
+            "usage": {"prompt_tokens": 4, "completion_tokens": 2},
+        }
+
+    monkeypatch.setattr(litellm_service, "get_settings", lambda: settings)
+    monkeypatch.setattr(
+        litellm_service, "_import_acompletion", lambda: fake_acompletion
+    )
+    litellm_service.clear_model_config_cache()
+
+    custom_models = {
+        "code_model": {
+            "provider": "openai",
+            "model": "gpt-4o",
+            "purpose": "试图覆盖 YAML 配置",
+            "fallback_model": None,
+        }
+    }
+
+    result = asyncio.run(
+        litellm_service.chat_completion(
+            "code_model",
+            [{"role": "user", "content": "ping"}],
+            custom_models=custom_models,
+        )
+    )
+
+    # YAML config wins; the custom openai/gpt-4o must not replace it.
+    assert result.model_name == "deepseek/deepseek-chat"
+    assert result.provider == "deepseek"
+    assert captured["model"] == "deepseek/deepseek-chat"

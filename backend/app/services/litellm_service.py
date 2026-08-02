@@ -300,6 +300,22 @@ async def get_db_api_keys(session) -> dict[str, str]:
     return {row.provider: row.api_key for row in rows}
 
 
+async def get_db_custom_models(session) -> dict[str, dict]:
+    """Load custom model configs from DB into a dict for chat_completion."""
+    from app.models import CustomModelConfig
+    from sqlalchemy import select
+    rows = (await session.execute(select(CustomModelConfig))).scalars().all()
+    return {
+        row.name: {
+            "provider": row.provider,
+            "model": row.model,
+            "purpose": row.purpose,
+            "fallback_model": row.fallback_model,
+        }
+        for row in rows
+    }
+
+
 async def is_provider_configured_async(provider: str, session=None) -> bool:
     """Return whether a provider has an API key (DB or env)."""
     if session is not None:
@@ -406,6 +422,7 @@ async def chat_completion(
     messages: Sequence[Message],
     temperature: float = 0.7,
     api_keys: dict[str, str] | None = None,
+    custom_models: dict[str, dict] | None = None,
 ) -> ChatCompletionResult:
     """Call a configured LiteLLM model, falling back on provider failures."""
     requested_model = model_name.strip()
@@ -414,6 +431,17 @@ async def chat_completion(
     _validate_request(messages, temperature)
 
     configs = get_model_configs()
+    if custom_models:
+        for alias, cfg in custom_models.items():
+            if alias in configs:
+                continue
+            configs[alias] = ModelConfig(
+                name=alias,
+                provider=cfg["provider"],
+                model=cfg["model"],
+                purpose=cfg.get("purpose") or alias,
+                fallback_model=cfg.get("fallback_model"),
+            )
     chain = _fallback_chain(requested_model, configs)
     acompletion = _import_acompletion()
     timeout_seconds = get_settings().model_request_timeout_seconds
