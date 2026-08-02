@@ -9,6 +9,7 @@ COPY --from=dependencies /app/node_modules ./node_modules
 COPY . .
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_BUILD_STANDALONE=1
 RUN npm run build
 
 FROM node:24-alpine AS runner
