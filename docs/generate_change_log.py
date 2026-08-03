@@ -27,6 +27,10 @@ from pathlib import Path
 # Change this when starting a new tracked era. Commits before it are ignored.
 BASELINE_SHA = "64887a4"
 
+# Commits on other lineages (e.g. the pre-existing origin/main line that was
+# overwritten by a force-push) that should still appear in the change log.
+EXTRA_SHAS = ["9c2dd0e"]
+
 REPO = Path(__file__).resolve().parents[1]  # repo root
 PRD = REPO / "docs" / "PRD.md"
 XLSX = REPO / "docs" / "Agent_Console_变更追踪.xlsx"
@@ -134,6 +138,28 @@ CURATED = {
         "Docs", "变更追踪表新增「改动内容」列，明确记录每次改了什么",
         "表结构更新(PRD.md + Excel)", "-", "否", "业务描述与前后端技术分离",
     ),
+    "9c2dd0e": (
+        "Requirement",
+        "前端视觉与响应式优化，新增通讯录 /contacts 页面与 Agent 头像组件",
+        "新增 agent-portrait.tsx、contacts-page.tsx(/contacts 路由)；agent-gallery/status-panel/app-sidebar/chat 组件重构；globals.css 视觉令牌与响应式优化",
+        "-", "否",
+        "1203 插入/471 删除，21 文件；位于独立主线(原 main)，当前分支强推覆盖 origin/main 后未合入",
+    ),
+}
+
+# Curated by exact commit subject (so docs/script commits render cleanly even
+# before their sha is known). Applied when the sha lookup misses.
+CURATED_BY_SUBJECT = {
+    "docs: auto-generate change log from git history": (
+        "Docs", "变更追踪表改为从 git history 自动生成",
+        "generate_change_log.py（爬取 git log + 自动推断列 + CURATED 人工覆盖 + 生成 PRD/Excel）",
+        "-", "否", "新提交自动生成行；已知提交按 sha 覆盖",
+    ),
+    "docs: add visual-aesthetics commit C-005 to change log": (
+        "Docs", "变更追踪表收录独立主线的视觉重构提交（C-005）",
+        "generate_change_log.py 支持 EXTRA_SHAS + 按 subject 覆盖", "-", "否",
+        "9c2dd0e 强推覆盖后归位",
+    ),
 }
 
 MODEL_FILES = ("app/models/", "provider_credentials", "custom_model_configs")
@@ -190,16 +216,36 @@ def type_from_subject(subject: str) -> str:
     return "Docs"
 
 
+def _commit_info(sha: str) -> tuple[str, str, str]:
+    out = run_git([
+        "log", "-1", sha, "--pretty=format:%h|%ad|%s",
+        "--date=format:%Y-%m-%d %H:%M",
+    ])
+    h, when, subject = out.strip().split("|", 2)
+    return h, when, subject
+
+
 def git_rows() -> list[tuple[str, str, str, str, str, str, str, str]]:
     out = run_git([
         "log", "--reverse", f"{BASELINE_SHA}..HEAD",
         "--pretty=format:%h|%ad|%s", "--date=format:%Y-%m-%d %H:%M",
     ])
+    commits: list[tuple[str, str, str]] = []
+    seen: set[str] = set()
+    for line in out.splitlines():
+        h, when, subject = line.split("|", 2)
+        commits.append((h, when, subject))
+        seen.add(h)
+    for sha in EXTRA_SHAS:
+        if sha not in seen and sha[:7] not in seen:
+            commits.append(_commit_info(sha))
+            seen.add(sha[:7])
+    commits.sort(key=lambda c: (c[1], c[0]))
+
     rows = []
-    for i, line in enumerate(out.splitlines(), start=1):
-        sha, when, subject = line.split("|", 2)
+    for i, (sha, when, subject) in enumerate(commits, start=1):
         files = changed_files(sha)
-        curated = CURATED.get(sha)
+        curated = CURATED.get(sha) or CURATED_BY_SUBJECT.get(subject)
         if curated:
             ctype, content, fe, be, db, notes = curated
         else:
