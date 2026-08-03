@@ -416,7 +416,7 @@ export function SettingsPage() {
                                 }
                                 disabled={isSaving}
                                 className={cn(
-                                  "w-full rounded-lg border bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50",
+                                  "w-full rounded-lg border bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50",
                                   configured
                                     ? "border-[oklch(0.72_0.15_155)]"
                                     : "border-[oklch(0.31_0.018_70)]",
@@ -599,7 +599,7 @@ export function SettingsPage() {
 
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                         <label className="flex min-w-0 flex-col gap-1.5">
-                          <span className="text-[11px] font-medium text-muted-foreground">
+                          <span className="text-[11px] font-medium text-white/90">
                             名称 <span className="text-destructive">*</span>
                           </span>
                           <input
@@ -612,12 +612,12 @@ export function SettingsPage() {
                               }))
                             }
                             placeholder="如 code_model"
-                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
                           />
                         </label>
 
                         <label className="flex min-w-0 flex-col gap-1.5">
-                          <span className="text-[11px] font-medium text-muted-foreground">
+                          <span className="text-[11px] font-medium text-white/90">
                             Provider <span className="text-destructive">*</span>
                           </span>
                           <select
@@ -628,7 +628,7 @@ export function SettingsPage() {
                                 provider: e.target.value,
                               }))
                             }
-                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-foreground [&>option]:bg-[oklch(0.185_0.014_70)] [&>option]:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-white [&>option]:bg-[oklch(0.185_0.014_70)] [&>option]:text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                           >
                             {providerOptions.map((p) => (
                               <option key={p} value={p}>
@@ -639,7 +639,7 @@ export function SettingsPage() {
                         </label>
 
                         <label className="flex min-w-0 flex-col gap-1.5">
-                          <span className="text-[11px] font-medium text-muted-foreground">
+                          <span className="text-[11px] font-medium text-white/90">
                             模型 ID <span className="text-destructive">*</span>
                           </span>
                           <input
@@ -652,13 +652,13 @@ export function SettingsPage() {
                               }))
                             }
                             placeholder="如 gpt-4o-mini"
-                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary/30"
                           />
                         </label>
 
                         <label className="flex min-w-0 flex-col gap-1.5">
-                          <span className="text-[11px] font-medium text-muted-foreground">
-                            用途 <span className="text-muted-foreground/60">可选</span>
+                          <span className="text-[11px] font-medium text-white/90">
+                            用途 <span className="text-white/60">可选</span>
                           </span>
                           <select
                             value={modelForm.purpose}
@@ -668,7 +668,7 @@ export function SettingsPage() {
                                 purpose: e.target.value,
                               }))
                             }
-                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-foreground [&>option]:bg-[oklch(0.185_0.014_70)] [&>option]:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-white [&>option]:bg-[oklch(0.185_0.014_70)] [&>option]:text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                           >
                             <option value="">无</option>
                             {purposeOptions.map((p) => (
@@ -680,8 +680,8 @@ export function SettingsPage() {
                         </label>
 
                         <label className="flex min-w-0 flex-col gap-1.5">
-                          <span className="text-[11px] font-medium text-muted-foreground">
-                            Fallback <span className="text-muted-foreground/60">可选</span>
+                          <span className="text-[11px] font-medium text-white/90">
+                            Fallback <span className="text-white/60">可选</span>
                           </span>
                           <select
                             value={modelForm.fallback_model}
@@ -691,7 +691,7 @@ export function SettingsPage() {
                                 fallback_model: e.target.value,
                               }))
                             }
-                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-foreground [&>option]:bg-[oklch(0.185_0.014_70)] [&>option]:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-white [&>option]:bg-[oklch(0.185_0.014_70)] [&>option]:text-white focus:outline-none focus:ring-2 focus:ring-primary/30"
                           >
                             <option value="">无</option>
                             {fallbackOptions.map((name) => (
