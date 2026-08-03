@@ -35,7 +35,7 @@ REPO = Path(__file__).resolve().parents[1]  # repo root
 PRD = REPO / "docs" / "PRD.md"
 XLSX = REPO / "docs" / "Agent_Console_变更追踪.xlsx"
 
-HEADERS = ["改动时间", "ID", "改动类型", "改动内容", "前端技术", "后端技术", "是否有数据库", "备注"]
+HEADERS = ["改动时间", "ID", "Git 提交", "改动类型", "改动内容", "前端技术", "后端技术", "是否有数据库", "备注"]
 
 # Conventional-commit prefix -> change type.
 PREFIX_TYPE = {
@@ -261,8 +261,8 @@ def git_rows() -> list[tuple[str, str, str, str, str, str, str, str]]:
             fe = infer_frontend(files)
             be = infer_backend(files)
             db = infer_db(files)
-            notes = sha
-        rows.append((when, f"C-{i:03d}", ctype, content, fe, be, db, notes))
+            notes = "-"
+        rows.append((when, f"C-{i:03d}", sha, ctype, content, fe, be, db, notes))
     return rows
 
 
@@ -327,14 +327,14 @@ def write_xlsx(rows) -> None:
             cell = ws.cell(row=r, column=col, value=val)
             cell.alignment = Alignment(
                 vertical="center", wrap_text=True,
-                horizontal="center" if col in (1, 2, 3, 7) else "left",
+                horizontal="center" if col in (1, 2, 3, 4, 8) else "left",
             )
             cell.border = border
-            if col == 3:
+            if col == 4:
                 cell.fill = type_fill.get(val, PatternFill())
             cell.font = Font(size=10)
 
-    widths = [18, 8, 13, 40, 46, 44, 20, 24]
+    widths = [18, 8, 10, 13, 40, 46, 44, 20, 24]
     for i, w in enumerate(widths, start=1):
         ws.column_dimensions[get_column_letter(i)].width = w
     ws.freeze_panes = "A3"
