@@ -138,6 +138,15 @@ CURATED_BY_SUBJECT = {
         "verify": "lint/test/build/pytest 全过(42)",
         "notes": "仅 settings-page.tsx 1 处文本冲突手工合并",
     },
+    "feat: add agent tool-calling (function calling) capability": {
+        "type": "Requirement",
+        "content": "为 Agent 增加工具调用（Function Calling）能力：chat_completion 支持 tools + tool_calls；新增工具注册表（calculate/query_tasks/get_agents/get_system_status）；orchestrator 工具循环（最大 5 轮）并持久化为 TaskStep；单 Agent 与 Worker 阶段启用",
+        "frontend": "task-format.ts stepLabel 增加「工具调用」映射",
+        "backend": "litellm_service 支持 tools/tool_calls；新增 services/tools.py 注册表+安全计算；orchestrator 工具循环+TaskStep 持久化；config 新增 agent_tools_enabled",
+        "db": "否", "breaking": "否",
+        "verify": "pytest 42→54；前端 28/build pass",
+        "notes": "详见 docs/prd/PRD-工具调用能力.md；不新增 WS 事件、不改表结构",
+    },
 }
 
 MODEL_FILES = ("app/models/", "provider_credentials", "custom_model_configs")
