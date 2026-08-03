@@ -160,6 +160,13 @@ CURATED_BY_SUBJECT = {
         "generate_change_log.py 支持 EXTRA_SHAS + 按 subject 覆盖", "-", "否",
         "9c2dd0e 强推覆盖后归位",
     ),
+    "merge: A/B test visual-aesthetics commit 9c2dd0e": (
+        "Requirement",
+        "合并视觉重构提交 9c2dd0e（A/B 测试通过）：新增 /contacts 通讯录页、agent-portrait 头像组件、恢复 software-dock；globals.css 视觉与响应式优化；设置页与 API Key/自定义模型功能共存",
+        "合并 settings-page.tsx（保留 API Key 管理 + 自定义模型功能并采用视觉样式）；新增 contacts 路由、agent-portrait.tsx、software-dock.tsx 恢复；agent-gallery/status-panel/app-sidebar/chat 视觉重构",
+        "-", "否",
+        "仅 settings-page.tsx 1 处文本冲突手工合并；lint/test/build/pytest 全过",
+    ),
 }
 
 MODEL_FILES = ("app/models/", "provider_credentials", "custom_model_configs")

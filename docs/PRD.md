@@ -40,6 +40,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-03 13:59 | C-017 | Docs | 新增 Excel 变更追踪工作簿 | openpyxl 生成脚本 | - | 否 | 表结构含颜色/冻结/筛选 |
 | 2026-08-03 14:01 | C-018 | Docs | 变更追踪表新增「改动内容」列，明确记录每次改了什么 | 表结构更新(PRD.md + Excel) | - | 否 | 业务描述与前后端技术分离 |
 | 2026-08-03 14:04 | C-019 | Docs | 变更追踪表改为从 git history 自动生成 | generate_change_log.py（爬取 git log + 自动推断列 + CURATED 人工覆盖 + 生成 PRD/Excel） | - | 否 | 新提交自动生成行；已知提交按 sha 覆盖 |
+| 2026-08-03 14:10 | C-020 | Docs | 变更追踪表收录独立主线的视觉重构提交（C-005） | generate_change_log.py 支持 EXTRA_SHAS + 按 subject 覆盖 | - | 否 | 9c2dd0e 强推覆盖后归位 |
+| 2026-08-03 14:36 | C-021 | Requirement | 合并视觉重构提交 9c2dd0e（A/B 测试通过）：新增 /contacts 通讯录页、agent-portrait 头像组件、恢复 software-dock；globals.css 视觉与响应式优化；设置页与 API Key/自定义模型功能共存 | 合并 settings-page.tsx（保留 API Key 管理 + 自定义模型功能并采用视觉样式）；新增 contacts 路由、agent-portrait.tsx、software-dock.tsx 恢复；agent-gallery/status-panel/app-sidebar/chat 视觉重构 | - | 否 | 仅 settings-page.tsx 1 处文本冲突手工合并；lint/test/build/pytest 全过 |
 <!-- CHANGELOG:END -->
 
 ---
