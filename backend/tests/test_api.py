@@ -15,6 +15,7 @@ from app.services.litellm_service import LiteLLMUnavailableError
 from app.services.litellm_service import ModelAttemptFailure
 from app.services.litellm_service import ModelCallError
 from app.services.litellm_service import TokenUsage
+from app.services.tools import get_tools_spec
 
 
 @pytest.fixture
@@ -254,6 +255,7 @@ def test_task_run_endpoint_executes_agent_and_returns_result(
             {"role": "system", "content": "Test carefully."},
             {"role": "user", "content": "@Tester Execute this task"},
         ],
+        tools=get_tools_spec(),
         api_keys={},
         custom_models={},
     )

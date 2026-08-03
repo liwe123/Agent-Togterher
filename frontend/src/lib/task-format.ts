@@ -39,6 +39,7 @@ export function stepLabel(stepName: string) {
   if (stepName === "review_results") return "测试专员审核"
   if (stepName === "final_summary") return "Manager 最终汇总"
   if (stepName === "call_agent_model") return "Agent 模型执行"
+  if (stepName === "tool_call") return "工具调用"
   if (stepName.startsWith("worker_execute_")) {
     return `Worker 执行 ${stepName.replace("worker_execute_", "")}`
   }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 from collections.abc import Awaitable
 from decimal import Decimal
@@ -9,6 +10,7 @@ from sqlalchemy import inspect as sqlalchemy_inspect, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.agents import final_agent, manager_agent, review_agent, worker_agent
+from app.core.config import get_settings
 from app.db.base import utc_now
 from app.db.session import AsyncSessionLocal
 from app.models import (
@@ -24,6 +26,7 @@ from app.models import (
 from app.schemas import AgentStatusRead, MessageRead, TaskRead, TaskStepEventPayload
 from app.services import litellm_service
 from app.services.litellm_service import ChatCompletionResult
+from app.services.tools import execute_tool, get_tools_spec
 from app.websocket import WebSocketManager, create_event, websocket_manager
 
 logger = logging.getLogger(__name__)
@@ -112,18 +115,37 @@ class AgentOrchestrator:
             db_api_keys = await litellm_service.get_db_api_keys(self._session)
             db_custom_models = await litellm_service.get_db_custom_models(self._session)
 
-            try:
-                completion = await self.call_agent_model(
+            if get_settings().agent_tools_enabled:
+                # The tool loop owns _call_and_log for every attempt including
+                # the final one, so the outer scope must NOT save model calls
+                # again. On failure the loop has already recorded the failed
+                # call, so the outer handler only marks the task failed.
+                completion = await self._run_agent_with_tools(
                     task,
                     agent,
-                    api_keys=db_api_keys,
-                    custom_models=db_custom_models,
+                    call_factory=lambda tools, extra_messages: self.call_agent_model(
+                        task,
+                        agent,
+                        api_keys=db_api_keys,
+                        custom_models=db_custom_models,
+                        tools=tools,
+                        extra_messages=extra_messages,
+                    ),
+                    tools=get_tools_spec(),
                 )
-            except Exception as exc:
-                await self.save_model_call(task, agent, error=exc)
-                raise
+            else:
+                try:
+                    completion = await self.call_agent_model(
+                        task,
+                        agent,
+                        api_keys=db_api_keys,
+                        custom_models=db_custom_models,
+                    )
+                except Exception as exc:
+                    await self.save_model_call(task, agent, error=exc)
+                    raise
 
-            await self.save_model_call(task, agent, completion=completion)
+                await self.save_model_call(task, agent, completion=completion)
             await self.save_task_step(
                 task,
                 agent,
@@ -241,18 +263,37 @@ class AgentOrchestrator:
                     status="running",
                     input_text=subtask.model_dump_json(indent=2),
                 )
-                worker_completion = await self._call_and_log(
-                    task,
-                    active_agent,
-                    worker_agent.execute_subtask(
+                if get_settings().agent_tools_enabled:
+                    # Tools are enabled ONLY on the worker execution stage;
+                    # manager/review/final stay tool-free.
+                    worker_completion = await self._run_agent_with_tools(
+                        task,
                         active_agent,
-                        task.description,
-                        plan,
-                        subtask,
-                        api_keys=db_api_keys,
-                        custom_models=db_custom_models,
-                    ),
-                )
+                        call_factory=lambda tools, extra_messages: worker_agent.execute_subtask(
+                            active_agent,
+                            task.description,
+                            plan,
+                            subtask,
+                            api_keys=db_api_keys,
+                            custom_models=db_custom_models,
+                            tools=tools,
+                            extra_messages=extra_messages,
+                        ),
+                        tools=get_tools_spec(),
+                    )
+                else:
+                    worker_completion = await self._call_and_log(
+                        task,
+                        active_agent,
+                        worker_agent.execute_subtask(
+                            active_agent,
+                            task.description,
+                            plan,
+                            subtask,
+                            api_keys=db_api_keys,
+                            custom_models=db_custom_models,
+                        ),
+                    )
                 result = {
                     "id": subtask.id,
                     "title": subtask.title,
@@ -473,16 +514,92 @@ class AgentOrchestrator:
         agent: Agent,
         api_keys: dict[str, str] | None = None,
         custom_models: dict[str, dict] | None = None,
+        tools: list[dict] | None = None,
+        extra_messages: list[dict] | None = None,
     ) -> ChatCompletionResult:
         return await litellm_service.chat_completion(
             agent.model_name,
             [
                 {"role": "system", "content": agent.system_prompt},
                 {"role": "user", "content": task.description},
+                *(extra_messages or []),
             ],
+            tools=tools,
             api_keys=api_keys,
             custom_models=custom_models,
         )
+
+    async def _run_agent_with_tools(
+        self,
+        task: Task,
+        agent: Agent,
+        call_factory,
+        tools: list[dict],
+        max_iterations: int = 5,
+    ) -> ChatCompletionResult:
+        """Run a classic function-calling loop against the configured agent.
+
+        The loop owns ``_call_and_log`` for every model attempt including the
+        final content answer, so callers must NOT persist the returned
+        completion themselves.
+        """
+        history: list[dict] = []
+        completion = await self._call_and_log(
+            task,
+            agent,
+            call_factory(tools=tools, extra_messages=history),
+        )
+        for _ in range(max_iterations):
+            if not completion.tool_calls:
+                return completion
+            tool_turns: list[dict] = []
+            for tc in completion.tool_calls:
+                step = await self.save_task_step(
+                    task,
+                    agent,
+                    step_name="tool_call",
+                    status="running",
+                    input_text=json.dumps(
+                        {
+                            "name": tc.get("name"),
+                            "arguments": tc.get("arguments", "{}"),
+                        },
+                        ensure_ascii=False,
+                    ),
+                )
+                result = await execute_tool(
+                    tc.get("name", ""),
+                    tc.get("arguments", "{}"),
+                    session=self._session,
+                )
+                await self.save_task_step(
+                    task,
+                    agent,
+                    step=step,
+                    status="completed",
+                    output=result,
+                )
+                tool_turns.append(
+                    {
+                        "role": "tool",
+                        "tool_call_id": tc.get("id"),
+                        "content": result,
+                    }
+                )
+            history.append(
+                {
+                    "role": "assistant",
+                    "content": completion.content,
+                    "tool_calls": completion.tool_calls,
+                }
+            )
+            history.extend(tool_turns)
+            completion = await self._call_and_log(
+                task,
+                agent,
+                call_factory(tools=tools, extra_messages=history),
+            )
+        return completion
 
     async def save_task_step(
         self,
@@ -862,6 +979,8 @@ async def call_agent_model(
     agent: Agent,
     api_keys: dict[str, str] | None = None,
     custom_models: dict[str, dict] | None = None,
+    tools: list[dict] | None = None,
+    extra_messages: list[dict] | None = None,
 ) -> ChatCompletionResult:
     """Call the configured Agent model without coupling the caller to HTTP."""
     return await litellm_service.chat_completion(
@@ -869,7 +988,9 @@ async def call_agent_model(
         [
             {"role": "system", "content": agent.system_prompt},
             {"role": "user", "content": task.description},
+            *(extra_messages or []),
         ],
+        tools=tools,
         api_keys=api_keys,
         custom_models=custom_models,
     )

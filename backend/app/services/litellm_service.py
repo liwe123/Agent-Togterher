@@ -4,7 +4,7 @@ import logging
 import asyncio
 import re
 from collections.abc import Awaitable, Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
@@ -39,6 +39,7 @@ class ChatCompletionResult:
     latency_ms: int
     fallback_used: bool
     cost: Decimal = Decimal("0")
+    tool_calls: list[dict] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -368,7 +369,9 @@ def _value(container: Any, name: str, default: Any = None) -> Any:
     return getattr(container, name, default)
 
 
-def _extract_result(response: Any) -> tuple[str, TokenUsage, Decimal]:
+def _extract_result(
+    response: Any,
+) -> tuple[str, TokenUsage, Decimal, list[dict]]:
     choices = _value(response, "choices", [])
     if not choices:
         raise ValueError("Provider response did not contain choices")
@@ -389,11 +392,28 @@ def _extract_result(response: Any) -> tuple[str, TokenUsage, Decimal]:
         or prompt_tokens + completion_tokens
     )
     cost = _extract_cost(response)
+    tool_calls = _extract_tool_calls(message)
     return normalized_content, TokenUsage(
         prompt_tokens=prompt_tokens,
         completion_tokens=completion_tokens,
         total_tokens=total_tokens,
-    ), cost
+    ), cost, tool_calls
+
+
+def _extract_tool_calls(message: Any) -> list[dict]:
+    """Parse choices[0].message.tool_calls into [{id, name, arguments}]."""
+    tool_calls: list[dict] = []
+    raw_tool_calls = _value(message, "tool_calls", None) or []
+    for tc in raw_tool_calls:
+        function = _value(tc, "function", {}) or {}
+        tool_calls.append(
+            {
+                "id": _value(tc, "id"),
+                "name": _value(function, "name"),
+                "arguments": _value(function, "arguments", "{}"),
+            }
+        )
+    return tool_calls
 
 
 def _extract_cost(response: Any) -> Decimal:
@@ -432,6 +452,7 @@ async def chat_completion(
     temperature: float = 0.7,
     api_keys: dict[str, str] | None = None,
     custom_models: dict[str, dict] | None = None,
+    tools: list[dict] | None = None,
 ) -> ChatCompletionResult:
     """Call a configured LiteLLM model, falling back on provider failures."""
     requested_model = model_name.strip()
@@ -479,6 +500,8 @@ async def chat_completion(
                 "messages": [dict(message) for message in messages],
                 "temperature": temperature,
             }
+            if tools:
+                kwargs["tools"] = tools
             if api_key is not None:
                 kwargs["api_key"] = api_key
 
@@ -491,7 +514,7 @@ async def chat_completion(
                 raise RuntimeError(
                     f"Provider request timed out after {timeout_seconds:g}s"
                 ) from exc
-            content, usage, cost = _extract_result(response)
+            content, usage, cost, tool_calls = _extract_result(response)
             latency_ms = round((perf_counter() - started_at) * 1000)
             logger.info(
                 "LiteLLM call succeeded provider=%s model=%s latency_ms=%d fallback=%s",
@@ -509,6 +532,7 @@ async def chat_completion(
                 latency_ms=latency_ms,
                 fallback_used=attempt_index > 0,
                 cost=cost,
+                tool_calls=tool_calls,
             )
         except Exception as exc:
             message = _sanitize_error_message(exc)

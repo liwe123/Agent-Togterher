@@ -25,6 +25,7 @@ from app.services.litellm_service import (
     ModelCallError,
     TokenUsage,
 )
+from app.services.tools import get_tools_spec
 
 
 class RecordingBroadcaster:
@@ -152,6 +153,7 @@ async def test_run_task_completes_and_persists_result(orchestrator_session) -> N
                 "content": "Implement the requested endpoint and report the result.",
             },
         ],
+        tools=get_tools_spec(),
         api_keys={},
         custom_models={},
     )

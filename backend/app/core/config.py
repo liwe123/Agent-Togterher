@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     litellm_default_model: str = ""
     models_config_path: str = ""
     model_request_timeout_seconds: float = Field(default=60.0, gt=0)
+    agent_tools_enabled: bool = True
     openai_api_key: SecretStr | None = None
     anthropic_api_key: SecretStr | None = None
     gemini_api_key: SecretStr | None = None
