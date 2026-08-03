@@ -292,6 +292,15 @@ def is_provider_configured(provider: str) -> bool:
     return _get_api_key(provider) is not None
 
 
+def get_api_key_value(provider: str) -> str | None:
+    """Return the env-configured key value for a provider.
+
+    Used only for explicit, user-triggered reveal in this local-first tool.
+    Prefer `is_provider_configured` for presence checks.
+    """
+    return _get_api_key(provider)
+
+
 async def get_db_api_keys(session) -> dict[str, str]:
     """Load all provider API keys stored in the database."""
     from app.models import ProviderCredential

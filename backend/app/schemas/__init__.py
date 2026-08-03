@@ -13,7 +13,7 @@ from app.schemas.model import (
     ModelTokenUsage,
     ProviderStatusInfo,
 )
-from app.schemas.provider_credential import ProviderKeyUpsert
+from app.schemas.provider_credential import ProviderKeyUpsert, ProviderKeyValue
 from app.schemas.task import (
     ModelCallRead,
     TaskAgentRead,
@@ -48,6 +48,7 @@ __all__ = [
     "ModelTokenUsage",
     "ProviderStatusInfo",
     "ProviderKeyUpsert",
+    "ProviderKeyValue",
     "SuccessResponse",
     "ModelCallRead",
     "TaskAgentRead",

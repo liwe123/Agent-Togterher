@@ -8,6 +8,7 @@ import type {
   ModelConfig,
   ModelTestResult,
   ProviderKeyStatus,
+  ProviderKeyValue,
   ProviderStatus,
   TestState,
 } from "@/types/settings"
@@ -126,6 +127,12 @@ export function useSettings() {
     )
   }, [])
 
+  const getProviderKey = useCallback(async (provider: string) => {
+    return requestData<ProviderKeyValue>(
+      `/api/provider-keys/${encodeURIComponent(provider)}`,
+    )
+  }, [])
+
   const addCustomModel = useCallback(
     async (config: {
       name: string
@@ -166,6 +173,7 @@ export function useSettings() {
     testModel,
     saveProviderKey,
     removeProviderKey,
+    getProviderKey,
     addCustomModel,
     deleteCustomModel,
   }

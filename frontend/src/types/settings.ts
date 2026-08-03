@@ -24,6 +24,13 @@ export interface ProviderStatus {
 /** Status of a provider API key stored via /api/provider-keys. */
 export type ProviderKeyStatus = ProviderStatus
 
+/** Key value returned only on explicit per-provider GET. */
+export interface ProviderKeyValue {
+  provider: string
+  configured: boolean
+  api_key: string | null
+}
+
 export interface ModelTestResult {
   requested_model: string
   model_name: string

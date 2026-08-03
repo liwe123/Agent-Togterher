@@ -85,6 +85,7 @@ export function SettingsPage() {
     testModel,
     saveProviderKey,
     removeProviderKey,
+    getProviderKey,
     addCustomModel,
     deleteCustomModel,
   } = useSettings()
@@ -268,6 +269,28 @@ export function SettingsPage() {
     }
   }
 
+  const handleToggleKey = async (provider: string) => {
+    const isVisible = showKeys[provider] ?? false
+    // When revealing and the input is empty, fetch the stored key value so
+    // the eye toggle actually shows something (previously it only flipped
+    // type while value stayed empty, so the placeholder dots never changed).
+    if (!isVisible && !(keyInputs[provider] ?? "").trim()) {
+      try {
+        const data = await getProviderKey(provider)
+        const key = data.api_key
+        if (key) {
+          setKeyInputs((prev) => ({ ...prev, [provider]: key }))
+        }
+      } catch {
+        // Key not retrievable; still toggle so the user sees an empty field.
+      }
+    }
+    setShowKeys((prev) => ({
+      ...prev,
+      [provider]: !(prev[provider] ?? false),
+    }))
+  }
+
   const isProviderConfigured = (provider: string) =>
     mergedProviders.find(
       (p) => p.provider.toLowerCase() === provider.toLowerCase(),
@@ -426,12 +449,7 @@ export function SettingsPage() {
                               <button
                                 type="button"
                                 aria-label={showKey ? "隐藏密钥" : "显示密钥"}
-                                onClick={() =>
-                                  setShowKeys((prev) => {
-                                    const current = prev[p.provider] ?? false
-                                    return { ...prev, [p.provider]: !current }
-                                  })
-                                }
+                                onClick={() => void handleToggleKey(p.provider)}
                                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
                               >
                                 {showKey ? (
