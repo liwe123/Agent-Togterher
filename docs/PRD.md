@@ -50,7 +50,9 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-03 20:54 | C-027 | 已完成 | [8716e45](https://github.com/liwe123/Agent-Togterher/commit/8716e45) | LI | Docs | 其他、文档 | 为 5 个历史需求（Agent Console MVP / API Key 管理 / 自定义模型 / 前端视觉与响应式优化 / Windows 一键启动）补充详细 PRD 文档到 docs/prd/，并在追踪表对应行备注 PRD 链接 | 新增 docs/prd/PRD-AgentConsoleMVP.md、PRD-APIKey管理.md、PRD-自定义模型接入.md、PRD-前端视觉与响应式优化.md、PRD-Windows一键启动脚本.md | generate_change_log.py CURATED 备注追加 PRD 链接 | 否 | 否 | - | docs/PRD.md 增补「PRD 文档索引」；MVP 为基线前需求，以其 PRD 文档登记 |
 | 2026-08-03 20:56 | C-028 | 已完成 | [197f6e3](https://github.com/liwe123/Agent-Togterher/commit/197f6e3) | LI | Docs | 其他、文档 | docs: 变更追踪表登记 PRD 文档提交 | - | - | 否 | 否 | - | - |
 | 2026-08-03 20:56 | C-029 | 已完成 | [2313960](https://github.com/liwe123/Agent-Togterher/commit/2313960) | LI | Docs | 其他、文档 | docs: 变更追踪表登记登记提交 | - | - | 否 | 否 | - | - |
-| 2026-08-03 21:04 | C-030 | 已完成 | [c519372](https://github.com/liwe123/Agent-Togterher/commit/c519372) | LI | Docs | 其他、文档 | docs: 统一 PRD 文档命名为 PRD-前缀 | - | - | 否 | 否 | - | - |
+| 2026-08-03 20:59 | C-030 | 已完成 | [caaafe1](https://github.com/liwe123/Agent-Togterher/commit/caaafe1) | liwe123 | Docs | 其他 | Add GitHub Actions workflow for Python package with Conda | - | - | 否 | 否 | - | - |
+| 2026-08-03 21:04 | C-031 | 已完成 | [1fd9aba](https://github.com/liwe123/Agent-Togterher/commit/1fd9aba) | LI | Docs | 其他、文档 | docs: 统一 PRD 文档命名为 PRD-前缀 | - | - | 否 | 否 | - | - |
+| 2026-08-03 21:04 | C-032 | 已完成 | [42dcda5](https://github.com/liwe123/Agent-Togterher/commit/42dcda5) | LI | Docs | 其他、文档 | docs: 变更追踪表登记 PRD 重命名提交 | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
