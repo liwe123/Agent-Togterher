@@ -416,7 +416,7 @@ export function SettingsPage() {
                                 }
                                 disabled={isSaving}
                                 className={cn(
-                                  "w-full rounded-lg border bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-primary-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50",
+                                  "w-full rounded-lg border bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50",
                                   configured
                                     ? "border-[oklch(0.72_0.15_155)]"
                                     : "border-[oklch(0.31_0.018_70)]",
@@ -612,7 +612,7 @@ export function SettingsPage() {
                               }))
                             }
                             placeholder="如 code_model"
-                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-primary-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
                           />
                         </label>
 
@@ -628,7 +628,7 @@ export function SettingsPage() {
                                 provider: e.target.value,
                               }))
                             }
-                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-primary-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-foreground [&>option]:bg-[oklch(0.185_0.014_70)] [&>option]:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                           >
                             {providerOptions.map((p) => (
                               <option key={p} value={p}>
@@ -652,7 +652,7 @@ export function SettingsPage() {
                               }))
                             }
                             placeholder="如 gpt-4o-mini"
-                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-primary-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
                           />
                         </label>
 
@@ -668,7 +668,7 @@ export function SettingsPage() {
                                 purpose: e.target.value,
                               }))
                             }
-                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-primary-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-foreground [&>option]:bg-[oklch(0.185_0.014_70)] [&>option]:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                           >
                             <option value="">无</option>
                             {purposeOptions.map((p) => (
@@ -691,7 +691,7 @@ export function SettingsPage() {
                                 fallback_model: e.target.value,
                               }))
                             }
-                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-primary-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-foreground [&>option]:bg-[oklch(0.185_0.014_70)] [&>option]:text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
                           >
                             <option value="">无</option>
                             {fallbackOptions.map((name) => (
