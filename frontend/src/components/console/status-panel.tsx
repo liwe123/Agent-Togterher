@@ -1,8 +1,5 @@
-import { Clock3, FileOutput, Radio } from "lucide-react"
+import { Activity, Bot, Clock3 } from "lucide-react"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
 import type { Agent, RecentOutput } from "@/types/agent"
 
 function formatRelativeTime(value: string | null) {
@@ -14,133 +11,134 @@ function formatRelativeTime(value: string | null) {
   return new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric" }).format(new Date(value))
 }
 
-function shortContent(content: string) {
-  return content.replace(/\s+/g, " ").slice(0, 54)
-}
-
 interface StatusPanelProps {
   agents: Agent[]
   recentOutputs: RecentOutput[]
 }
 
 export function StatusPanel({ agents, recentOutputs }: StatusPanelProps) {
-  const counts = agents.reduce(
-    (result, agent) => {
-      if (agent.status === "running") result.running += 1
-      else if (agent.status === "failed") result.failed += 1
-      else result.idle += 1
-      return result
-    },
-    { running: 0, idle: 0, failed: 0 },
-  )
-
-  const recentAgents = agents
-    .filter((agent) => agent.last_active_at !== null)
-    .toSorted((a, b) =>
-      (b.last_active_at ?? "").localeCompare(a.last_active_at ?? ""),
-    )
-    .slice(0, 4)
-
+  const running = agents.filter((agent) => agent.status === "running").length
+  const failed = agents.filter((agent) => agent.status === "failed").length
+  const idle = agents.length - running - failed
   const agentsById = new Map(agents.map((agent) => [agent.id, agent]))
+  const totalAgents = Math.max(agents.length, 1)
+  const runningPercent = Math.round((running / totalAgents) * 100)
+  const failedPercent = Math.round((failed / totalAgents) * 100)
+  const idlePercent = 100 - runningPercent - failedPercent
 
   return (
-    <aside aria-label="Agent 状态" className="console-panel min-w-0 overflow-hidden rounded-xl border border-border bg-card/70">
-      <section className="p-4">
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold">
-          <Radio aria-hidden="true" className="size-4 text-primary" />
-          编队状态
-        </h2>
-        <div className="flex flex-col gap-3">
-          <StatusRow label="工作中" value={counts.running} status="running" />
-          <StatusRow label="空闲" value={counts.idle} status="idle" />
-          <StatusRow label="失败" value={counts.failed} status="failed" />
-          <Separator />
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Agent 总数</span>
-            <span className="font-mono font-medium">{agents.length}</span>
+    <section aria-labelledby="agent-status" className="console-panel overflow-hidden rounded-2xl border border-border bg-card/82 p-4 sm:p-5">
+      <div className="flex flex-col gap-6 xl:grid xl:grid-cols-[minmax(0,1fr)_340px] xl:gap-8">
+        <div className="min-w-0">
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <span className="flex size-8 items-center justify-center rounded-lg bg-secondary text-primary">
+                <Activity aria-hidden="true" className="size-4" />
+              </span>
+              <div>
+                <h2 id="agent-status" className="text-base font-semibold">Agent 负载与运行状态</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">实时集群资源分布</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              <span className="text-primary font-semibold">{running} 工作中</span> · {idle} 空闲 · 共 {agents.length} 人
+            </p>
+          </div>
+
+          {/* Progress bar breakdown */}
+          <div className="mb-5 space-y-1.5">
+            <div className="flex h-2 w-full overflow-hidden rounded-full bg-secondary">
+              {running > 0 && (
+                <div
+                  style={{ width: `${runningPercent}%` }}
+                  className="bg-[var(--status-running)] transition-all duration-500"
+                  title={`工作中: ${running} (${runningPercent}%)`}
+                />
+              )}
+              {failed > 0 && (
+                <div
+                  style={{ width: `${failedPercent}%` }}
+                  className="bg-[var(--status-failed)] transition-all duration-500"
+                  title={`异常: ${failed} (${failedPercent}%)`}
+                />
+              )}
+              {idle > 0 && (
+                <div
+                  style={{ width: `${idlePercent}%` }}
+                  className="bg-[var(--status-idle)]/40 transition-all duration-500"
+                  title={`空闲: ${idle} (${idlePercent}%)`}
+                />
+              )}
+            </div>
+            <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+              <span className="flex items-center gap-1">
+                <span className="size-1.5 rounded-full bg-[var(--status-running)]" /> 工作中 ({runningPercent}%)
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="size-1.5 rounded-full bg-[var(--status-idle)]/50" /> 空闲 ({idlePercent}%)
+              </span>
+              {failed > 0 && (
+                <span className="flex items-center gap-1 text-destructive">
+                  <span className="size-1.5 rounded-full bg-[var(--status-failed)]" /> 异常 ({failedPercent}%)
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-2.5">
+            {agents.map((agent) => (
+              <div
+                key={agent.id}
+                className="flex min-w-0 items-center gap-2 rounded-full border border-border/80 bg-background/50 px-3 py-1.5 shadow-sm transition-all hover:border-primary/40 hover:bg-card"
+              >
+                <span aria-hidden="true" className="text-base select-none">{agent.avatar ?? "🤖"}</span>
+                <span className="max-w-36 truncate text-xs font-medium">{agent.name}</span>
+                <span className="status-dot size-2 rounded-full" data-status={agent.status} aria-hidden="true" />
+                <span className="text-[10px] text-muted-foreground">
+                  {agent.status === "running" ? "工作中" : agent.status === "failed" ? "异常" : "空闲"}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
-      </section>
 
-      <section className="border-t border-border p-4">
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold">
-          <Clock3 aria-hidden="true" className="size-4 text-primary" />
-          最近活跃
-        </h2>
-        <div className="flex flex-col gap-3">
-          {recentAgents.length > 0 ? (
-            recentAgents.map((agent) => (
-              <div key={agent.id} className="flex items-center gap-3">
-                <Avatar size="sm">
-                  <AvatarFallback>{agent.name.slice(0, 1)}</AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-medium">{agent.name}</p>
-                  <p className="text-[11px] text-muted-foreground">
-                    {formatRelativeTime(agent.last_active_at)}
-                  </p>
-                </div>
-                <Badge variant={agent.status === "failed" ? "destructive" : "secondary"}>
-                  {agent.status === "running" ? "工作中" : agent.status === "failed" ? "失败" : "空闲"}
-                </Badge>
-              </div>
-            ))
-          ) : (
-            <p className="py-2 text-xs leading-5 text-muted-foreground">
-              Agent 开始执行任务后，这里会显示最近活跃记录。
-            </p>
-          )}
-        </div>
-      </section>
+        <div className="border-t border-border pt-4 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
+          <div className="mb-3 flex items-center justify-between text-xs font-semibold">
+            <span className="flex items-center gap-2">
+              <Clock3 aria-hidden="true" className="size-3.5 text-primary" />
+              最近 Agent 输出
+            </span>
+            <span className="font-mono text-[10px] text-muted-foreground">{recentOutputs.length} 条记录</span>
+          </div>
 
-      <section className="border-t border-border p-4">
-        <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold">
-          <FileOutput aria-hidden="true" className="size-4 text-primary" />
-          最近输出
-        </h2>
-        <div className="flex flex-col gap-3">
           {recentOutputs.length > 0 ? (
-            recentOutputs.map((output) => {
-              const agent = agentsById.get(output.agentId)
-              return (
-                <div key={output.id} className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate text-xs font-medium">
-                      {agent?.name ?? "Agent"}
+            <div className="space-y-3 max-h-56 overflow-y-auto scrollbar-thin pr-1">
+              {recentOutputs.slice(0, 3).map((output, idx) => {
+                const agent = agentsById.get(output.agentId)
+                return (
+                  <div key={idx} className="flex gap-3 rounded-xl border border-border/60 bg-muted/30 p-2.5 transition-colors hover:bg-muted/60">
+                    <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-secondary text-base" aria-hidden="true">
+                      {agent?.avatar ?? "🤖"}
                     </span>
-                    <span className="shrink-0 text-[11px] text-muted-foreground">
-                      {formatRelativeTime(output.createdAt)}
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="truncate text-xs font-semibold">{agent?.name ?? "Agent"}</p>
+                        <span className="shrink-0 font-mono text-[10px] text-muted-foreground">{formatRelativeTime(output.createdAt)}</span>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{output.content}</p>
+                    </div>
                   </div>
-                  <p className="line-clamp-2 text-[11px] leading-4 text-muted-foreground">
-                    {shortContent(output.content)}
-                  </p>
-                </div>
-              )
-            })
+                )
+              })}
+            </div>
           ) : (
-            <p className="py-2 text-xs leading-5 text-muted-foreground">
-              新的群聊结果会通过实时通道到达这里。
-            </p>
+            <div className="flex min-h-28 items-center justify-center gap-2 text-xs text-muted-foreground rounded-xl border border-dashed border-border p-4">
+              <Bot aria-hidden="true" className="size-4" />
+              等待新的 Agent 实时输出
+            </div>
           )}
         </div>
-      </section>
-    </aside>
-  )
-}
-
-interface StatusRowProps {
-  label: string
-  value: number
-  status: "running" | "idle" | "failed"
-}
-
-function StatusRow({ label, value, status }: StatusRowProps) {
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <span className="status-dot size-2 rounded-full" data-status={status} aria-hidden="true" />
-      <span className="text-muted-foreground">{label}</span>
-      <span className="ml-auto font-mono font-medium">{value}</span>
-    </div>
+      </div>
+    </section>
   )
 }

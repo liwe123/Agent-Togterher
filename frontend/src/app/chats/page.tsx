@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Suspense } from "react"
 
 import { ChatPage } from "@/components/chat/chat-page"
 
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 }
 
 export default function ChatsPage() {
-  return <ChatPage />
+  return (
+    <Suspense fallback={<div className="console-shell flex items-center justify-center text-sm text-muted-foreground">正在加载群聊频道…</div>}>
+      <ChatPage />
+    </Suspense>
+  )
 }

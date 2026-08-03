@@ -11,8 +11,8 @@ const statusLabels: Record<string, string> = {
 
 const statusClasses: Record<string, string> = {
   pending: "border-primary/30 bg-primary/10 text-primary",
-  running: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300",
-  completed: "border-emerald-400/22 bg-emerald-400/7 text-emerald-300",
+  running: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 md:text-emerald-300",
+  completed: "border-emerald-500/22 bg-emerald-500/7 text-emerald-700 md:text-emerald-300",
   failed: "border-destructive/30 bg-destructive/12 text-destructive",
   cancelled: "border-border bg-muted text-muted-foreground",
 }

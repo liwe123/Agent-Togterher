@@ -1,17 +1,19 @@
 ---
 name: Agent Console
-description: A calm operations desk for multi-agent work.
+description: A dual-surface cluster console with a dark desktop deck and light mobile collaboration UI.
 colors:
-  operations-black: "oklch(0.125 0.012 70)"
-  deck-surface: "oklch(0.16 0.013 70)"
-  raised-surface: "oklch(0.195 0.014 70)"
-  rule: "oklch(0.31 0.018 70)"
-  signal-amber: "oklch(0.76 0.16 65)"
-  signal-amber-ink: "oklch(0.18 0.03 65)"
+  operations-black: "oklch(0.105 0.012 155)"
+  deck-surface: "oklch(0.145 0.013 155)"
+  raised-surface: "oklch(0.18 0.015 155)"
+  rule: "oklch(0.285 0.02 155)"
+  signal-mint: "oklch(0.76 0.16 160)"
+  signal-mint-ink: "oklch(0.14 0.025 160)"
+  mobile-canvas: "oklch(0.985 0.003 250)"
+  mobile-violet: "oklch(0.57 0.17 268)"
   live-green: "oklch(0.72 0.15 155)"
   warning-red: "oklch(0.65 0.2 28)"
-  primary-text: "oklch(0.94 0.006 70)"
-  secondary-text: "oklch(0.72 0.015 70)"
+  primary-text: "oklch(0.94 0.008 155)"
+  secondary-text: "oklch(0.69 0.018 155)"
 typography:
   headline:
     fontFamily: "Segoe UI Variable, Microsoft YaHei UI, sans-serif"
@@ -42,8 +44,8 @@ spacing:
   section: "32px"
 components:
   button-primary:
-    backgroundColor: "{colors.signal-amber}"
-    textColor: "{colors.signal-amber-ink}"
+    backgroundColor: "{colors.signal-mint}"
+    textColor: "{colors.signal-mint-ink}"
     rounded: "{rounded.md}"
     padding: "8px 14px"
   panel:
@@ -57,19 +59,19 @@ components:
 
 ## 1. Overview
 
-**Creative North Star: "The Quiet Flight Desk"**
+**Creative North Star: "The Connected Cluster Lounge"**
 
-Agent Console 像一张持续工作的任务调度桌：稳定的深色底面承载高密度信息，少量信号琥珀标记当前选择与需要注意的操作，绿色、黄色和红色仅用于真实运行状态。页面保持平整、克制和结构化，依靠对齐、层级与细边界建立秩序。
+Agent Console 采用明确的双表面系统：桌面端像持续运行的深色集群工作台，用软件 Dock、角色群像和状态光环呈现跨 Agent 协作；移动端像原生团队通讯工具，以白色画布、清晰人物头像、自然消息气泡和底部导航降低操作成本。
 
-系统拒绝通用 AI 产品的紫蓝渐变与霓虹光效，也拒绝把每条数据都做成悬浮卡片。它应让熟悉 Linear、Raycast 或现代可观测性工具的用户直接进入工作，不必重新学习装饰性操作方式。
+两种表面共享同一信息结构和语义状态。桌面端允许运行中的头像使用局部状态光环，但拒绝全页霓虹和无意义科技装饰；移动端保持高对比、宽松行距和原生聊天节奏。
 
 **Key Characteristics:**
 
-- 深色暖石墨底面，低反光、长时间查看不刺眼
-- 琥珀色只标记选择、主操作和关键编号
+- 桌面端深色绿黑底面，移动端纯净浅色画布
+- 薄荷绿只标记实时连接、当前选择和运行中状态
+- 圆形角色肖像是 Agent 身份识别的第一层
 - 平面分区、细规则线、紧凑但可扫描的数据排版
-- 状态始终同时具备颜色、图标和文字
-- 桌面高密度，移动端按任务顺序重排而非简单缩小
+- 桌面高密度，移动端使用原生聊天和通讯录结构
 
 ## 2. Colors
 
@@ -77,7 +79,8 @@ Agent Console 像一张持续工作的任务调度桌：稳定的深色底面承
 
 ### Primary
 
-- **Signal Amber** (`oklch(0.76 0.16 65)`): 当前导航、选中筛选、主按钮和关键编号。单屏视觉占比不超过 10%。
+- **Signal Mint** (`oklch(0.76 0.16 160)`): 桌面连接状态、当前导航与运行中头像光环。单屏视觉占比不超过 10%。
+- **Mobile Violet** (`oklch(0.57 0.17 268)`): 移动端提及文字、当前标签和轻量主操作。
 
 ### Secondary
 
@@ -86,14 +89,14 @@ Agent Console 像一张持续工作的任务调度桌：稳定的深色底面承
 
 ### Neutral
 
-- **Operations Black** (`oklch(0.125 0.012 70)`): 页面底色。
-- **Deck Surface** (`oklch(0.16 0.013 70)`): 主面板与侧边栏。
-- **Raised Surface** (`oklch(0.195 0.014 70)`): 输入框、悬停和次级分区。
-- **Rule** (`oklch(0.31 0.018 70)`): 边界和分隔线。
+- **Operations Black** (`oklch(0.105 0.012 155)`): 桌面页面底色。
+- **Deck Surface** (`oklch(0.145 0.013 155)`): 桌面主面板与侧边栏。
+- **Mobile Canvas** (`oklch(0.985 0.003 250)`): 移动端背景与聊天画布。
+- **Rule** (`oklch(0.285 0.02 155)`): 桌面边界；移动端使用更浅的同语义规则线。
 - **Primary Text** (`oklch(0.94 0.006 70)`): 标题与主要内容。
 - **Secondary Text** (`oklch(0.72 0.015 70)`): 说明、元数据和辅助标签。
 
-**The Signal Budget Rule.** 琥珀色只表达“现在看这里或在这里操作”，不用于装饰背景。
+**The Signal Budget Rule.** 薄荷绿只表达实时连接与运行状态；紫色只表达移动端选择和提及，两者都不用于大面积装饰背景。
 
 ## 3. Typography
 
@@ -115,7 +118,7 @@ Agent Console 像一张持续工作的任务调度桌：稳定的深色底面承
 
 ## 4. Elevation
 
-系统默认平面化。深度来自表面明度差、1px 规则线和交互状态，不为静态卡片添加宽而柔的阴影。悬停最多使用局部亮度变化与 1px 位移；焦点使用清晰的琥珀或状态色轮廓。
+系统默认平面化。深度来自表面明度差、1px 规则线和交互状态，不为静态卡片添加宽而柔的阴影。运行中的人物头像可以使用局部、有语义的状态光环；其他元素仍保持平整。
 
 **The Flat Deck Rule.** 静态面板不悬浮；只有菜单、提示层等真正覆盖内容的元素获得阴影。
 
@@ -124,14 +127,14 @@ Agent Console 像一张持续工作的任务调度桌：稳定的深色底面承
 ### Buttons
 
 - **Shape:** 8px 圆角；移动端触控高度至少 44px。
-- **Primary:** Signal Amber 背景配深色文字，只用于当前页面最重要动作。
+- **Primary:** 桌面使用 Signal Mint，移动端使用 Mobile Violet；只用于当前页面最重要动作。
 - **Hover / Focus:** 提升明度或显示 2px 外焦点环，不使用光晕和弹跳。
 - **Secondary / Ghost:** 使用规则线或透明背景，保持动作层级清晰。
 
 ### Chips
 
 - **Style:** 状态标签使用紧凑胶囊形，但必须包含文字；筛选标签使用 8px 圆角，不伪装成状态。
-- **State:** 选中筛选使用琥珀色边界和浅色底面，未选中保持中性。
+- **State:** 选中筛选使用当前表面的主色边界和浅色底面，未选中保持中性。
 
 ### Cards / Containers
 
@@ -144,16 +147,16 @@ Agent Console 像一张持续工作的任务调度桌：稳定的深色底面承
 ### Inputs / Fields
 
 - **Style:** Raised Surface、8px 圆角、1px 输入边界。
-- **Focus:** Signal Amber 边界与清晰外环。
+- **Focus:** 当前表面的主色边界与清晰外环。
 - **Error / Disabled:** 错误使用红色边界与文字；禁用态降低对比度但仍保持可读。
 
 ### Navigation
 
-侧边栏保持固定工具形态；当前项使用琥珀色小型标记和高对比文本，不使用大面积彩色胶囊。移动端转为顶部紧凑导航，所有核心路由仍可横向访问。
+桌面端使用 76px 图标轨道，当前项由独立薄荷绿标记和高对比图标表达。移动端通讯录、控制台、任务和设置使用固定底部导航；群聊进入沉浸式页面并通过顶部返回按钮退出。
 
 ### Agent Roster
 
-Agent 是系统核心实体。头像、名称、角色、状态和模型绑定保持同一阅读顺序；运行态变化通过状态灯、文字和轻量表面变化共同表达。
+Agent 是系统核心实体。桌面群像使用大号圆形角色肖像，移动通讯录和聊天使用紧凑肖像；运行态通过头像光环、状态灯和文字共同表达。
 
 ## 6. Do's and Don'ts
 
@@ -167,7 +170,7 @@ Agent 是系统核心实体。头像、名称、角色、状态和模型绑定�
 
 ### Don't:
 
-- **Don't** 使用紫蓝渐变、霓虹描边、玻璃拟态或无业务含义的光晕。
+- **Don't** 使用紫蓝渐变、玻璃拟态或无业务含义的光晕；只有运行中头像可以出现状态光环。
 - **Don't** 把所有内容包装成同尺寸圆角卡片或嵌套卡片。
 - **Don't** 使用游戏化 HUD、伪终端字符雨或无意义装饰网格。
 - **Don't** 使用营销页英雄指标、巨大标题或装饰性统计数字。

@@ -65,7 +65,7 @@ export function TasksPage() {
       : tasks.filter((task) => task.status === activeFilter)
 
   return (
-    <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[232px_minmax(0,1fr)]">
+    <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[76px_minmax(0,1fr)]">
       <AppSidebar connectionStatus={connectionStatus} activeItem="tasks" />
 
       <ErrorBoundary>
