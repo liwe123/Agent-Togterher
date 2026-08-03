@@ -71,9 +71,9 @@ CURATED = {
         "frontend": "设置页 API Key 管理 UI(密码框+眼睛+保存/删除)；use-settings 扩展",
         "backend": "ProviderCredential 模型；GET/PUT/DELETE /api/provider-keys；Key 解析优先级 DB>env",
         "db": "是(provider_credentials)", "breaking": "是",
-        "verify": "后端 37→40", "notes": "Key 永不在列表回传；新增表",
+        "verify": "后端 37→40", "notes": "Key 永不在列表回传；新增表；PRD: docs/prd/api-key-management.md",
     },
-    "fb94fb2": {"type": "Requirement", "content": "新增 Windows 一键启动脚本", "frontend": "start.bat / start.ps1", "backend": "-", "db": "否", "breaking": "否", "verify": "-", "notes": "Docker Compose 封装；自动复制 .env + 等健康"},
+    "fb94fb2": {"type": "Requirement", "content": "新增 Windows 一键启动脚本", "frontend": "start.bat / start.ps1", "backend": "-", "db": "否", "breaking": "否", "verify": "-", "notes": "Docker Compose 封装；自动复制 .env + 等健康；PRD: docs/prd/launch-scripts.md"},
     "f6ac2e8": {"type": "BUG", "content": "修复开发服务器端口无法访问（next.config standalone 配置与 dev 冲突）", "frontend": "output:standalone 改为 NEXT_BUILD_STANDALONE env 按需启用", "backend": "-", "db": "否", "breaking": "否", "verify": "build pass", "notes": "仅生产 Docker 构建启用"},
     "48b3c47": {
         "type": "Requirement",
@@ -81,7 +81,7 @@ CURATED = {
         "frontend": "自定义模型添加/删除 UI +「自定义」徽章；眼睛图标切换修复(undefined 与 React 批处理冲突)",
         "backend": "CustomModelConfig 模型；/api/custom-models；chat_completion 自定义解析；修按 name 查 PK bug",
         "db": "是(custom_model_configs)", "breaking": "是",
-        "verify": "后端 37→40", "notes": "新增表；含眼睛 BUG 修复",
+        "verify": "后端 37→40", "notes": "新增表；含眼睛 BUG 修复；PRD: docs/prd/custom-models.md",
     },
     "5b5e5d9": {"type": "Docs", "content": "README 补充「模型与密钥管理」章节，更新测试数", "frontend": "README 章节补充", "backend": "-", "db": "否", "breaking": "否", "verify": "-", "notes": "测试数 40/28"},
     "4396cad": {"type": "BUG", "content": "修复一键启动脚本中文乱码（UTF-8 被 cmd/PowerShell 按 ANSI 解析）", "frontend": "脚本消息改纯 ASCII", "backend": "-", "db": "否", "breaking": "否", "verify": "-", "notes": "跨代码页安全"},
@@ -101,7 +101,7 @@ CURATED = {
         "frontend": "「添加厂商」表单(任意厂商名+Key)；厂商名 title-case；移除其余预设",
         "backend": "移除 Provider 白名单；/models/providers/status 只显示 deepseek+DB 厂商",
         "db": "否(复用 provider_credentials)", "breaking": "是",
-        "verify": "后端 40→42", "notes": "API 行为变化：PUT 接受任意厂商名",
+        "verify": "后端 40→42", "notes": "API 行为变化：PUT 接受任意厂商名；PRD: docs/prd/api-key-management.md",
     },
     "6289107": {"type": "Docs", "content": "新增 docs/PRD.md 变更追踪表", "frontend": "表格 + 维护约定", "backend": "-", "db": "否", "breaking": "否", "verify": "-", "notes": "建立本表，后续由脚本实时生成"},
     "fc35e0b": {"type": "Docs", "content": "新增 Excel 变更追踪工作簿", "frontend": "openpyxl 生成脚本", "backend": "-", "db": "否", "breaking": "否", "verify": "-", "notes": "表结构含颜色/冻结/筛选"},
@@ -111,7 +111,7 @@ CURATED = {
         "content": "前端视觉与响应式优化，新增通讯录 /contacts 页面与 Agent 头像组件",
         "frontend": "新增 agent-portrait.tsx、contacts-page.tsx(/contacts 路由)；agent-gallery/status-panel/app-sidebar/chat 组件重构；globals.css 视觉令牌与响应式优化",
         "backend": "-", "db": "否", "breaking": "否",
-        "verify": "-", "notes": "1203 插入/471 删除，21 文件；经 C-021 并入当前分支",
+        "verify": "-", "notes": "1203 插入/471 删除，21 文件；经 C-021 并入当前分支；PRD: docs/prd/visual-aesthetics.md",
     },
 }
 
@@ -136,7 +136,15 @@ CURATED_BY_SUBJECT = {
         "frontend": "合并 settings-page.tsx（保留 API Key 管理 + 自定义模型功能并采用视觉样式）；新增 contacts 路由、agent-portrait.tsx、software-dock.tsx 恢复；agent-gallery/status-panel/app-sidebar/chat 视觉重构",
         "backend": "-", "db": "否", "breaking": "否",
         "verify": "lint/test/build/pytest 全过(42)",
-        "notes": "仅 settings-page.tsx 1 处文本冲突手工合并",
+        "notes": "仅 settings-page.tsx 1 处文本冲突手工合并；PRD: docs/prd/visual-aesthetics.md",
+    },
+    "docs: 为 5 个历史需求补充详细 PRD 并登记到变更追踪表": {
+        "type": "Docs",
+        "content": "为 5 个历史需求（Agent Console MVP / API Key 管理 / 自定义模型 / 前端视觉与响应式优化 / Windows 一键启动）补充详细 PRD 文档到 docs/prd/，并在追踪表对应行备注 PRD 链接",
+        "frontend": "新增 docs/prd/agent-console-mvp.md、api-key-management.md、custom-models.md、visual-aesthetics.md、launch-scripts.md",
+        "backend": "generate_change_log.py CURATED 备注追加 PRD 链接",
+        "db": "否", "breaking": "否", "verify": "-",
+        "notes": "docs/PRD.md 增补「PRD 文档索引」；MVP 为基线前需求，以其 PRD 文档登记",
     },
     "feat: add agent tool-calling (function calling) capability": {
         "type": "Requirement",
@@ -155,7 +163,8 @@ MODEL_FILES = ("app/models/", "provider_credentials", "custom_model_configs")
 def run_git(args: list[str]) -> str:
     return subprocess.run(
         ["git", "-C", str(REPO), *args],
-        capture_output=True, text=True, check=True,
+        capture_output=True, text=True, encoding="utf-8",
+        errors="replace", check=True,
     ).stdout
 
 
