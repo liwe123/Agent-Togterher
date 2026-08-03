@@ -458,7 +458,10 @@ async def chat_completion(
     started_at = perf_counter()
 
     for attempt_index, model in enumerate(chain):
-        # Check DB keys first, then env
+        # Check DB keys first, then env. The api_keys dict (from get_db_api_keys)
+        # already holds arbitrary provider names, so custom providers stored in
+        # the DB resolve here; the known-provider guard below is intentionally
+        # skipped for providers not in _PROVIDER_KEY_FIELDS.
         api_key = None
         if api_keys:
             api_key = api_keys.get(model.provider)

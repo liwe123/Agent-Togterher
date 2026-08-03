@@ -45,8 +45,20 @@ const providerLabels: Record<string, string> = {
   dashscope: "DashScope",
 }
 
+/**
+ * Title-case an arbitrary provider name for display, e.g.
+ * "moonshot" -> "Moonshot", "x.ai" -> "X.Ai". Known providers keep
+ * their curated label from `providerLabels`.
+ */
+const titleCaseProvider = (name: string) =>
+  name
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(".")
+
 const providerDisplayName = (p: string) =>
-  providerLabels[p.toLowerCase()] ?? p
+  providerLabels[p.toLowerCase()] ?? titleCaseProvider(p.toLowerCase())
 
 /* Model purpose → badge color */
 const purposeColors: Record<string, string> = {
@@ -95,6 +107,12 @@ export function SettingsPage() {
   const [showKeys, setShowKeys] = useState<Record<string, boolean>>({})
   const [savingKeys, setSavingKeys] = useState<Record<string, boolean>>({})
   const [keyErrors, setKeyErrors] = useState<Record<string, string | null>>({})
+
+  // Local state for the "add provider" form
+  const [addProviderName, setAddProviderName] = useState("")
+  const [addProviderKey, setAddProviderKey] = useState("")
+  const [addingProvider, setAddingProvider] = useState(false)
+  const [addProviderError, setAddProviderError] = useState<string | null>(null)
 
   // Local state for the "add custom model" form
   const [showAddForm, setShowAddForm] = useState(false)
@@ -269,6 +287,25 @@ export function SettingsPage() {
     }
   }
 
+  const handleAddProvider = async () => {
+    const name = addProviderName.trim().toLowerCase()
+    const apiKey = addProviderKey.trim()
+    if (!name || !apiKey) return
+    setAddingProvider(true)
+    setAddProviderError(null)
+    try {
+      await saveProviderKey(name, apiKey)
+      setAddProviderName("")
+      setAddProviderKey("")
+    } catch (err) {
+      setAddProviderError(
+        err instanceof Error ? err.message : "添加厂商失败",
+      )
+    } finally {
+      setAddingProvider(false)
+    }
+  }
+
   const handleToggleKey = async (provider: string) => {
     const isVisible = showKeys[provider] ?? false
     // When revealing and the input is empty, fetch the stored key value so
@@ -387,6 +424,69 @@ export function SettingsPage() {
                 </div>
                 <span className="font-mono text-[11px] text-muted-foreground">{allProviders.length} PROVIDERS</span>
               </div>
+
+              {/* Add-provider form */}
+              <div className="rounded-xl border border-border bg-card/50 p-3">
+                <h3 className="text-sm font-semibold">添加厂商</h3>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  输入厂商名称与 API Key，保存后即可在下方编辑或删除
+                </p>
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    void handleAddProvider()
+                  }}
+                  className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center"
+                >
+                  <input
+                    type="text"
+                    value={addProviderName}
+                    onChange={(e) =>
+                      setAddProviderName(e.target.value.toLowerCase())
+                    }
+                    placeholder="如 moonshot / zhipu / x.ai"
+                    disabled={addingProvider}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    className="w-full rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 sm:w-56"
+                  />
+                  <input
+                    type="password"
+                    value={addProviderKey}
+                    onChange={(e) => setAddProviderKey(e.target.value)}
+                    placeholder="输入 API Key…"
+                    disabled={addingProvider}
+                    autoComplete="off"
+                    className="w-full flex-1 rounded-lg border border-[oklch(0.31_0.018_70)] bg-[oklch(0.195_0.014_70)] px-3 py-2 text-sm text-white placeholder:text-white/40 focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50"
+                  />
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={
+                      addingProvider ||
+                      !addProviderName.trim() ||
+                      !addProviderKey.trim()
+                    }
+                  >
+                    {addingProvider ? (
+                      <LoaderCircle
+                        aria-hidden="true"
+                        className="size-3.5 animate-spin"
+                      />
+                    ) : (
+                      <Plus aria-hidden="true" className="size-3.5" />
+                    )}
+                    添加
+                  </Button>
+                </form>
+                {addProviderError && (
+                  <p className="mt-2 text-[11px] text-destructive">
+                    {addProviderError}
+                  </p>
+                )}
+              </div>
+
               <div className="console-panel overflow-hidden rounded-xl border border-border bg-card/72">
                 {isLoading ? (
                   <div className="space-y-0 divide-y divide-border">

@@ -467,6 +467,55 @@ def test_custom_model_endpoints_and_model_config_integration(
     assert all(item["name"] != "my_analyst" for item in after_delete)
 
 
+def test_provider_keys_accept_any_custom_provider(api_client: TestClient) -> None:
+    # PUT accepts a provider not in any preset list.
+    created = assert_success(
+        api_client.put(
+            "/api/provider-keys/moonshot",
+            json={"api_key": "sk-moonshot-test-key"},
+        )
+    )
+    assert created == {"provider": "moonshot", "configured": True}
+
+    # GET reveals the stored value for the custom provider.
+    revealed = assert_success(api_client.get("/api/provider-keys/moonshot"))
+    assert revealed == {
+        "provider": "moonshot",
+        "configured": True,
+        "api_key": "sk-moonshot-test-key",
+    }
+
+    # The list includes the custom provider (configured) and the DeepSeek preset.
+    listed = assert_success(api_client.get("/api/provider-keys"))
+    providers = {item["provider"]: item["configured"] for item in listed}
+    assert providers["moonshot"] is True
+    assert "deepseek" in providers
+
+    # DELETE removes the DB row; the provider disappears from the list.
+    deleted = assert_success(api_client.delete("/api/provider-keys/moonshot"))
+    assert deleted["provider"] == "moonshot"
+    assert deleted["configured"] is False
+    after = assert_success(api_client.get("/api/provider-keys"))
+    assert all(item["provider"] != "moonshot" for item in after)
+
+
+def test_providers_status_includes_deepseek_and_db_providers(
+    api_client: TestClient,
+) -> None:
+    assert_success(
+        api_client.put(
+            "/api/provider-keys/moonshot",
+            json={"api_key": "sk-moonshot-test-key"},
+        )
+    )
+    statuses = assert_success(
+        api_client.get("/api/models/providers/status")
+    )
+    status_by_provider = {item["provider"]: item["configured"] for item in statuses}
+    assert "deepseek" in status_by_provider
+    assert status_by_provider["moonshot"] is True
+
+
 def test_validation_errors_are_wrapped(api_client: TestClient) -> None:
     response = api_client.post("/api/workspaces", json={"name": ""})
     assert response.status_code == 422

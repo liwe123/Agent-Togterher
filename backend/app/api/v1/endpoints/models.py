@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.errors import AppError
 from app.core.config import get_settings
 from app.db.session import get_db
-from app.models import Agent, CustomModelConfig, Workspace
+from app.models import Agent, CustomModelConfig, ProviderCredential, Workspace
 from app.schemas import (
     ErrorResponse,
     ModelConfigInfo,
@@ -75,7 +75,7 @@ async def list_models(
 
 
 # -- Providers whose key configuration status we expose ----------------------
-_KNOWN_PROVIDERS = ("openai", "anthropic", "gemini", "deepseek", "qwen")
+_KNOWN_PROVIDERS = ("deepseek",)
 
 
 @router.get("/config", response_model=SuccessResponse[list[ModelConfigInfo]])
@@ -120,12 +120,16 @@ async def get_providers_status(
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[list[ProviderStatusInfo]]:
     """Return API-key configuration status per provider (never the key)."""
-    # Collect providers from YAML + a fixed list so the UI always shows all.
+    # Preset providers always shown; plus every provider stored in the DB.
     configs = litellm_service.get_model_configs()
     providers: dict[str, bool] = {p: False for p in _KNOWN_PROVIDERS}
     for cfg in configs.values():
         p = cfg.provider.strip().lower()
         providers.setdefault(p, False)
+    # Any provider with a stored DB key counts as configured.
+    rows = (await session.execute(select(ProviderCredential))).scalars().all()
+    for row in rows:
+        providers[row.provider] = True
     for p in list(providers):
         providers[p] = await litellm_service.is_provider_configured_async(p, session=session)
     items = [

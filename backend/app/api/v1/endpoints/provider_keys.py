@@ -14,18 +14,39 @@ from app.services import litellm_service
 
 router = APIRouter(prefix="/provider-keys", tags=["provider-keys"])
 
-_PROVIDERS = ["openai", "anthropic", "gemini", "deepseek", "qwen", "dashscope"]
+# Preset providers are always listed; any other provider is accepted and
+# surfaced once it has a stored DB row.
+_PRESET_PROVIDERS = ["deepseek"]
+
+# Matches the ProviderCredential.provider column width.
+_PROVIDER_NAME_MAX_LENGTH = 50
 
 
 @router.get("", response_model=SuccessResponse[list[ProviderStatusInfo]])
 async def list_provider_keys(session: AsyncSession = Depends(get_db)):
     """Return which providers have keys configured (DB or env). Never exposes key values."""
-    rows = (await session.execute(select(ProviderCredential))).scalars().all()
+    rows = (
+        await session.execute(
+            select(ProviderCredential).order_by(ProviderCredential.id)
+        )
+    ).scalars().all()
     db_configured = {row.provider for row in rows}
     result = []
-    for provider in _PROVIDERS:
-        configured = provider in db_configured or litellm_service.is_provider_configured(provider)
+    seen: set[str] = set()
+    # Preset providers are always listed; deepseek may be env-configured.
+    for provider in _PRESET_PROVIDERS:
+        seen.add(provider)
+        configured = (
+            provider in db_configured
+            or litellm_service.is_provider_configured(provider)
+        )
         result.append(ProviderStatusInfo(provider=provider, configured=configured))
+    # Every provider stored in the DB is listed too (it has a stored key).
+    for row in rows:
+        if row.provider in seen:
+            continue
+        seen.add(row.provider)
+        result.append(ProviderStatusInfo(provider=row.provider, configured=True))
     return SuccessResponse(data=result)
 
 
@@ -36,8 +57,6 @@ async def get_provider_key(provider: str, session: AsyncSession = Depends(get_db
     Intended for explicit user-triggered reveal in this local-first tool.
     The list endpoint still never exposes key values.
     """
-    if provider not in _PROVIDERS:
-        raise AppError(422, f"Unknown provider '{provider}'. Supported: {', '.join(_PROVIDERS)}")
     row = (await session.execute(
         select(ProviderCredential).where(ProviderCredential.provider == provider)
     )).scalar_one_or_none()
@@ -51,9 +70,15 @@ async def get_provider_key(provider: str, session: AsyncSession = Depends(get_db
 
 @router.put("/{provider}", status_code=status.HTTP_200_OK, response_model=SuccessResponse[ProviderStatusInfo])
 async def upsert_provider_key(provider: str, payload: ProviderKeyUpsert, session: AsyncSession = Depends(get_db)):
-    """Store an API key for a provider. Overwrites if already exists."""
-    if provider not in _PROVIDERS:
-        raise AppError(422, f"Unknown provider '{provider}'. Supported: {', '.join(_PROVIDERS)}")
+    """Store an API key for any provider. Overwrites if already exists."""
+    provider = provider.strip()
+    if not provider:
+        raise AppError(422, "Provider name cannot be empty")
+    if len(provider) > _PROVIDER_NAME_MAX_LENGTH:
+        raise AppError(
+            422,
+            f"Provider name must be {_PROVIDER_NAME_MAX_LENGTH} characters or fewer",
+        )
     key = payload.api_key.strip()
     if not key:
         raise AppError(422, "API key cannot be empty")
