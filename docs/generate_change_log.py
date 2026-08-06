@@ -113,6 +113,24 @@ CURATED = {
         "backend": "-", "db": "否", "breaking": "否",
         "verify": "-", "notes": "1203 插入/471 删除，21 文件；经 C-021 并入当前分支；PRD: docs/prd/PRD-前端视觉与响应式优化.md",
     },
+    "b7f7d27": {
+        "type": "Docs",
+        "content": "同步优化版项目为新的 Git 基线",
+        "frontend": "-", "backend": "-", "db": "否", "breaking": "否", "verify": "-",
+        "notes": "将优化后的完整项目作为当前主线基线提交",
+    },
+    "29deb0e": {
+        "type": "Docs",
+        "content": "合并远端历史并保留当前优化版项目状态",
+        "frontend": "-", "backend": "-", "db": "否", "breaking": "否", "verify": "-",
+        "notes": "采用 ours 策略合并远端历史后推送到 GitHub",
+    },
+    "6cab7da": {
+        "type": "Docs",
+        "content": "同步优化版项目后刷新变更追踪表",
+        "frontend": "更新 PRD 与 Excel 变更追踪表", "backend": "生成脚本重跑", "db": "否", "breaking": "否", "verify": "-",
+        "notes": "将新基线提交一并纳入改动表",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even
