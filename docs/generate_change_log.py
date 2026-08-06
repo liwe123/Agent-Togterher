@@ -131,6 +131,11 @@ CURATED = {
         "frontend": "更新 PRD 与 Excel 变更追踪表", "backend": "生成脚本重跑", "db": "否", "breaking": "否", "verify": "-",
         "notes": "将新基线提交一并纳入改动表",
     },
+    "7039e2a": {
+        "type": "Docs",
+        "content": "修复 GitHub Actions Python 包工作流以运行后端测试",
+        "frontend": "-", "backend": "backend/requirements-dev.txt；backend/tests；.github/workflows/python-package-conda.yml", "db": "否", "breaking": "否", "verify": "backend/tests/test_health.py 通过", "notes": "移除缺失的 environment.yml 依赖，改为 pip 安装并在 backend 目录执行 pytest",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even

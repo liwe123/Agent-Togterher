@@ -57,6 +57,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-06 21:26 | C-034 | 已完成 | [b7f7d27](https://github.com/liwe123/Agent-Togterher/commit/b7f7d27) | LI | Docs | 其他 | 同步优化版项目为新的 Git 基线 | - | - | 否 | 否 | - | 将优化后的完整项目作为当前主线基线提交 |
 | 2026-08-06 21:28 | C-035 | 已完成 | [29deb0e](https://github.com/liwe123/Agent-Togterher/commit/29deb0e) | LI | Docs | 其他 | 合并远端历史并保留当前优化版项目状态 | - | - | 否 | 否 | - | 采用 ours 策略合并远端历史后推送到 GitHub |
 | 2026-08-06 21:34 | C-036 | 已完成 | [6cab7da](https://github.com/liwe123/Agent-Togterher/commit/6cab7da) | LI | Docs | 其他、文档 | 同步优化版项目后刷新变更追踪表 | 更新 PRD 与 Excel 变更追踪表 | 生成脚本重跑 | 否 | 否 | - | 将新基线提交一并纳入改动表 |
+| 2026-08-06 21:37 | C-037 | 已完成 | [2d1e659](https://github.com/liwe123/Agent-Togterher/commit/2d1e659) | LI | Docs | 其他、文档 | docs: make change log entries Chinese for recent sync | - | - | 否 | 否 | - | - |
+| 2026-08-06 21:46 | C-038 | 已完成 | [7039e2a](https://github.com/liwe123/Agent-Togterher/commit/7039e2a) | LI | Docs | 其他 | 修复 GitHub Actions Python 包工作流以运行后端测试 | - | backend/requirements-dev.txt；backend/tests；.github/workflows/python-package-conda.yml | 否 | 否 | backend/tests/test_health.py 通过 | 移除缺失的 environment.yml 依赖，改为 pip 安装并在 backend 目录执行 pytest |
 <!-- CHANGELOG:END -->
 
 ---
