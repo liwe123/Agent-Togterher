@@ -53,6 +53,9 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-03 20:59 | C-030 | 已完成 | [caaafe1](https://github.com/liwe123/Agent-Togterher/commit/caaafe1) | liwe123 | Docs | 其他 | Add GitHub Actions workflow for Python package with Conda | - | - | 否 | 否 | - | - |
 | 2026-08-03 21:04 | C-031 | 已完成 | [1fd9aba](https://github.com/liwe123/Agent-Togterher/commit/1fd9aba) | LI | Docs | 其他、文档 | docs: 统一 PRD 文档命名为 PRD-前缀 | - | - | 否 | 否 | - | - |
 | 2026-08-03 21:04 | C-032 | 已完成 | [42dcda5](https://github.com/liwe123/Agent-Togterher/commit/42dcda5) | LI | Docs | 其他、文档 | docs: 变更追踪表登记 PRD 重命名提交 | - | - | 否 | 否 | - | - |
+| 2026-08-03 21:05 | C-033 | 已完成 | [9d4a57e](https://github.com/liwe123/Agent-Togterher/commit/9d4a57e) | LI | Docs | 其他、文档 | docs: 变更追踪表登记 CI workflow 与 PRD 重命名提交 | - | - | 否 | 否 | - | - |
+| 2026-08-06 21:26 | C-034 | 已完成 | [b7f7d27](https://github.com/liwe123/Agent-Togterher/commit/b7f7d27) | LI | Docs | 其他 | Sync optimized project into a clean Git baseline. | - | - | 否 | 否 | - | - |
+| 2026-08-06 21:28 | C-035 | 已完成 | [29deb0e](https://github.com/liwe123/Agent-Togterher/commit/29deb0e) | LI | Docs | 其他 | Merge remote history while preserving optimized project state. | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
