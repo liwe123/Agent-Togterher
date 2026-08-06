@@ -1,0 +1,5 @@
+export const RECONNECT_DELAY_MS = 3000
+export const TASK_REFRESH_DELAY_MS = 80
+export const MESSAGE_LIST_LIMIT = 200
+export const TASK_LIST_LIMIT = 100
+export const CONVERSATION_LIST_LIMIT = 20

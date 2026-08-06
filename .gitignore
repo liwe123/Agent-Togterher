@@ -1,0 +1,21 @@
+.env
+__pycache__/
+node_modules/
+.next/
+dist/
+*.db
+*.sqlite
+
+# Python / Virtualenv
+.venv/
+*.py[cod]
+.pytest_cache/
+
+# IDEs & System files
+.idea/
+.vscode/
+.claude/
+.codex/
+.impeccable/
+.DS_Store
+Thumbs.db

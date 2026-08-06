@@ -1,0 +1,35 @@
+models:
+  manager_model:
+    name: manager_model
+    provider: openai
+    model: gpt-4.1-mini
+    purpose: 任务拆解、协调和最终结果整合
+    fallback_model: cheap_model
+
+  code_model:
+    name: code_model
+    provider: deepseek
+    model: deepseek-chat
+    purpose: 代码生成、调试和技术分析
+    fallback_model: cheap_model
+
+  writing_model:
+    name: writing_model
+    provider: anthropic
+    model: claude-3-5-haiku-20241022
+    purpose: 长文本写作、改写和摘要
+    fallback_model: cheap_model
+
+  review_model:
+    name: review_model
+    provider: gemini
+    model: gemini-2.0-flash
+    purpose: 结果审查、交叉检查和风险识别
+    fallback_model: cheap_model
+
+  cheap_model:
+    name: cheap_model
+    provider: qwen
+    model: qwen-turbo
+    purpose: 低成本分类、提取和简单问答
+    fallback_model: null

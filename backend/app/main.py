@@ -1,0 +1,56 @@
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.errors import install_error_handlers
+from app.api.rest_router import rest_api_router
+from app.api.v1.router import api_router
+from app.core.config import get_settings
+from app.db.session import close_db, init_db
+from app.websocket.router import router as websocket_router
+
+settings = get_settings()
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    await init_db()
+    from app.db.seed import seed_defaults
+    from app.db.session import AsyncSessionLocal
+    from app.core.message_hub import recover_unfinished_tasks
+    async with AsyncSessionLocal() as session:
+        await seed_defaults(session)
+        await recover_unfinished_tasks(session)
+    yield
+    await close_db()
+
+
+app = FastAPI(
+    title=settings.app_name,
+    version="0.1.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+install_error_handlers(app)
+app.include_router(api_router, prefix=settings.api_v1_prefix)
+app.include_router(rest_api_router, prefix="/api")
+app.include_router(websocket_router)
+
+
+@app.get("/", tags=["root"])
+async def root() -> dict[str, str]:
+    return {
+        "name": settings.app_name,
+        "docs": "/docs",
+        "health": f"{settings.api_v1_prefix}/health",
+    }
