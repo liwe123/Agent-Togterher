@@ -53,6 +53,8 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "result",
             "created_at",
             "updated_at",
+            "execution_token",
+            "execution_token_expires_at",
         },
         "task_steps": {
             "id",
