@@ -424,9 +424,10 @@ async def test_tool_loop_terminates_when_model_always_returns_tool_calls(
             orchestrator_session, broadcaster
         ).run_task(task.id)
 
-    # 1 initial call + max_iterations=5 follow-up calls, no infinite loop.
+    # 1 initial call + max_iterations=5 follow-up calls, then a hard failure.
     assert model_call.await_count == 6
-    assert result.status == TaskStatus.COMPLETED
+    assert result.status == TaskStatus.FAILED
+    assert "did not converge" in (result.result or "")
 
     tool_steps = list(
         await orchestrator_session.scalars(

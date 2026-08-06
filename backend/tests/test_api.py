@@ -470,10 +470,10 @@ def test_custom_model_endpoints_and_model_config_integration(
 
 
 def test_provider_keys_accept_any_custom_provider(api_client: TestClient) -> None:
-    # PUT accepts a provider not in any preset list.
+    # PUT accepts a provider not in any preset list and normalizes casing.
     created = assert_success(
         api_client.put(
-            "/api/provider-keys/moonshot",
+            "/api/provider-keys/MoonShot",
             json={"api_key": "sk-moonshot-test-key"},
         )
     )
@@ -506,7 +506,7 @@ def test_providers_status_includes_deepseek_and_db_providers(
 ) -> None:
     assert_success(
         api_client.put(
-            "/api/provider-keys/moonshot",
+            "/api/provider-keys/MoonShot",
             json={"api_key": "sk-moonshot-test-key"},
         )
     )

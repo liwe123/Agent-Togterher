@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Awaitable
+from datetime import timedelta
+from uuid import uuid4
 from decimal import Decimal
 from typing import Final
 
@@ -429,16 +431,32 @@ class AgentOrchestrator:
             )
 
     async def _claim_pending_task(self, task_id: int) -> Task:
+        claim_token = str(uuid4())
+        lease_expires_at = utc_now() + timedelta(minutes=30)
         claim = await self._session.execute(
             update(Task)
             .where(Task.id == task_id, Task.status == TaskStatus.PENDING)
-            .values(status=TaskStatus.RUNNING, updated_at=utc_now())
+            .values(
+                status=TaskStatus.RUNNING,
+                execution_token=claim_token,
+                execution_token_expires_at=lease_expires_at,
+                updated_at=utc_now(),
+            )
         )
         if claim.rowcount != 1:
             await self._session.rollback()
             task = await self._session.get(Task, task_id)
             if task is None:
                 raise TaskNotFoundError(f"Task {task_id} not found")
+            if task.status == TaskStatus.RUNNING and task.execution_token_expires_at is not None and task.execution_token_expires_at < utc_now():
+                task.status = TaskStatus.PENDING
+                task.execution_token = None
+                task.execution_token_expires_at = None
+                await self._session.commit()
+                task = await self._session.get(Task, task_id)
+                if task is None:
+                    raise TaskNotFoundError(f"Task {task_id} not found after claim reset")
+                return await self._claim_pending_task(task_id)
             raise TaskNotRunnableError(
                 f"Task {task_id} is {task.status.value} and cannot be started"
             )
@@ -477,6 +495,9 @@ class AgentOrchestrator:
         result: str | None = None,
     ) -> TaskRead:
         task.status = status
+        if status in {TaskStatus.COMPLETED, TaskStatus.FAILED}:
+            task.execution_token = None
+            task.execution_token_expires_at = None
         if result is not None:
             task.result = result
         await self._session.commit()
@@ -598,6 +619,10 @@ class AgentOrchestrator:
                 task,
                 agent,
                 call_factory(tools=tools, extra_messages=history),
+            )
+        if completion.tool_calls:
+            raise TaskNotRunnableError(
+                f"Task {task.id} tool calling did not converge after {max_iterations} rounds"
             )
         return completion
 

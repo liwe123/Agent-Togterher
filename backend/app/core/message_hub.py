@@ -5,11 +5,12 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import AppError
 from app.api.persistence import commit_or_conflict
+from app.db.base import utc_now
 from app.db.session import AsyncSessionLocal
 from app.models import (
     Agent,
@@ -52,19 +53,37 @@ async def recover_unfinished_tasks(
 ) -> int:
     """Dispatch tasks left unfinished by a previous in-process worker."""
     task_dispatcher = dispatcher or dispatch_background_task
+    now = utc_now()
     tasks = list(
         await session.scalars(
             select(Task)
-            .where(Task.status.in_([TaskStatus.PENDING, TaskStatus.RUNNING]))
+            .where(
+                Task.status == TaskStatus.PENDING,
+            )
             .order_by(Task.id)
         )
     )
+    expired_running_tasks = list(
+        await session.scalars(
+            select(Task)
+            .where(
+                Task.status == TaskStatus.RUNNING,
+                or_(
+                    Task.execution_token_expires_at.is_(None),
+                    Task.execution_token_expires_at < now,
+                ),
+            )
+            .order_by(Task.id)
+        )
+    )
+    tasks.extend(expired_running_tasks)
     if not tasks:
         return 0
 
-    for task in tasks:
-        if task.status == TaskStatus.RUNNING:
-            task.status = TaskStatus.PENDING
+    for task in expired_running_tasks:
+        task.status = TaskStatus.PENDING
+        task.execution_token = None
+        task.execution_token_expires_at = None
 
     await commit_or_conflict(session)
 

@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-from sqlalchemy import event
+from sqlalchemy import event, inspect, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -36,6 +36,23 @@ async def init_db() -> None:
 
     async with engine.begin() as connection:
         await connection.run_sync(Base.metadata.create_all)
+        await connection.run_sync(_migrate_sqlite_schema)
+
+
+def _migrate_sqlite_schema(connection) -> None:
+    inspector = inspect(connection)
+    if not inspector.has_table("tasks"):
+        return
+    columns = {column["name"] for column in inspector.get_columns("tasks")}
+    alterations = []
+    if "execution_token" not in columns:
+        alterations.append("ALTER TABLE tasks ADD COLUMN execution_token VARCHAR(36)")
+    if "execution_token_expires_at" not in columns:
+        alterations.append(
+            "ALTER TABLE tasks ADD COLUMN execution_token_expires_at DATETIME"
+        )
+    for statement in alterations:
+        connection.execute(text(statement))
 
 
 async def close_db() -> None:

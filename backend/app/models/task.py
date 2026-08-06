@@ -46,6 +46,12 @@ class Task(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, onupdate=utc_now
     )
+    execution_token: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    execution_token_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
 
     workspace: Mapped["Workspace"] = relationship(back_populates="tasks")
     conversation: Mapped["Conversation | None"] = relationship(back_populates="tasks")

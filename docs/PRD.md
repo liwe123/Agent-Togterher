@@ -59,6 +59,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-06 21:34 | C-036 | 已完成 | [6cab7da](https://github.com/liwe123/Agent-Togterher/commit/6cab7da) | LI | Docs | 其他、文档 | 同步优化版项目后刷新变更追踪表 | 更新 PRD 与 Excel 变更追踪表 | 生成脚本重跑 | 否 | 否 | - | 将新基线提交一并纳入改动表 |
 | 2026-08-06 21:37 | C-037 | 已完成 | [2d1e659](https://github.com/liwe123/Agent-Togterher/commit/2d1e659) | LI | Docs | 其他、文档 | docs: make change log entries Chinese for recent sync | - | - | 否 | 否 | - | - |
 | 2026-08-06 21:46 | C-038 | 已完成 | [7039e2a](https://github.com/liwe123/Agent-Togterher/commit/7039e2a) | LI | Docs | 其他 | 修复 GitHub Actions Python 包工作流以运行后端测试 | - | backend/requirements-dev.txt；backend/tests；.github/workflows/python-package-conda.yml | 否 | 否 | backend/tests/test_health.py 通过 | 移除缺失的 environment.yml 依赖，改为 pip 安装并在 backend 目录执行 pytest |
+| 2026-08-06 21:49 | C-039 | 已完成 | [0e0a15f](https://github.com/liwe123/Agent-Togterher/commit/0e0a15f) | LI | Docs | 其他、文档 | docs: record the GitHub Actions workflow fix in the change log | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---

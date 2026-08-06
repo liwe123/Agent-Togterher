@@ -18,6 +18,8 @@ class TaskCreate(BaseModel):
     priority: str = Field(default="normal", min_length=1, max_length=20)
     input_message_id: int | None = Field(default=None, gt=0)
     result: str | None = None
+    execution_token: str | None = None
+    execution_token_expires_at: datetime | None = None
 
 
 class TaskUpdate(BaseModel):

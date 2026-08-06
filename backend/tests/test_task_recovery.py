@@ -1,9 +1,11 @@
+from datetime import timedelta
+
 import pytest
 import pytest_asyncio
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app.db.base import Base
+from app.db.base import Base, utc_now
 from app.models import Agent, Conversation, Task, TaskStatus, Workspace
 
 
@@ -49,6 +51,8 @@ async def create_recovery_graph(session) -> tuple[Task, Task, Task]:
         description="Recover this interrupted task.",
         assigned_agent_id=agent.id,
         status=TaskStatus.RUNNING,
+        execution_token="stale-token",
+        execution_token_expires_at=utc_now() - timedelta(minutes=1),
     )
     completed_task = Task(
         workspace_id=workspace.id,
@@ -64,7 +68,7 @@ async def create_recovery_graph(session) -> tuple[Task, Task, Task]:
 
 
 @pytest.mark.asyncio
-async def test_recover_unfinished_tasks_dispatches_pending_and_running_tasks(
+async def test_recover_unfinished_tasks_dispatches_pending_and_expired_running_tasks(
     recovery_session,
 ) -> None:
     pending_task, running_task, completed_task = await create_recovery_graph(

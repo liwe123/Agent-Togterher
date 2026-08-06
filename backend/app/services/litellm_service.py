@@ -219,8 +219,13 @@ def clear_model_config_cache() -> None:
     _load_model_configs.cache_clear()
 
 
-def _normalize_provider(provider: str) -> str:
+def normalize_provider(provider: str) -> str:
+    """Return the canonical provider key used by config, DB, and LiteLLM."""
     return provider.strip().lower()
+
+
+def _normalize_provider(provider: str) -> str:
+    return normalize_provider(provider)
 
 
 def _model_name_for_litellm(provider: str, model: str) -> str:
@@ -307,7 +312,11 @@ async def get_db_api_keys(session) -> dict[str, str]:
     from app.models import ProviderCredential
     from sqlalchemy import select as sa_select
     rows = (await session.execute(sa_select(ProviderCredential))).scalars().all()
-    return {row.provider: row.api_key for row in rows}
+    return {
+        normalize_provider(row.provider): row.api_key
+        for row in rows
+        if row.api_key.strip()
+    }
 
 
 async def get_db_custom_models(session) -> dict[str, dict]:
@@ -317,7 +326,7 @@ async def get_db_custom_models(session) -> dict[str, dict]:
     rows = (await session.execute(select(CustomModelConfig))).scalars().all()
     return {
         row.name: {
-            "provider": row.provider,
+            "provider": normalize_provider(row.provider),
             "model": row.model,
             "purpose": row.purpose,
             "fallback_model": row.fallback_model,
@@ -331,9 +340,12 @@ async def is_provider_configured_async(provider: str, session=None) -> bool:
     if session is not None:
         from app.models import ProviderCredential
         from sqlalchemy import select as sa_select
-        row = (await session.execute(
-            sa_select(ProviderCredential).where(ProviderCredential.provider == provider)
-        )).scalar_one_or_none()
+        canonical_provider = normalize_provider(provider)
+        rows = (await session.execute(sa_select(ProviderCredential))).scalars().all()
+        row = next(
+            (item for item in rows if normalize_provider(item.provider) == canonical_provider),
+            None,
+        )
         if row is not None and row.api_key.strip():
             return True
     return is_provider_configured(provider)
@@ -485,7 +497,14 @@ async def chat_completion(
         # skipped for providers not in _PROVIDER_KEY_FIELDS.
         api_key = None
         if api_keys:
-            api_key = api_keys.get(model.provider)
+            api_key = next(
+                (
+                    value
+                    for key, value in api_keys.items()
+                    if normalize_provider(key) == model.provider
+                ),
+                None,
+            )
         if api_key is None:
             api_key = _get_api_key(model.provider)
         attempt_started_at = perf_counter()
