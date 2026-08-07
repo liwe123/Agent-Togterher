@@ -149,19 +149,29 @@ def build_toc(fragment: str, prd_prefixes: set[str]) -> str:
     return f'<nav class="toc" aria-label="目录"><ul class="toc-root">{"".join(items)}</ul></nav>'
 
 
-def extract_shell(existing: str) -> tuple[str, str, str]:
+def extract_shell(existing: str) -> tuple[str, str]:
     style_match = re.search(r"<style>.*?</style>", existing, flags=re.S)
     script_match = re.search(r"<script>.*?</script>", existing, flags=re.S)
     if not style_match or not script_match:
         raise ValueError("现有 HTML 缺少可复用的 style 或 script 区块")
-    style = style_match.group(0)
-    script = script_match.group(0)
-    brand_match = re.search(r'(<div class="brand">.*?</div>\s*</div>)', existing, flags=re.S)
-    brand = brand_match.group(1) if brand_match else (
-        '<div class="brand"><div class="brand-mark">AC</div><div>'
-        '<div class="brand-name">Agent Console</div><div class="brand-sub">PRD 文档</div></div></div>'
-    )
-    return style, script, brand
+    return style_match.group(0), script_match.group(0)
+
+
+BRAND = (
+    '<div class="brand"><div class="brand-mark">AC</div><div>'
+    '<div class="brand-name">Agent Console</div>'
+    '<div class="brand-sub">PRD 文档</div></div></div>'
+)
+
+SIDEBAR_CSS = """
+.sidebar-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 4px 8px 12px; margin-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+.sidebar-head .brand { padding: 0; margin: 0; border-bottom: none; }
+.sidebar-head .theme-toggle { width: auto; margin: 0; padding: 6px 10px; font-size: 12px; }
+"""
 
 
 def build(output: Path) -> None:
@@ -172,7 +182,10 @@ def build(output: Path) -> None:
         else:
             raise FileNotFoundError(f"找不到用于复用样式的 HTML 文件：{output}")
     existing = output.read_text(encoding="utf-8")
-    style, script, brand = extract_shell(existing)
+    style, script = extract_shell(existing)
+    if ".sidebar-head" not in style:
+        style = style.replace("</style>", SIDEBAR_CSS + "\n</style>")
+    brand = BRAND
     main_source = (DOCS / "PRD.md").read_text(encoding="utf-8")
     main_body, maintenance = split_main_document(main_source)
     main_body = strip_document_title(main_body)
@@ -204,9 +217,11 @@ def build(output: Path) -> None:
 <button class="menu-toggle" id="menu-toggle" aria-label="打开目录">☰</button>
 <div class="app">
   <aside class="sidebar" id="sidebar">
-    {brand}
+    <div class="sidebar-head">
+      {brand}
+      <button class="theme-toggle" id="theme-toggle" type="button">切换深浅主题</button>
+    </div>
     {toc}
-    <div class="sidebar-foot"><button class="theme-toggle" id="theme-toggle" type="button">切换深浅主题</button></div>
   </aside>
   <main class="content">
     <header class="hero">
