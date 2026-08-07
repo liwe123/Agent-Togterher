@@ -142,12 +142,24 @@ CURATED = {
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
     "feat: improve frontend interaction and accessibility": {
-        "type": "Requirement",
-        "content": "前端交互体验完善：Software Dock 状态详情、移动端快捷指令、安全 Markdown；修复主题冲突、通讯录搜索分组、动态提及与 Agent 弹窗无障碍问题",
-        "frontend": "globals.css 统一深色主题；chat composer 动态 Agent/移动快捷操作；message bubble 安全 Markdown；Agent Dialog 焦点与键盘支持；Dock 可交互；通讯录和设置表单优化",
+        "details": [
+            {"type": "Requirement", "content": "Software Dock 增加可操作的连接状态详情", "frontend": "software-dock.tsx：展示软件名称、接入位、在线状态；支持鼠标与键盘操作", "notes": "PRD FR1；依赖同提交"},
+            {"type": "Requirement", "content": "Agent 消息支持安全 Markdown 结构化渲染", "frontend": "message-bubble.tsx + react-markdown：标题、列表、行内代码、代码块、安全外链；跳过原始 HTML", "notes": "PRD FR2；package.json/package-lock.json 新增 react-markdown"},
+            {"type": "Requirement", "content": "移动端聊天增加快捷指令与 Agent 选择面板", "frontend": "chat-composer.tsx：移动快捷操作入口、模板列表、动态 Agent 列表", "notes": "PRD FR3"},
+            {"type": "Requirement", "content": "Agent 详情弹层补齐完整交互能力", "frontend": "agent-gallery.tsx：Dialog 语义、Escape/遮罩关闭、背景滚动锁定、焦点恢复", "notes": "PRD FR4"},
+            {"type": "BUG", "content": "修复移动端浅色变量与根节点深色主题冲突", "frontend": "globals.css：移除按屏幕宽度覆盖主题色与 color-scheme 的规则", "notes": "无需 PRD"},
+            {"type": "BUG", "content": "修复通讯录搜索后 Agent 服务分组错乱", "frontend": "contacts-page.tsx：先按原始服务归属分组，再分别执行搜索过滤", "notes": "无需 PRD"},
+            {"type": "BUG", "content": "修复通讯录在线人数与连接状态不一致", "frontend": "contacts-page.tsx：结合 WebSocket 连接状态与 Agent 状态计算在线人数", "notes": "无需 PRD"},
+            {"type": "BUG", "content": "修复聊天提及列表依赖固定中文姓名", "frontend": "chat-composer.tsx：基于接口 Agent 数据和角色优先级生成提及列表", "notes": "无需 PRD"},
+            {"type": "BUG", "content": "修复客户端 mention 查询参数变化后输入框不更新", "frontend": "chat-composer.tsx：监听查询参数并去重追加提及，保留用户已有输入", "notes": "无需 PRD"},
+            {"type": "Optimization", "content": "设置页表单统一使用全局语义颜色", "frontend": "settings-page.tsx：输入框改用 background/foreground/input/muted 设计令牌", "notes": "无需 PRD"},
+            {"type": "Optimization", "content": "Agent 卡片扩大为完整语义化交互区域", "frontend": "agent-gallery.tsx：头像、姓名、状态和角色合并为可聚焦按钮", "notes": "无需 PRD"},
+            {"type": "Optimization", "content": "完善通讯录搜索范围、无结果状态与清空操作", "frontend": "contacts-page.tsx：支持姓名/角色/职责，Escape 清空，无结果提示与清空按钮", "notes": "无需 PRD"},
+            {"type": "Optimization", "content": "提升 Agent 角色辅助文字可读性", "frontend": "agent-gallery.tsx：角色文字由 10px 调整为 11px", "notes": "无需 PRD"},
+            {"type": "Docs", "content": "新增前端交互体验完善 PRD", "frontend": "docs/prd/PRD-前端交互体验完善.md", "notes": "登记 Requirement 的目标、用户故事、FR 与验收标准"},
+        ],
         "backend": "-", "db": "否", "breaking": "否",
         "verify": "A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过",
-        "notes": "PRD: docs/prd/PRD-前端交互体验完善.md；分类包含 Requirement、BUG、Optimization",
     },
     "docs: auto-generate change log from git history": {
         "type": "Docs", "content": "变更追踪表改为从 git history 自动生成",
@@ -300,9 +312,26 @@ def git_rows():
     commits.sort(key=lambda c: (c[1], c[0]))
 
     rows = []
-    for i, (sha, when, author, subject) in enumerate(commits, start=1):
+    next_id = 1
+    for sha, when, author, subject in commits:
         files = changed_files(sha)
         curated = CURATED.get(sha) or CURATED_BY_SUBJECT.get(subject)
+        details = curated.get("details") if curated else None
+        if details:
+            for detail in details:
+                rows.append((
+                    when, f"C-{next_id:03d}", detail.get("status", "已完成"),
+                    sha, author, detail["type"], detail.get("scope", infer_scope(files)),
+                    detail["content"], detail.get("frontend", "-"),
+                    detail.get("backend", curated.get("backend", "-")),
+                    detail.get("db", curated.get("db", "否")),
+                    detail.get("breaking", curated.get("breaking", "否")),
+                    detail.get("verify", curated.get("verify", "-")),
+                    detail.get("notes", "-"),
+                ))
+                next_id += 1
+            continue
+
         if curated:
             ctype = curated.get("type", type_from_subject(subject))
             content = curated.get("content", subject)
@@ -323,8 +352,9 @@ def git_rows():
             notes = "-"
         status = curated.get("status", "已完成") if curated else "已完成"
         scope = infer_scope(files)
-        rows.append((when, f"C-{i:03d}", status, sha, author, ctype, scope,
+        rows.append((when, f"C-{next_id:03d}", status, sha, author, ctype, scope,
                      content, fe, be, db, breaking, verify, notes))
+        next_id += 1
     return rows
 
 
