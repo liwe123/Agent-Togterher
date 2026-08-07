@@ -106,6 +106,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-APIKey管理.md](prd/PRD-APIKey管理.md) | 设置页 API Key 管理（DeepSeek 预设 + 任意厂商） | 19d4dca、abbb336 | C-006、C-015 |
 | [PRD-自定义模型接入.md](prd/PRD-自定义模型接入.md) | 自定义模型接入（任意 provider/model + fallback 降级） | 48b3c47 | C-009 |
 | [PRD-前端视觉与响应式优化.md](prd/PRD-前端视觉与响应式优化.md) | 前端视觉与响应式优化 + /contacts 通讯录页 | 9c2dd0e、0c46b78 | C-005、C-021 |
+| [PRD-前端交互体验完善.md](prd/PRD-前端交互体验完善.md) | 软件 Dock、Markdown 消息、移动端快捷操作与无障碍交互 | 53268f4 | C-042～C-045、C-055 |
+| [PRD-后端访问控制与工作区隔离.md](prd/PRD-后端访问控制与工作区隔离.md) | API Token、可信工作区上下文与 Provider Key 脱敏 | 71ea26f | C-058～C-060、C-070 |
 | [PRD-Windows一键启动脚本.md](prd/PRD-Windows一键启动脚本.md) | Windows 一键启动脚本 | fb94fb2 | C-007 |
 
 ---

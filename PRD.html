@@ -1,0 +1,2893 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Agent Console 产品需求文档 · 变更追踪 · 全量阅读版">
+<title>Agent Console · PRD 文档</title>
+<style>
+:root {
+  --bg: #f6f7f5;
+  --surface: #ffffff;
+  --surface-2: #f0f2ee;
+  --surface-3: #e8ece5;
+  --rule: #dfe3dc;
+  --text: #1c221e;
+  --text-2: #5b655e;
+  --text-3: #8b948d;
+  --accent: #0e6b4f;
+  --accent-2: #6a52c8;
+  --accent-soft: #e3f1ea;
+  --link: #0b5d43;
+  --code-bg: #eef0ea;
+  --row-alt: rgba(14, 107, 79, 0.05);
+  --shadow: 0 1px 2px rgba(20, 30, 24, 0.05);
+  --font-sans: "Segoe UI Variable","Segoe UI","Microsoft YaHei UI","Microsoft YaHei","PingFang SC","Hiragino Sans GB",system-ui,sans-serif;
+  --font-mono: "Cascadia Code","Cascadia Mono",Consolas,"SF Mono",Menlo,monospace;
+}
+[data-theme="dark"] {
+  --bg: #0b1512;
+  --surface: #14201b;
+  --surface-2: #1b2923;
+  --surface-3: #223229;
+  --rule: #2a3933;
+  --text: #e7eee9;
+  --text-2: #9aa89f;
+  --text-3: #6f7d74;
+  --accent: #7be0b3;
+  --accent-2: #9d84f0;
+  --accent-soft: rgba(123, 224, 179, 0.12);
+  --link: #8fe6bf;
+  --code-bg: #101a16;
+  --row-alt: rgba(255, 255, 255, 0.035);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+.app { display: grid; grid-template-columns: 288px minmax(0, 1fr); min-height: 100vh; }
+
+/* ---- sidebar ---- */
+.sidebar {
+  position: sticky; top: 0; height: 100vh;
+  display: flex; flex-direction: column;
+  background: var(--surface);
+  border-right: 1px solid var(--rule);
+  padding: 18px 14px 16px;
+  overflow-y: auto;
+  z-index: 20;
+}
+.brand {
+  display: flex; gap: 10px; align-items: center;
+  padding: 4px 8px 14px; margin-bottom: 12px;
+  border-bottom: 1px solid var(--rule);
+}
+.brand-mark {
+  width: 34px; height: 34px; flex: none; border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #fff; font-weight: 700; font-size: 15px;
+  display: grid; place-items: center;
+}
+.brand-name { font-weight: 650; font-size: 14px; letter-spacing: -0.01em; }
+.brand-sub { font-size: 12px; color: var(--text-3); }
+.toc { font-size: 13.5px; }
+.toc ul { list-style: none; margin: 0; padding: 0; }
+.toc-root > li { margin: 2px 0; }
+.toc ul ul { margin-left: 12px; padding-left: 8px; border-left: 1px solid var(--rule); }
+.toc-head { display: flex; align-items: center; gap: 2px; }
+.toc-head > a { flex: 1; min-width: 0; }
+.toc a {
+  display: block; padding: 5px 10px; border-radius: 7px;
+  color: var(--text-2); text-decoration: none; line-height: 1.45;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  transition: background .15s, color .15s;
+}
+.toc a:hover { background: var(--surface-2); color: var(--text); }
+.toc a.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.toc ul ul a { padding: 3px 8px; font-size: 12.5px; color: var(--text-3); }
+.toc ul ul a.active { color: var(--accent); background: var(--accent-soft); }
+.toc-toggle {
+  flex: none; width: 22px; height: 22px; margin-left: 1px;
+  display: grid; place-items: center;
+  border: none; background: transparent; color: var(--text-3);
+  border-radius: 6px; cursor: pointer; padding: 0;
+}
+.toc-toggle:hover { background: var(--surface-2); color: var(--text); }
+.toc-toggle .chev {
+  width: 7px; height: 7px; box-sizing: border-box;
+  border-right: 1.6px solid currentColor; border-bottom: 1.6px solid currentColor;
+  transform: rotate(45deg); transition: transform .18s ease; margin-top: -3px;
+}
+.toc-toggle[aria-expanded="false"] .chev { transform: rotate(-45deg); }
+.toc-children {
+  max-height: 1000px; opacity: 1; overflow: hidden;
+  transition: max-height .2s ease, opacity .2s ease;
+}
+li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
+.toc-group {
+  margin: 14px 8px 4px; font-size: 11px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: .07em; color: var(--text-3);
+}
+.toc-group::before {
+  content: ""; display: block; height: 1px; background: var(--rule); margin: 0 0 6px;
+}
+.sidebar-foot { margin-top: auto; padding-top: 14px; border-top: 1px solid var(--rule); }
+.theme-toggle {
+  width: 100%; padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--rule); background: var(--surface-2);
+  color: var(--text-2); font: inherit; font-size: 12.5px; cursor: pointer;
+  display: flex; align-items: center; gap: 8px; justify-content: center;
+}
+.theme-toggle:hover { background: var(--surface-3); color: var(--text); }
+.menu-toggle { display: none; }
+
+/* ---- content ---- */
+.content { max-width: 940px; width: 100%; margin: 0 auto; padding: 40px 48px 80px; }
+.hero { padding: 8px 0 20px; margin-bottom: 26px; border-bottom: 2px solid var(--rule); }
+.hero .kicker {
+  font-size: 12px; font-weight: 600; letter-spacing: .08em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+}
+.hero h1 { margin: 0 0 8px; font-size: 30px; font-weight: 750; letter-spacing: -0.02em; line-height: 1.2; }
+.hero .sub { margin: 0; color: var(--text-2); font-size: 14px; }
+.hero .stats { display: flex; gap: 18px; margin-top: 14px; font-size: 12.5px; color: var(--text-2); flex-wrap: wrap; }
+.hero .stats b { color: var(--text); font-weight: 650; }
+
+.markdown-body h2 {
+  font-size: 21px; font-weight: 700; letter-spacing: -0.015em;
+  margin: 44px 0 14px; padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+  scroll-margin-top: 24px;
+}
+.markdown-body h3 { font-size: 16.5px; font-weight: 650; margin: 30px 0 10px; scroll-margin-top: 24px; }
+.markdown-body h2:first-child { margin-top: 6px; }
+.markdown-body p { margin: 0 0 14px; }
+.markdown-body ul, .markdown-body ol { margin: 0 0 14px; padding-left: 24px; }
+.markdown-body li { margin: 4px 0; }
+.markdown-body strong { font-weight: 650; }
+.markdown-body a { color: var(--link); text-decoration: none; border-bottom: 1px solid transparent; }
+.markdown-body a:hover { border-bottom-color: var(--link); }
+.markdown-body hr { border: none; border-top: 1px solid var(--rule); margin: 26px 0; }
+.markdown-body blockquote {
+  margin: 16px 0; padding: 12px 16px;
+  background: var(--accent-soft); border-left: 3px solid var(--accent);
+  border-radius: 0 10px 10px 0; color: var(--text-2);
+}
+.markdown-body blockquote p { margin: 4px 0; }
+.markdown-body code {
+  font-family: var(--font-mono); font-size: 0.86em;
+  background: var(--code-bg); border: 1px solid var(--rule);
+  border-radius: 5px; padding: 1px 5px;
+}
+.markdown-body pre {
+  background: var(--code-bg); border: 1px solid var(--rule);
+  border-radius: 10px; padding: 14px 16px; overflow-x: auto; line-height: 1.55;
+}
+.markdown-body pre code { background: none; border: none; padding: 0; font-size: 0.84em; }
+
+/* ---- tables ---- */
+.table-wrap { margin: 16px 0; border: 1px solid var(--rule); border-radius: 10px; overflow: auto; }
+.table-wrap table { border-collapse: separate; border-spacing: 0; width: 100%; min-width: 560px; font-size: 13px; line-height: 1.55; }
+.table-wrap th, .table-wrap td { padding: 9px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); }
+.table-wrap thead th {
+  background: var(--surface-2); color: var(--text); font-weight: 650; font-size: 12.5px;
+  position: sticky; top: 0; z-index: 1; border-bottom: 2px solid var(--rule);
+}
+.table-wrap tbody tr:last-child td { border-bottom: none; }
+.table-wrap tbody tr:nth-child(even) td { background: var(--row-alt); }
+.table-wrap td a { color: var(--link); }
+.table-wrap.changelog { max-height: 74vh; }
+.table-wrap.changelog td:first-child, .table-wrap.changelog th:first-child { white-space: nowrap; }
+
+.content-foot {
+  margin-top: 48px; padding-top: 16px; border-top: 1px solid var(--rule);
+  color: var(--text-3); font-size: 12px; display: flex; gap: 16px; flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .app { display: block; }
+  .menu-toggle {
+    display: flex; position: fixed; top: 12px; left: 12px; z-index: 40;
+    width: 40px; height: 40px; align-items: center; justify-content: center;
+    background: var(--surface); border: 1px solid var(--rule); border-radius: 10px;
+    box-shadow: var(--shadow); cursor: pointer; color: var(--text); font-size: 16px;
+  }
+  .sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 300px; height: 100%;
+    transform: translateX(-105%); transition: transform .22s ease;
+    box-shadow: var(--shadow);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .content { max-width: 100%; padding: 72px 20px 60px; }
+}
+
+@media print {
+  .sidebar, .menu-toggle { display: none !important; }
+  .app { display: block; }
+  .content { max-width: 100%; padding: 0; }
+  body { background: #fff; color: #000; font-size: 12px; }
+  .table-wrap { border: 1px solid #999; overflow: visible; max-height: none !important; }
+  .table-wrap table { font-size: 10.5px; min-width: 0; }
+  .table-wrap thead th { position: static; background: #f0f0f0; }
+  .markdown-body a { color: #000; border: none; }
+  .hero h1 { font-size: 22px; }
+}
+</style>
+</head>
+<body>
+<button class="menu-toggle" id="menu-toggle" aria-label="打开目录">☰</button>
+<div class="app">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">AC</div>
+      <div>
+        <div class="brand-name">Agent Console</div>
+        <div class="brand-sub">PRD 文档</div>
+      </div>
+    <nav class="toc" aria-label="目录"><ul class="toc-root"><li class="toc-item"><div class="toc-head"><a href="#产品概述">产品概述</a></div></li><li class="toc-item"><div class="toc-head"><a href="#变更追踪表">变更追踪表</a></div></li><li class="toc-group"><span>PRD 文档</span></li><li class="toc-item"><div class="toc-head"><a href="#prd-文档索引">PRD 文档索引</a></div></li><li class="toc-item has-children"><div class="toc-head"><button class="toc-toggle" type="button" aria-expanded="true" aria-label="展开/合并 1. 背景与问题"><span class="chev"></span></button><a href="#prd-agentconsolemvp-1-背景与问题">1. 背景与问题</a></div><ul class="toc-children"><li class="toc-item"><div class="toc-head"><a href="#prd-agentconsolemvp-本轮要解决的问题">本轮要解决的问题</a></div></li></ul></li><li class="toc-item"><div class="toc-head"><a href="#prd-agentconsolemvp-2-目标与非目标">2. 目标与非目标</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-agentconsolemvp-3-用户故事">3. 用户故事</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-agentconsolemvp-4-功能需求fr">4. 功能需求（FR）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-agentconsolemvp-5-非功能需求nfr">5. 非功能需求（NFR）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-agentconsolemvp-6-验收标准ac">6. 验收标准（AC）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-agentconsolemvp-7-里程碑">7. 里程碑</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-agentconsolemvp-8-变更追踪登记">8. 变更追踪登记</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-agentconsolemvp-9-已实施摘要实施部分">9. 已实施摘要（实施部分）</a></div></li><li class="toc-item has-children"><div class="toc-head"><button class="toc-toggle" type="button" aria-expanded="true" aria-label="展开/合并 1. 背景与问题"><span class="chev"></span></button><a href="#prd-apikey管理-1-背景与问题">1. 背景与问题</a></div><ul class="toc-children"><li class="toc-item"><div class="toc-head"><a href="#prd-apikey管理-本轮要解决的问题">本轮要解决的问题</a></div></li></ul></li><li class="toc-item"><div class="toc-head"><a href="#prd-apikey管理-2-目标与非目标">2. 目标与非目标</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-apikey管理-3-用户故事">3. 用户故事</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-apikey管理-4-功能需求fr">4. 功能需求（FR）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-apikey管理-5-非功能需求nfr">5. 非功能需求（NFR）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-apikey管理-6-验收标准ac">6. 验收标准（AC）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-apikey管理-7-里程碑">7. 里程碑</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-apikey管理-8-变更追踪登记">8. 变更追踪登记</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-apikey管理-9-已实施摘要实施部分">9. 已实施摘要（实施部分）</a></div></li><li class="toc-item has-children"><div class="toc-head"><button class="toc-toggle" type="button" aria-expanded="true" aria-label="展开/合并 1. 背景与问题"><span class="chev"></span></button><a href="#prd-windows一键启动脚本-1-背景与问题">1. 背景与问题</a></div><ul class="toc-children"><li class="toc-item"><div class="toc-head"><a href="#prd-windows一键启动脚本-本轮要解决的问题">本轮要解决的问题</a></div></li></ul></li><li class="toc-item"><div class="toc-head"><a href="#prd-windows一键启动脚本-2-目标与非目标">2. 目标与非目标</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-windows一键启动脚本-3-用户故事">3. 用户故事</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-windows一键启动脚本-4-功能需求fr">4. 功能需求（FR）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-windows一键启动脚本-5-非功能需求nfr">5. 非功能需求（NFR）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-windows一键启动脚本-6-验收标准ac">6. 验收标准（AC）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-windows一键启动脚本-7-里程碑">7. 里程碑</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-windows一键启动脚本-8-变更追踪登记">8. 变更追踪登记</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-windows一键启动脚本-9-已实施摘要实施部分">9. 已实施摘要（实施部分）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端交互体验完善-1-背景与问题">1. 背景与问题</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端交互体验完善-2-目标与非目标">2. 目标与非目标</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端交互体验完善-3-用户故事">3. 用户故事</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端交互体验完善-4-功能需求">4. 功能需求</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端交互体验完善-5-非功能需求">5. 非功能需求</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端交互体验完善-6-验收标准">6. 验收标准</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端交互体验完善-7-分类说明">7. 分类说明</a></div></li><li class="toc-item has-children"><div class="toc-head"><button class="toc-toggle" type="button" aria-expanded="true" aria-label="展开/合并 1. 背景与问题"><span class="chev"></span></button><a href="#prd-前端视觉与响应式优化-1-背景与问题">1. 背景与问题</a></div><ul class="toc-children"><li class="toc-item"><div class="toc-head"><a href="#prd-前端视觉与响应式优化-本轮要解决的问题">本轮要解决的问题</a></div></li></ul></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端视觉与响应式优化-2-目标与非目标">2. 目标与非目标</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端视觉与响应式优化-3-用户故事">3. 用户故事</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端视觉与响应式优化-4-功能需求fr">4. 功能需求（FR）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端视觉与响应式优化-5-非功能需求nfr">5. 非功能需求（NFR）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端视觉与响应式优化-6-验收标准ac">6. 验收标准（AC）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端视觉与响应式优化-7-里程碑">7. 里程碑</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端视觉与响应式优化-8-变更追踪登记">8. 变更追踪登记</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-前端视觉与响应式优化-9-已实施摘要实施部分">9. 已实施摘要（实施部分）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-后端访问控制与工作区隔离-1-背景">1. 背景</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-后端访问控制与工作区隔离-2-目标">2. 目标</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-后端访问控制与工作区隔离-3-非目标">3. 非目标</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-后端访问控制与工作区隔离-4-功能需求">4. 功能需求</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-后端访问控制与工作区隔离-5-非功能需求">5. 非功能需求</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-后端访问控制与工作区隔离-6-验收标准">6. 验收标准</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-工具调用能力-1-背景与问题">1. 背景与问题</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-工具调用能力-2-目标与非目标">2. 目标与非目标</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-工具调用能力-3-用户故事">3. 用户故事</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-工具调用能力-4-功能需求fr">4. 功能需求（FR）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-工具调用能力-5-非功能需求nfr">5. 非功能需求（NFR）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-工具调用能力-6-验收标准ac">6. 验收标准（AC）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-工具调用能力-7-内置工具">7. 内置工具</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-工具调用能力-8-里程碑">8. 里程碑</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-工具调用能力-9-变更登记">9. 变更登记</a></div></li><li class="toc-item has-children"><div class="toc-head"><button class="toc-toggle" type="button" aria-expanded="true" aria-label="展开/合并 1. 背景与问题"><span class="chev"></span></button><a href="#prd-自定义模型接入-1-背景与问题">1. 背景与问题</a></div><ul class="toc-children"><li class="toc-item"><div class="toc-head"><a href="#prd-自定义模型接入-本轮要解决的问题">本轮要解决的问题</a></div></li></ul></li><li class="toc-item"><div class="toc-head"><a href="#prd-自定义模型接入-2-目标与非目标">2. 目标与非目标</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-自定义模型接入-3-用户故事">3. 用户故事</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-自定义模型接入-4-功能需求fr">4. 功能需求（FR）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-自定义模型接入-5-非功能需求nfr">5. 非功能需求（NFR）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-自定义模型接入-6-验收标准ac">6. 验收标准（AC）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-自定义模型接入-7-里程碑">7. 里程碑</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-自定义模型接入-8-变更追踪登记">8. 变更追踪登记</a></div></li><li class="toc-item"><div class="toc-head"><a href="#prd-自定义模型接入-9-已实施摘要实施部分">9. 已实施摘要（实施部分）</a></div></li><li class="toc-item"><div class="toc-head"><a href="#后续维护约定">后续维护约定</a></div></li></ul></nav>
+    <div class="sidebar-foot"><button class="theme-toggle" id="theme-toggle" type="button">切换深浅主题</button></div>
+  </aside>
+  <main class="content">
+    <header class="hero">
+      <div class="kicker">Agent Console · 需求文档</div>
+      <h1>PRD 文档</h1>
+      <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
+      <div class="stats">
+        <span>需求文档 <b>8</b> 份</span>
+        <span>变更记录 <b>73</b> 条</span>
+        <span>生成于 2026-08-07 22:44</span>
+      </div>
+    </header>
+    <article class="markdown-body">
+<h1 id="agent-console-prd-变更追踪">Agent Console · PRD / 变更追踪</h1>
+<h2 id="产品概述">产品概述</h2>
+<p>Agent Console 是一个本地优先的多智能体协同运行台：Next.js 16 + FastAPI +
+SQLite + LiteLLM + WebSocket。用户在群聊 <code>@Agent</code> 派发任务，后端自动编排
+（Manager 拆解 → Worker 执行 → QA 审核 → 最终汇总），全程实时可视。</p>
+<p><strong>核心页面</strong>：运行总览 <code>/</code>、群聊 <code>/chats</code>、任务 <code>/tasks</code>、任务详情
+<code>/tasks/[id]</code>、模型设置 <code>/settings</code>。</p>
+<hr />
+<h2 id="变更追踪表">变更追踪表</h2>
+<blockquote>
+<p>约定：表格由 <code>docs/generate_change_log.py</code> 从 git history 自动生成。
+ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新需求）/
+<code>Optimization</code>（优化）/ <code>BUG</code>（修复）/ <code>Docs</code>（文档）。
+新提交自动推断列；需补充细节时在脚本 <code>CURATED</code> 字典按 commit sha 填写。</p>
+</blockquote>
+<!-- CHANGELOG:START -->
+<div class="table-wrap changelog"><table>
+<thead>
+<tr>
+<th>改动时间</th>
+<th>ID</th>
+<th>状态</th>
+<th>Git 提交</th>
+<th>作者</th>
+<th>改动类型</th>
+<th>影响范围</th>
+<th>改动内容</th>
+<th>前端技术</th>
+<th>后端技术</th>
+<th>是否有数据库</th>
+<th>破坏性变更</th>
+<th>验证结果</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-08-01 20:28</td>
+<td>C-001</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/08ed038">08ed038</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>后端、数据库、前端</td>
+<td>全站优化：消除前端 4 处重复 WebSocket 逻辑与死代码，统一连接/任务工具/常量，增加 ErrorBoundary；后端事件契约规范化、记录模型成本、限制并发</td>
+<td>提取共用 useWorkspaceSocket；删除死代码(SystemStatus/SoftwareDock/selectConsoleAgents)；新增 ErrorBoundary；常量集中 constants.ts；任务工具去重 task-utils.ts；fetchedRef 防护</td>
+<td>TaskStepEventPayload Schema 替代手写 dict；LiteLLM 响应提取成本；并发控制(max 3, 429)；receipt 标注预留</td>
+<td>否</td>
+<td>否</td>
+<td>前端测试 2→28；净减 237 行</td>
+<td>仅前端组件 + 后端工具函数改动，无外部 API 变化</td>
+</tr>
+<tr>
+<td>2026-08-01 20:31</td>
+<td>C-002</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/8ab4834">8ab4834</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>文档</td>
+<td>README 更新本轮优化详情</td>
+<td>README 章节补充</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>测试数 37/28</td>
+</tr>
+<tr>
+<td>2026-08-01 20:33</td>
+<td>C-003</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/5f3b6a1">5f3b6a1</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>文档</td>
+<td>README 全文中文化</td>
+<td>README 全量翻译</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>全量翻译</td>
+</tr>
+<tr>
+<td>2026-08-01 20:37</td>
+<td>C-004</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/3a99015">3a99015</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>文档</td>
+<td>README 风格重写，加入架构图与关键决策记录</td>
+<td>README 结构重排、徽章、ASCII 架构图</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>资深工程师口吻</td>
+</tr>
+<tr>
+<td>2026-08-01 20:55</td>
+<td>C-005</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/9c2dd0e">9c2dd0e</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>其他、配置、文档、前端</td>
+<td>前端视觉与响应式优化，新增通讯录 /contacts 页面与 Agent 头像组件</td>
+<td>新增 agent-portrait.tsx、contacts-page.tsx(/contacts 路由)；agent-gallery/status-panel/app-sidebar/chat 组件重构；globals.css 视觉令牌与响应式优化</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>1203 插入/471 删除，21 文件；经 C-021 并入当前分支；PRD: docs/prd/PRD-前端视觉与响应式优化.md</td>
+</tr>
+<tr>
+<td>2026-08-01 21:17</td>
+<td>C-006</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/19d4dca">19d4dca</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>后端、数据库、前端</td>
+<td>新增「设置 → API Key 管理」：用户可在前端填入/删除各 Provider 密钥，存库优先于环境变量</td>
+<td>设置页 API Key 管理 UI(密码框+眼睛+保存/删除)；use-settings 扩展</td>
+<td>ProviderCredential 模型；GET/PUT/DELETE /api/provider-keys；Key 解析优先级 DB&gt;env</td>
+<td>是(provider_credentials)</td>
+<td>是</td>
+<td>后端 37→40</td>
+<td>Key 永不在列表回传；新增表；PRD: docs/prd/PRD-APIKey管理.md</td>
+</tr>
+<tr>
+<td>2026-08-01 21:20</td>
+<td>C-007</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/fb94fb2">fb94fb2</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>部署</td>
+<td>新增 Windows 一键启动脚本</td>
+<td>start.bat / start.ps1</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>Docker Compose 封装；自动复制 .env + 等健康；PRD: docs/prd/PRD-Windows一键启动脚本.md</td>
+</tr>
+<tr>
+<td>2026-08-02 12:22</td>
+<td>C-008</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/f6ac2e8">f6ac2e8</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>前端</td>
+<td>修复开发服务器端口无法访问（next.config standalone 配置与 dev 冲突）</td>
+<td>output:standalone 改为 NEXT_BUILD_STANDALONE env 按需启用</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>build pass</td>
+<td>仅生产 Docker 构建启用</td>
+</tr>
+<tr>
+<td>2026-08-02 23:28</td>
+<td>C-009</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/48b3c47">48b3c47</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>后端、数据库、前端</td>
+<td>新增自定义模型接入（任意 provider/model + fallback 降级）；修复 API Key 眼睛图标切换失效</td>
+<td>自定义模型添加/删除 UI +「自定义」徽章；眼睛图标切换修复(undefined 与 React 批处理冲突)</td>
+<td>CustomModelConfig 模型；/api/custom-models；chat_completion 自定义解析；修按 name 查 PK bug</td>
+<td>是(custom_model_configs)</td>
+<td>是</td>
+<td>后端 37→40</td>
+<td>新增表；含眼睛 BUG 修复；PRD: docs/prd/PRD-自定义模型接入.md</td>
+</tr>
+<tr>
+<td>2026-08-02 23:33</td>
+<td>C-010</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/5b5e5d9">5b5e5d9</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>文档</td>
+<td>README 补充「模型与密钥管理」章节，更新测试数</td>
+<td>README 章节补充</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>测试数 40/28</td>
+</tr>
+<tr>
+<td>2026-08-02 23:36</td>
+<td>C-011</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/4396cad">4396cad</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>部署</td>
+<td>修复一键启动脚本中文乱码（UTF-8 被 cmd/PowerShell 按 ANSI 解析）</td>
+<td>脚本消息改纯 ASCII</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>跨代码页安全</td>
+</tr>
+<tr>
+<td>2026-08-03 13:06</td>
+<td>C-012</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/a138831">a138831</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>前端</td>
+<td>修复设置页自定义模型表单 / API Key 输入框黑底黑字无法阅读</td>
+<td>text-foreground 修复</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-03 13:10</td>
+<td>C-013</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/c8d1f72">c8d1f72</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>前端</td>
+<td>设置页表单字段文字改纯白，提升可读性</td>
+<td>text-white / white/90 / 占位符 white/40</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-03 13:37</td>
+<td>C-014</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/c374465">c374465</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端、前端</td>
+<td>修复点击眼睛无法显示已保存 API Key（保存后清空 + Key 不回传，value 恒空）</td>
+<td>眼睛点击时拉取真实 Key 填充输入框再切换可见性</td>
+<td>新增 GET /api/provider-keys/{provider} 按需返回 Key；get_api_key_value()</td>
+<td>否</td>
+<td>否</td>
+<td>后端 42 passed</td>
+<td>显式操作才返回 Key，列表仍不回传</td>
+</tr>
+<tr>
+<td>2026-08-03 13:50</td>
+<td>C-015</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/abbb336">abbb336</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>后端、前端</td>
+<td>API Key 管理收敛为仅 DeepSeek 预设，用户可自行添加任意厂商的 API</td>
+<td>「添加厂商」表单(任意厂商名+Key)；厂商名 title-case；移除其余预设</td>
+<td>移除 Provider 白名单；/models/providers/status 只显示 deepseek+DB 厂商</td>
+<td>否(复用 provider_credentials)</td>
+<td>是</td>
+<td>后端 40→42</td>
+<td>API 行为变化：PUT 接受任意厂商名；PRD: docs/prd/PRD-APIKey管理.md</td>
+</tr>
+<tr>
+<td>2026-08-03 13:56</td>
+<td>C-016</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/6289107">6289107</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>文档</td>
+<td>新增 docs/PRD.md 变更追踪表</td>
+<td>表格 + 维护约定</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>建立本表，后续由脚本实时生成</td>
+</tr>
+<tr>
+<td>2026-08-03 13:59</td>
+<td>C-017</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/fc35e0b">fc35e0b</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他</td>
+<td>新增 Excel 变更追踪工作簿</td>
+<td>openpyxl 生成脚本</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>表结构含颜色/冻结/筛选</td>
+</tr>
+<tr>
+<td>2026-08-03 14:01</td>
+<td>C-018</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/2ba41fc">2ba41fc</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>变更追踪表新增「改动内容」列，明确记录每次改了什么</td>
+<td>表结构更新(PRD.md + Excel)</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>业务描述与前后端技术分离</td>
+</tr>
+<tr>
+<td>2026-08-03 14:04</td>
+<td>C-019</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/3049af9">3049af9</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>变更追踪表改为从 git history 自动生成</td>
+<td>generate_change_log.py（爬取 git log + 自动推断列 + CURATED 人工覆盖 + 生成 PRD/Excel）</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>新提交自动生成行；已知提交按 sha 覆盖</td>
+</tr>
+<tr>
+<td>2026-08-03 14:10</td>
+<td>C-020</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/0bde63b">0bde63b</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>变更追踪表收录独立主线的视觉重构提交（C-005）</td>
+<td>generate_change_log.py 支持 EXTRA_SHAS + 按 subject 覆盖</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>9c2dd0e 强推覆盖后归位</td>
+</tr>
+<tr>
+<td>2026-08-03 14:36</td>
+<td>C-021</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/0c46b78">0c46b78</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>其他</td>
+<td>合并视觉重构提交 9c2dd0e（A/B 测试通过）：新增 /contacts 通讯录页、agent-portrait 头像组件、恢复 software-dock；globals.css 视觉与响应式优化；设置页与 API Key/自定义模型功能共存</td>
+<td>合并 settings-page.tsx（保留 API Key 管理 + 自定义模型功能并采用视觉样式）；新增 contacts 路由、agent-portrait.tsx、software-dock.tsx 恢复；agent-gallery/status-panel/app-sidebar/chat 视觉重构</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>lint/test/build/pytest 全过(42)</td>
+<td>仅 settings-page.tsx 1 处文本冲突手工合并；PRD: docs/prd/PRD-前端视觉与响应式优化.md</td>
+</tr>
+<tr>
+<td>2026-08-03 14:38</td>
+<td>C-022</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/ffe1535">ffe1535</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: record merge C-021 (visual aesthetics A/B test) in change log</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-03 15:06</td>
+<td>C-023</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/d64090a">d64090a</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: add Git commit column to change log</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-03 15:09</td>
+<td>C-024</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/08b8e10">08b8e10</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: expand change log to professional 14-column layout</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-03 20:38</td>
+<td>C-025</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/36854c8">36854c8</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>后端、其他、前端</td>
+<td>为 Agent 增加工具调用（Function Calling）能力：chat_completion 支持 tools + tool_calls；新增工具注册表（calculate/query_tasks/get_agents/get_system_status）；orchestrator 工具循环（最大 5 轮）并持久化为 TaskStep；单 Agent 与 Worker 阶段启用</td>
+<td>task-format.ts stepLabel 增加「工具调用」映射</td>
+<td>litellm_service 支持 tools/tool_calls；新增 services/tools.py 注册表+安全计算；orchestrator 工具循环+TaskStep 持久化；config 新增 agent_tools_enabled</td>
+<td>否</td>
+<td>否</td>
+<td>pytest 42→54；前端 28/build pass</td>
+<td>详见 docs/prd/PRD-工具调用能力.md；不新增 WS 事件、不改表结构</td>
+</tr>
+<tr>
+<td>2026-08-03 20:39</td>
+<td>C-026</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/e4c9e20">e4c9e20</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: register tool-calling requirement C-025 in change log</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-03 20:54</td>
+<td>C-027</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/8716e45">8716e45</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>为 5 个历史需求（Agent Console MVP / API Key 管理 / 自定义模型 / 前端视觉与响应式优化 / Windows 一键启动）补充详细 PRD 文档到 docs/prd/，并在追踪表对应行备注 PRD 链接</td>
+<td>新增 docs/prd/PRD-AgentConsoleMVP.md、PRD-APIKey管理.md、PRD-自定义模型接入.md、PRD-前端视觉与响应式优化.md、PRD-Windows一键启动脚本.md</td>
+<td>generate_change_log.py CURATED 备注追加 PRD 链接</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>docs/PRD.md 增补「PRD 文档索引」；MVP 为基线前需求，以其 PRD 文档登记</td>
+</tr>
+<tr>
+<td>2026-08-03 20:56</td>
+<td>C-028</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/197f6e3">197f6e3</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: 变更追踪表登记 PRD 文档提交</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-03 20:56</td>
+<td>C-029</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/2313960">2313960</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: 变更追踪表登记登记提交</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-03 20:59</td>
+<td>C-030</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/caaafe1">caaafe1</a></td>
+<td>liwe123</td>
+<td>Docs</td>
+<td>其他</td>
+<td>Add GitHub Actions workflow for Python package with Conda</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-03 21:04</td>
+<td>C-031</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/1fd9aba">1fd9aba</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: 统一 PRD 文档命名为 PRD-前缀</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-03 21:04</td>
+<td>C-032</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/42dcda5">42dcda5</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: 变更追踪表登记 PRD 重命名提交</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-03 21:05</td>
+<td>C-033</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/9d4a57e">9d4a57e</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: 变更追踪表登记 CI workflow 与 PRD 重命名提交</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-06 21:26</td>
+<td>C-034</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/b7f7d27">b7f7d27</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他</td>
+<td>同步优化版项目为新的 Git 基线</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>将优化后的完整项目作为当前主线基线提交</td>
+</tr>
+<tr>
+<td>2026-08-06 21:28</td>
+<td>C-035</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/29deb0e">29deb0e</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他</td>
+<td>合并远端历史并保留当前优化版项目状态</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>采用 ours 策略合并远端历史后推送到 GitHub</td>
+</tr>
+<tr>
+<td>2026-08-06 21:34</td>
+<td>C-036</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/6cab7da">6cab7da</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>同步优化版项目后刷新变更追踪表</td>
+<td>更新 PRD 与 Excel 变更追踪表</td>
+<td>生成脚本重跑</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>将新基线提交一并纳入改动表</td>
+</tr>
+<tr>
+<td>2026-08-06 21:37</td>
+<td>C-037</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/2d1e659">2d1e659</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: make change log entries Chinese for recent sync</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-06 21:46</td>
+<td>C-038</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/7039e2a">7039e2a</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他</td>
+<td>修复 GitHub Actions Python 包工作流以运行后端测试</td>
+<td>-</td>
+<td>backend/requirements-dev.txt；backend/tests；.github/workflows/python-package-conda.yml</td>
+<td>否</td>
+<td>否</td>
+<td>backend/tests/test_health.py 通过</td>
+<td>移除缺失的 environment.yml 依赖，改为 pip 安装并在 backend 目录执行 pytest</td>
+</tr>
+<tr>
+<td>2026-08-06 21:49</td>
+<td>C-039</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/0e0a15f">0e0a15f</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: record the GitHub Actions workflow fix in the change log</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-06 22:42</td>
+<td>C-040</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/c190d7d">c190d7d</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端、数据库、其他、文档</td>
+<td>fix: harden provider lookup and task recovery</td>
+<td>-</td>
+<td>backend/app/api；backend/app/core；backend/app/db；backend/app/models；backend/app/schemas；backend/app/services；backend/tests/test_api.py；backend/tests/test_task_recovery.py；backend/tests/test_tools.py</td>
+<td>是(task)</td>
+<td>是</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-06 22:54</td>
+<td>C-041</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/c36bf54">c36bf54</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端</td>
+<td>fix: update database schema test for task lease fields</td>
+<td>-</td>
+<td>backend/tests/test_database.py</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-042</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>其他、前端</td>
+<td>Software Dock 增加可操作的连接状态详情</td>
+<td>software-dock.tsx：展示软件名称、接入位、在线状态；支持鼠标与键盘操作</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>PRD FR1；依赖同提交</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-043</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>其他、前端</td>
+<td>Agent 消息支持安全 Markdown 结构化渲染</td>
+<td>message-bubble.tsx + react-markdown：标题、列表、行内代码、代码块、安全外链；跳过原始 HTML</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>PRD FR2；package.json/package-lock.json 新增 react-markdown</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-044</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>其他、前端</td>
+<td>移动端聊天增加快捷指令与 Agent 选择面板</td>
+<td>chat-composer.tsx：移动快捷操作入口、模板列表、动态 Agent 列表</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>PRD FR3</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-045</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>其他、前端</td>
+<td>Agent 详情弹层补齐完整交互能力</td>
+<td>agent-gallery.tsx：Dialog 语义、Escape/遮罩关闭、背景滚动锁定、焦点恢复</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>PRD FR4</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-046</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>其他、前端</td>
+<td>修复移动端浅色变量与根节点深色主题冲突</td>
+<td>globals.css：移除按屏幕宽度覆盖主题色与 color-scheme 的规则</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-047</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>其他、前端</td>
+<td>修复通讯录搜索后 Agent 服务分组错乱</td>
+<td>contacts-page.tsx：先按原始服务归属分组，再分别执行搜索过滤</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-048</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>其他、前端</td>
+<td>修复通讯录在线人数与连接状态不一致</td>
+<td>contacts-page.tsx：结合 WebSocket 连接状态与 Agent 状态计算在线人数</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-049</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>其他、前端</td>
+<td>修复聊天提及列表依赖固定中文姓名</td>
+<td>chat-composer.tsx：基于接口 Agent 数据和角色优先级生成提及列表</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-050</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>其他、前端</td>
+<td>修复客户端 mention 查询参数变化后输入框不更新</td>
+<td>chat-composer.tsx：监听查询参数并去重追加提及，保留用户已有输入</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-051</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、前端</td>
+<td>设置页表单统一使用全局语义颜色</td>
+<td>settings-page.tsx：输入框改用 background/foreground/input/muted 设计令牌</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-052</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、前端</td>
+<td>Agent 卡片扩大为完整语义化交互区域</td>
+<td>agent-gallery.tsx：头像、姓名、状态和角色合并为可聚焦按钮</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-053</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、前端</td>
+<td>完善通讯录搜索范围、无结果状态与清空操作</td>
+<td>contacts-page.tsx：支持姓名/角色/职责，Escape 清空，无结果提示与清空按钮</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-054</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、前端</td>
+<td>提升 Agent 角色辅助文字可读性</td>
+<td>agent-gallery.tsx：角色文字由 10px 调整为 11px</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 21:40</td>
+<td>C-055</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/53268f4">53268f4</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、前端</td>
+<td>新增前端交互体验完善 PRD</td>
+<td>docs/prd/PRD-前端交互体验完善.md</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过</td>
+<td>登记 Requirement 的目标、用户故事、FR 与验收标准</td>
+</tr>
+<tr>
+<td>2026-08-07 21:43</td>
+<td>C-056</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/39dae3c">39dae3c</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: register frontend experience changes</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-07 21:52</td>
+<td>C-057</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/6816c87">6816c87</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>其他、文档</td>
+<td>docs: itemize every frontend change in tracking table</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-058</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>后端、其他、前端</td>
+<td>新增可选 API Token 访问控制</td>
+<td>-</td>
+<td>APP_API_TOKEN；REST 支持 Bearer/X-API-Key；WebSocket 支持请求头或 token 查询参数</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>PRD: docs/prd/PRD-后端访问控制与工作区隔离.md；FR1-FR3</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-059</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>后端、其他、前端</td>
+<td>Agent 工具继承可信工作区执行上下文</td>
+<td>-</td>
+<td>Orchestrator 注入 workspace_id；query_tasks/get_agents 强制按当前工作区过滤并忽略模型伪造范围</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>PRD FR4</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-060</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>后端、其他、前端</td>
+<td>Provider Key 接口改为仅返回掩码元数据</td>
+<td>设置页查看已保存凭证时仅显示掩码，并禁止将掩码作为新密钥保存</td>
+<td>ProviderKeyValue 返回 configured/masked_key/source，不再返回 api_key 原文</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>PRD FR5</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-061</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端、其他、前端</td>
+<td>修复客户端可伪造 Agent/System 消息</td>
+<td>-</td>
+<td>公开消息接口仅接受 user + normal，拒绝 sender_id、Agent、System 与其他消息类型</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-062</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端、其他、前端</td>
+<td>修复客户端可篡改任务执行状态与租约</td>
+<td>-</td>
+<td>TaskCreate/TaskUpdate 移除 status/result/execution_token/expires_at 等服务端字段</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-063</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端、其他、前端</td>
+<td>修复工作区活跃任务配额漏算 Pending 任务</td>
+<td>-</td>
+<td>MessageHub 配额统计改为 Pending + Running，达到上限返回 429</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-064</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端、其他、前端</td>
+<td>修复重启恢复任务绕过工作区并发额度</td>
+<td>-</td>
+<td>recover_unfinished_tasks 按 Workspace 计算可用额度并限量调度</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-065</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端、其他、前端</td>
+<td>修复长任务固定租约过期后可能被重复执行</td>
+<td>-</td>
+<td>Orchestrator 启动后台 lease heartbeat，按 execution_token 条件定期续租并在结束时取消</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-066</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端、其他、前端</td>
+<td>修复模型测试接口无法识别数据库自定义模型</td>
+<td>-</td>
+<td>models/test 同时传入 DB API Keys 与 DB custom_models</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-067</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端、其他、前端</td>
+<td>修复模型列表忽略数据库 Provider Key 状态</td>
+<td>-</td>
+<td>models 列表统一以 DB 优先、环境变量兜底判断 configured</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-068</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端、其他、前端</td>
+<td>修复删除仍被引用的自定义模型导致悬空配置</td>
+<td>-</td>
+<td>删除前检查 Agent.model_name 和其他模型 fallback_model，存在引用返回 409</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-069</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>后端、其他、前端</td>
+<td>补充后端访问控制与工作区隔离回归测试</td>
+<td>-</td>
+<td>新增 API Token、消息伪造、任务字段保护、凭证脱敏、工具跨工作区隔离测试；更新既有 API 契约测试</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>无需 PRD</td>
+</tr>
+<tr>
+<td>2026-08-07 22:20</td>
+<td>C-070</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/71ea26f">71ea26f</a></td>
+<td>LI</td>
+<td>Docs</td>
+<td>后端、其他、前端</td>
+<td>新增后端访问控制与工作区隔离 PRD</td>
+<td>-</td>
+<td>docs/prd/PRD-后端访问控制与工作区隔离.md</td>
+<td>否</td>
+<td>是（消息、任务更新、Provider Key GET 响应契约收紧）</td>
+<td>A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过</td>
+<td>覆盖目标、FR、非功能需求与验收标准</td>
+</tr>
+</tbody>
+</table></div>
+<!-- CHANGELOG:END -->
+
+<hr />
+<h2 id="prd-文档索引">PRD 文档索引</h2>
+<p>历史需求的详细 PRD（背景/目标/用户故事/FR/NFR/AC/里程碑）存放于 <code>docs/prd/</code>：</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>PRD 文档</th>
+<th>需求</th>
+<th>关联提交</th>
+<th>追踪表</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><a href="#prd-agentconsolemvp">PRD-AgentConsoleMVP.md</a></td>
+<td>Agent Console MVP（多智能体协同运行台）</td>
+<td>599e268（+ca6322d、0a27d86）</td>
+<td>基线前</td>
+</tr>
+<tr>
+<td><a href="#prd-工具调用能力">PRD-工具调用能力.md</a></td>
+<td>Agent 工具调用（Function Calling）</td>
+<td>36854c8</td>
+<td>C-025</td>
+</tr>
+<tr>
+<td><a href="#prd-apikey管理">PRD-APIKey管理.md</a></td>
+<td>设置页 API Key 管理（DeepSeek 预设 + 任意厂商）</td>
+<td>19d4dca、abbb336</td>
+<td>C-006、C-015</td>
+</tr>
+<tr>
+<td><a href="#prd-自定义模型接入">PRD-自定义模型接入.md</a></td>
+<td>自定义模型接入（任意 provider/model + fallback 降级）</td>
+<td>48b3c47</td>
+<td>C-009</td>
+</tr>
+<tr>
+<td><a href="#prd-前端视觉与响应式优化">PRD-前端视觉与响应式优化.md</a></td>
+<td>前端视觉与响应式优化 + /contacts 通讯录页</td>
+<td>9c2dd0e、0c46b78</td>
+<td>C-005、C-021</td>
+</tr>
+<tr>
+<td><a href="#prd-前端交互体验完善">PRD-前端交互体验完善.md</a></td>
+<td>软件 Dock、Markdown 消息、移动端快捷操作与无障碍交互</td>
+<td>53268f4</td>
+<td>C-042～C-045、C-055</td>
+</tr>
+<tr>
+<td><a href="#prd-后端访问控制与工作区隔离">PRD-后端访问控制与工作区隔离.md</a></td>
+<td>API Token、可信工作区上下文与 Provider Key 脱敏</td>
+<td>71ea26f</td>
+<td>C-058～C-060、C-070</td>
+</tr>
+<tr>
+<td><a href="#prd-windows一键启动脚本">PRD-Windows一键启动脚本.md</a></td>
+<td>Windows 一键启动脚本</td>
+<td>fb94fb2</td>
+<td>C-007</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h1 id="prd-agentconsolemvp">PRD：Agent Console MVP（多智能体协同运行台）</h1>
+<blockquote>
+<p>类型：新需求（Requirement）｜状态：已实施｜关联提交：<code>599e268</code>（+ 加固 <code>ca6322d</code>、<code>0a27d86</code>）</p>
+</blockquote>
+<hr />
+<h2 id="prd-agentconsolemvp-1-背景与问题">1. 背景与问题</h2>
+<p>多个 AI Agent 此前是散落的：模型配置在 <code>config/models.yaml</code>，执行日志埋在数据库，
+没有统一的界面来「看健康、派任务、追执行、查结果」。工程负责人与独立开发者只能
+靠 API / 脚本拼凑，无法在几秒内回答三个核心问题：<strong>系统现在是否健康、谁正在做什么、
+下一步需要我处理什么</strong>。</p>
+<p>同时，单一 LLM 直答模式（一次 prompt 一次回答）无法胜任需要拆解与协作的复杂任务——
+缺少「Manager 拆解 → Worker 执行 → QA 审核 → 汇总」的编排能力。</p>
+<h3 id="prd-agentconsolemvp-本轮要解决的问题">本轮要解决的问题</h3>
+<ol>
+<li>没有可观察、可操作的多 Agent 协同台，Agent 之间无法围绕一个任务协作。</li>
+<li>任务执行过程（拆解/子任务/审核/汇总）不可见，失败无法定位到具体步骤。</li>
+<li>模型调用成本与延迟不落账，无法回答「每次调用花了多少钱、多慢」。</li>
+<li>进程崩溃后任务状态丢失，无法恢复。</li>
+</ol>
+<h2 id="prd-agentconsolemvp-2-目标与非目标">2. 目标与非目标</h2>
+<p><strong>目标</strong>
+- G1：用户在群聊 <code>@Agent</code> 派发任务，任务被持久化并按编排流水线执行。
+- G2：多 Agent 流水线「Manager 拆解 → Worker 执行 → QA 审核 → 最终汇总」，结果回到群聊。
+- G3：全程实时可视：任务状态、步骤时间线、Agent 状态灯、模型调用日志通过单个 WebSocket 推送。
+- G4：系统健康可查（连接状态 / Provider 配置 / 任务并发），异常可恢复。
+- G5：每个模型调用记录 provider/model/token/成本/延迟/是否降级。</p>
+<p><strong>非目标（N1-N3）</strong>
+- N1：不做 Worker 并行执行（SQLite 单写者，串行；PostgreSQL 到位后用 <code>asyncio.gather</code> 并行）。
+- N2：不做消息队列（Celery/Redis），<code>run_task(task_id)</code> 保持队列友好入口，未来可切换。
+- N3：不做多进程广播（进程内 WebSocket Manager，接口已抽象可换 Redis Pub/Sub）。</p>
+<h2 id="prd-agentconsolemvp-3-用户故事">3. 用户故事</h2>
+<ul>
+<li>US1：作为用户，我在群聊输入 <code>@项目总设计师 帮我重构订单模块</code>，任务被拆成子任务分给对应 Worker，全程每个步骤实时可见。</li>
+<li>US2：作为用户，我想在运行总览一眼看到工作区连接状态、6 个 Agent 谁在忙、当前有哪些任务在跑。</li>
+<li>US3：作为用户，我想在任务详情页看到「拆解 → 每个 Worker 执行 → 测试专员审核 → 最终汇总」的时间线与每次模型调用的 token/成本/延迟。</li>
+<li>US4：作为用户，服务重启后，未完成任务应自动恢复继续，而不是卡在 pending/running。</li>
+</ul>
+<h2 id="prd-agentconsolemvp-4-功能需求fr">4. 功能需求（FR）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>需求</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FR1</td>
+<td>群聊 <code>@Agent</code> 派发任务：消息落库并创建 <code>Task</code>（PENDING），入口 <code>run_task(task_id)</code> 无状态可复用</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR2</td>
+<td>单 Agent 路径：分配 Agent 直接执行（system prompt + 任务描述 → chat_completion）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR3</td>
+<td>多 Agent 流水线：<code>manager_plan</code> → <code>worker_execute_{id}</code>（逐个 Worker）→ <code>review_results</code> → <code>final_summary</code>，各阶段生成 <code>TaskStep</code></td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR4</td>
+<td>六种 WebSocket 事件按工作区广播：<code>message.created</code> / <code>task.status_changed</code> / <code>task.step_changed</code> / <code>agent.status_changed</code> / <code>model.call_finished</code> / <code>error</code></td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR5</td>
+<td>任务状态机：PENDING → RUNNING → COMPLETED / FAILED；<code>_claim_pending_task</code> 原子认领防止重复执行</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR6</td>
+<td>模型调用落账 <code>ModelCall</code>：provider / model / prompt+completion tokens / latency_ms / cost / status / error_message</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR7</td>
+<td>模型降级链：<code>config/models.yaml</code> 定义 fallback，主 Provider 失败自动切换并标记 <code>fallback_used</code></td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR8</td>
+<td>失败恢复：任务失败 → 步骤标 failed、任务标 FAILED、错误消息回群聊并广播 error 事件；主 session 失效时用 fallback session 补写</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR9</td>
+<td>并发控制：单工作区最多 3 个进行中任务，超出返回 429</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>FR10</td>
+<td>前端四页：运行总览 <code>/</code>、群聊 <code>/chats</code>、任务 <code>/tasks</code>、任务详情 <code>/tasks/[id]</code>（步骤时间线 + 模型调用日志）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR11</td>
+<td>错误信息脱敏：LiteLLM 错误中替换 API Key 与 <code>sk-*</code>/32 位以上连续字符</td>
+<td>P1</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-agentconsolemvp-5-非功能需求nfr">5. 非功能需求（NFR）</h2>
+<ul>
+<li><strong>本地优先</strong>：零配置 SQLite，<code>Base.metadata.create_all</code> 初始化；模型均为标准 SQLAlchemy 定义，换 PostgreSQL 只改 <code>DATABASE_URL</code>。</li>
+<li><strong>可扩展</strong>：<code>run_task</code> 入口与 WebSocket 广播接口已抽象，后续换 Redis 队列/Pub/Sub 不破坏调用方。</li>
+<li><strong>可观测</strong>：每次模型调用/任务步骤/Agent 状态变更都持久化 + 广播，前端可追溯。</li>
+<li><strong>安全</strong>：错误消息不泄露密钥；结果消息与任务结果长度受限（error_message ≤ 4000 字符）。</li>
+<li><strong>性能</strong>：单进程 SQLite 串行执行，单次模型调用毫秒级；WebSocket 广播按工作区隔离。</li>
+</ul>
+<h2 id="prd-agentconsolemvp-6-验收标准ac">6. 验收标准（AC）</h2>
+<ul>
+<li>AC1：<code>docker compose up</code> 后默认工作区与 6 个 Agent 就位；群聊 <code>@项目总设计师 帮我...</code> 回车 → 任务创建并执行。</li>
+<li>AC2：多 Agent 任务在任务详情页呈现完整步骤时间线（manager_plan / worker_execute_N / review_results / final_summary），每步有 input/output。</li>
+<li>AC3：Agent 状态灯、任务徽章、消息气泡随 WebSocket 事件实时变化，无刷新。</li>
+<li>AC4：模型调用日志含 provider/model/token/latency/cost/fallback 标记；降级发生时 <code>fallback_used=true</code>。</li>
+<li>AC5：杀进程重启后，PENDING 任务可重新执行、未完成状态不丢失（<code>_claim_pending_task</code> 原子认领 + fallback session）。</li>
+<li>AC6：后端 <code>pytest</code> 全过（本轮含 task 执行、task recovery、message_hub、litellm_service、orchestrator 测试）；前端 <code>lint/test/build</code> 通过。</li>
+</ul>
+<h2 id="prd-agentconsolemvp-7-里程碑">7. 里程碑</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>内容</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td>单 Agent 执行 + 消息/任务持久化 + 基础 WebSocket</td>
+<td>群聊可派单，Agent 回话</td>
+</tr>
+<tr>
+<td>M2</td>
+<td>多 Agent 流水线（Manager/Worker/QA/Final）+ TaskStep 时间线</td>
+<td>复杂任务可拆解执行</td>
+</tr>
+<tr>
+<td>M3</td>
+<td>运行总览 + 任务列表/详情 + 模型调用日志</td>
+<td>全程可视</td>
+</tr>
+<tr>
+<td>M4</td>
+<td>加固：任务认领原子化、失败恢复、并发控制、成本提取、测试补齐</td>
+<td>稳定性达标</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-agentconsolemvp-8-变更追踪登记">8. 变更追踪登记</h2>
+<div class="table-wrap changelog"><table>
+<thead>
+<tr>
+<th>改动时间</th>
+<th>ID</th>
+<th>状态</th>
+<th>Git 提交</th>
+<th>作者</th>
+<th>改动类型</th>
+<th>影响范围</th>
+<th>改动内容</th>
+<th>前端技术</th>
+<th>后端技术</th>
+<th>是否有数据库</th>
+<th>破坏性变更</th>
+<th>验证结果</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>MVP 基线前</td>
+<td>基线前（未入表）</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/599e268">599e268</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>前端、后端、数据库</td>
+<td>Agent Console MVP：多 Agent 编排、WebSocket 实时可视、任务/消息/模型调用持久化、前端四页</td>
+<td>Next.js 16 + React 19 + Tailwind；useChat/useTasks/useAgentConsole/useSettings</td>
+<td>FastAPI + SQLite + LiteLLM；orchestrator/message_hub；Agent/Message/Task/TaskStep/ModelCall 模型</td>
+<td>是(全表)</td>
+<td>是</td>
+<td>pytest + lint/test/build 通过</td>
+<td>含加固 ca6322d/0a27d86</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="prd-agentconsolemvp-9-已实施摘要实施部分">9. 已实施摘要（实施部分）</h2>
+<p><strong>关键文件</strong>
+- 后端：<code>backend/app/core/orchestrator.py</code>（编排/认领/失败恢复）、<code>backend/app/core/message_hub.py</code>（事件契约）、<code>backend/app/services/litellm_service.py</code>（调用/降级/成本）、<code>backend/app/agents/*.py</code>（Manager/Worker/QA/Final prompts）、<code>backend/app/api/v1/endpoints/*.py</code>（conversations/messages/tasks/agents/workspaces/health）
+- 前端：<code>frontend/src/hooks/use-chat.ts</code> / <code>use-tasks.ts</code> / <code>use-agent-console.ts</code>、<code>frontend/src/components/chat/*</code>、<code>frontend/src/components/tasks/*</code>、<code>frontend/src/components/console/*</code></p>
+<p><strong>验证结果</strong>：后端 pytest 40 passed；前端 Node test 28 passed；ESLint 0 错误；TypeScript + Next build 通过；失败恢复与并发控制（max 3 / 429）已覆盖测试。</p>
+<p><strong>后续演进</strong>：本 MVP 之上叠加了 API Key 管理、自定义模型、视觉重构与启动脚本（见对应 PRD）。</p>
+<h1 id="prd-apikey管理">PRD：设置页 API Key 管理（含收敛为 DeepSeek 预设 + 任意厂商）</h1>
+<blockquote>
+<p>类型：新需求（Requirement）｜状态：已实施｜关联提交：<code>19d4dca</code>（C-006）+ 演进 <code>abbb336</code>（C-015）</p>
+</blockquote>
+<hr />
+<h2 id="prd-apikey管理-1-背景与问题">1. 背景与问题</h2>
+<p>MVP 阶段 API Key 只能通过环境变量（<code>.env</code>）配置，存在三个痛点：</p>
+<ol>
+<li><strong>改 Key 要改配置 + 重启</strong>：换一个 Provider 密钥必须编辑 <code>.env</code> 并重启服务，操作成本高、中断在线协作。</li>
+<li><strong>解析路径单一</strong>：密钥只能来自环境变量，无法在前端按需录入/替换。</li>
+<li><strong>Provider 白名单写死</strong>：列表预设了多个厂商，用户想接白名单外的厂商（如 Moonshot / Zhipu / x.ai）只能改代码或环境变量，且厂商名无法在前端维护。</li>
+</ol>
+<h3 id="prd-apikey管理-本轮要解决的问题">本轮要解决的问题</h3>
+<ol>
+<li>用户能在前端「设置 → API Key 管理」直接填入/删除各 Provider 密钥，无需重启。</li>
+<li>密钥解析优先级：<strong>数据库 &gt; 环境变量</strong>（DB 存的是用户最新录入）。</li>
+<li><strong>密钥安全</strong>：列表接口永不含 Key 明文，只回传 <code>configured</code> 布尔；仅在用户显式点击眼睛时才按需取回。</li>
+<li><strong>收敛预设 + 开放任意厂商</strong>：只保留 DeepSeek 预设，其余任意厂商名由用户添加维护。</li>
+</ol>
+<h2 id="prd-apikey管理-2-目标与非目标">2. 目标与非目标</h2>
+<p><strong>目标</strong>
+- G1：前端可对任意 Provider 保存 / 删除 / 按需查看 API Key，全程无需改文件或重启。
+- G2：<code>provider_credentials</code> 表存储密钥，DB 优先于环境变量解析。
+- G3：列表/状态接口绝不泄露密钥明文。
+- G4：预设仅 DeepSeek；用户可添加任意厂商（名称 ≤50 字符，显示 title-case）。</p>
+<p><strong>非目标（N1-N3）</strong>
+- N1：不做密钥加密存储（本地优先工具，明文存 SQLite，README 注明安全边界）。
+- N2：不做多用户/权限体系（本地单用户工具）。
+- N3：不校验厂商名是否为真实 Provider（仅格式校验，未知厂商由 LiteLLM 调用时失败）。</p>
+<h2 id="prd-apikey管理-3-用户故事">3. 用户故事</h2>
+<ul>
+<li>US1：作为用户，我在设置页粘贴 DeepSeek 密钥点保存，立即生效，无需重启；点删除即移除。</li>
+<li>US2：作为用户，我接入 <code>moonshot</code> 模型，在「添加厂商」输入 <code>moonshot</code> 与 Key，它出现在密钥列表并可被自定义模型选用。</li>
+<li>US3：作为用户，我想确认已保存的 Key 是否正确——点眼睛图标，输入框按需回填真实 Key，再点一次隐藏。</li>
+</ul>
+<h2 id="prd-apikey管理-4-功能需求fr">4. 功能需求（FR）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>需求</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FR1</td>
+<td>新增 <code>provider_credentials</code> 表（provider 唯一、api_key、时间戳）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR2</td>
+<td><code>GET /api/provider-keys</code>：返回各 Provider 的 <code>configured</code> 状态（DB 或 env 已配），<strong>不含 Key 值</strong></td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR3</td>
+<td><code>PUT /api/provider-keys/{provider}</code>：保存/覆盖密钥（provider 去空白、非空、≤50 字符）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR4</td>
+<td><code>DELETE /api/provider-keys/{provider}</code>：删除 DB 中的密钥</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR5</td>
+<td><code>GET /api/provider-keys/{provider}</code>：按需返回该 Provider 真实 Key（DB 优先，其次 env）——仅显式操作时调用</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR6</td>
+<td><code>chat_completion</code> 解析优先级：DB 密钥 &gt; 环境变量；任意厂商名（不在 <code>_PROVIDER_KEY_FIELDS</code>）也走 DB 取值</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR7</td>
+<td>预设收敛为仅 DeepSeek；<code>/api/models/providers/status</code> 只显示 deepseek + DB 中已添加的厂商</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR8</td>
+<td>前端密钥管理 UI：密码框 + 眼睛切换（点击时拉取真实 Key 回填再显隐）+ 保存/删除按钮；「添加厂商」表单（任意厂商名 + Key）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR9</td>
+<td>状态融合：Provider 已配置 = env 或 DB 任一来源已配，状态卡片与模型卡片正确显示「已配置/未配置」</td>
+<td>P1</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-apikey管理-5-非功能需求nfr">5. 非功能需求（NFR）</h2>
+<ul>
+<li><strong>安全</strong>：列表接口不回传密钥；<code>_sanitize_error_message</code> 对错误消息中的 Key 与 <code>sk-*</code> 模式做 <code>[REDACTED]</code> 替换；Key 不写日志。</li>
+<li><strong>隐私</strong>：只有用户显式点击眼睛才经 <code>GET /api/provider-keys/{provider}</code> 取回真实 Key，取回即填、不常驻状态。</li>
+<li><strong>兼容</strong>：沿用 <code>SuccessResponse[T]</code> 响应契约；API 行为变化（PUT 接受任意厂商名）在追踪表标注破坏性变更。</li>
+<li><strong>可用</strong>：保存/删除带 loading 态与错误提示；输入框明/暗背景对比可读（含后续 c8d1f72 纯白文字修复）。</li>
+</ul>
+<h2 id="prd-apikey管理-6-验收标准ac">6. 验收标准（AC）</h2>
+<ul>
+<li>AC1：设置页保存 Key → 刷新页面仍显示「已配置」；删除 → 「未配置」。</li>
+<li>AC2：DB 与 env 同时配置同一 Provider 时，调用使用 DB 密钥。</li>
+<li>AC3：<code>GET /api/provider-keys</code> 响应中<strong>不含任何 <code>api_key</code> 字段值</strong>。</li>
+<li>AC4：点眼睛从空输入框可回填真实已存 Key（此前 BUG：value 恒空只切类型）。</li>
+<li>AC5：添加厂商 <code>moonshot</code> + Key 后，它出现在 Provider 状态与密钥列表；未添加的预设（除 deepseek 外）不再出现。</li>
+<li>AC6：后端 pytest 全过（40→42）；<code>GET /api/provider-keys/{provider}</code> 仅显式操作可用。</li>
+</ul>
+<h2 id="prd-apikey管理-7-里程碑">7. 里程碑</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>内容</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td>ProviderCredential 模型 + /api/provider-keys 增删查 + DB&gt;env 解析</td>
+<td>后端可用</td>
+</tr>
+<tr>
+<td>M2</td>
+<td>前端密钥管理 UI（保存/删除/眼睛）</td>
+<td>设置页可用</td>
+</tr>
+<tr>
+<td>M3</td>
+<td>眼睛取回真实 Key 修复（c374465）</td>
+<td>BUG 修复</td>
+</tr>
+<tr>
+<td>M4</td>
+<td>收敛预设 + 任意厂商添加（abbb336）</td>
+<td>演进完成</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-apikey管理-8-变更追踪登记">8. 变更追踪登记</h2>
+<div class="table-wrap changelog"><table>
+<thead>
+<tr>
+<th>改动时间</th>
+<th>ID</th>
+<th>状态</th>
+<th>Git 提交</th>
+<th>作者</th>
+<th>改动类型</th>
+<th>影响范围</th>
+<th>改动内容</th>
+<th>前端技术</th>
+<th>后端技术</th>
+<th>是否有数据库</th>
+<th>破坏性变更</th>
+<th>验证结果</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-08-01 21:17</td>
+<td>C-006</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/19d4dca">19d4dca</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>后端、数据库、前端</td>
+<td>新增「设置 → API Key 管理」：前端填入/删除各 Provider 密钥，存库优先于环境变量</td>
+<td>设置页密钥 UI(密码框+眼睛+保存/删除)；use-settings 扩展</td>
+<td>ProviderCredential 模型；GET/PUT/DELETE /api/provider-keys；Key 解析优先级 DB&gt;env</td>
+<td>是(provider_credentials)</td>
+<td>是</td>
+<td>后端 37→40</td>
+<td>Key 永不在列表回传；新增表</td>
+</tr>
+<tr>
+<td>2026-08-03 13:50</td>
+<td>C-015</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/abbb336">abbb336</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>后端、前端</td>
+<td>API Key 管理收敛为仅 DeepSeek 预设，用户可自行添加任意厂商的 API</td>
+<td>「添加厂商」表单(任意厂商名+Key)；厂商名 title-case；移除其余预设</td>
+<td>移除 Provider 白名单；/models/providers/status 只显示 deepseek+DB 厂商</td>
+<td>否(复用 provider_credentials)</td>
+<td>是</td>
+<td>后端 40→42</td>
+<td>API 行为变化：PUT 接受任意厂商名</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="prd-apikey管理-9-已实施摘要实施部分">9. 已实施摘要（实施部分）</h2>
+<p><strong>关键文件</strong>
+- 后端：<code>backend/app/models/provider_credential.py</code>、<code>backend/app/api/v1/endpoints/provider_keys.py</code>、<code>backend/app/services/litellm_service.py</code>（<code>get_db_api_keys</code> / <code>is_provider_configured</code> / <code>get_api_key_value</code>）
+- 前端：<code>frontend/src/components/settings/settings-page.tsx</code>、<code>frontend/src/hooks/use-settings.ts</code>、<code>frontend/src/types/settings.ts</code></p>
+<p><strong>验证结果</strong>：后端 pytest 40→42 passed；<code>GET /api/provider-keys/{provider}</code> 显式取回行为有测试覆盖；列表永不含 Key。</p>
+<p><strong>配套修复</strong>：眼睛图标切换失效（c374465，点击时拉取真实 Key 再显隐）、输入框黑底黑字（a138831/c8d1f72）。</p>
+<h1 id="prd-windows一键启动脚本">PRD：Windows 一键启动脚本</h1>
+<blockquote>
+<p>类型：新需求（Requirement）｜状态：已实施｜关联提交：<code>fb94fb2</code>（C-007，+ 修复 <code>4396cad</code>）</p>
+</blockquote>
+<hr />
+<h2 id="prd-windows一键启动脚本-1-背景与问题">1. 背景与问题</h2>
+<p>MVP 的启动方式是手敲三条命令：</p>
+<pre><code class="language-powershell">Copy-Item .env.example .env
+docker compose up --build
+</code></pre>
+<p>对非运维用户门槛高：需要记得复制 <code>.env</code>（漏了则缺 API Key 配置）、Docker 未安装/未启动时只会抛晦涩错误、不知道何时服务就绪、还要手动打开浏览器。README 里「一分钟跑起来」需要真正一键化。</p>
+<h3 id="prd-windows一键启动脚本-本轮要解决的问题">本轮要解决的问题</h3>
+<ol>
+<li>双击即启动：自动处理 <code>.env</code>、Docker 检查、服务构建与启动、就绪等待、打开浏览器。</li>
+<li>同时支持 cmd（<code>start.bat</code>）与 PowerShell（<code>start.ps1</code>）两种 shell。</li>
+<li>启动失败给出明确原因（缺 Docker / Docker 未运行 / 端口占用）。</li>
+</ol>
+<h2 id="prd-windows一键启动脚本-2-目标与非目标">2. 目标与非目标</h2>
+<p><strong>目标</strong>
+- G1：<code>start.bat</code> 与 <code>start.ps1</code> 一键启动完整栈（前端 3000 + 后端 8000）。
+- G2：<code>.env</code> 缺失时自动从 <code>.env.example</code> 复制；已存在则跳过。
+- G3：Docker 未安装时给出安装指引；<code>docker compose up --build -d</code> 失败时提示检查 Docker 是否运行。
+- G4：轮询 <code>/api/v1/health</code> 直到就绪，然后打开浏览器。
+- G5：脚本输出消息跨代码页安全（纯 ASCII，避免 cmd/PowerShell 按 ANSI 解析中文乱码）。</p>
+<p><strong>非目标（N1-N3）</strong>
+- N1：不做安装 Docker 的自动化（引导用户装 Docker Desktop）。
+- N2：不做 Linux/macOS 脚本（本轮仅 Windows；Docker Compose 本身跨平台）。
+- N3：不做停止/日志管理（脚本末尾提示 <code>docker compose down</code> / <code>logs -f</code>）。</p>
+<h2 id="prd-windows一键启动脚本-3-用户故事">3. 用户故事</h2>
+<ul>
+<li>US1：作为新用户，我双击 <code>start.bat</code>，看到三步进度（复制 .env → 启动服务 → 等待就绪），就绪后浏览器自动打开 http://localhost:3000。</li>
+<li>US2：作为用户，我本机没装 Docker——双击脚本后看到「Docker not found」与安装链接，而不是命令报错。</li>
+<li>US3：作为用户，我重复启动——<code>.env</code> 已存在时脚本跳过复制，直接启动服务。</li>
+</ul>
+<h2 id="prd-windows一键启动脚本-4-功能需求fr">4. 功能需求（FR）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>需求</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FR1</td>
+<td>新增 <code>start.bat</code>（cmd）与 <code>start.ps1</code>（PowerShell）两个启动脚本</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR2</td>
+<td>自动复制 <code>.env.example</code> → <code>.env</code>（仅当 <code>.env</code> 不存在）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR3</td>
+<td>Docker 存在性检查：<code>where docker</code> / <code>Get-Command docker</code>，缺失时提示安装 Docker Desktop 并退出</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR4</td>
+<td><code>docker compose up --build -d</code> 启动服务，失败时提示检查 Docker 运行状态</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR5</td>
+<td>健康轮询：每 3 秒 <code>curl</code>/<code>Invoke-WebRequest</code> 命中 <code>http://localhost:8000/api/v1/health</code>，直到 200</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR6</td>
+<td>就绪后输出前端/API 地址，等待按键后 <code>start http://localhost:3000</code> 打开浏览器</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR7</td>
+<td>脚本输出使用纯 ASCII 消息（4396cad 修复 UTF-8 被 ANSI 解析的中文乱码）；PowerShell 端显式设置 <code>[Console]::OutputEncoding = UTF8</code></td>
+<td>P1</td>
+</tr>
+<tr>
+<td>FR8</td>
+<td>结尾提示停止（<code>docker compose down</code>）与日志（<code>docker compose logs -f</code>）命令</td>
+<td>P1</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-windows一键启动脚本-5-非功能需求nfr">5. 非功能需求（NFR）</h2>
+<ul>
+<li><strong>健壮</strong>：<code>$ErrorActionPreference="Stop"</code>（PowerShell）；<code>if %ERRORLEVEL% NEQ 0</code> 退出检查（cmd）；任一失败步骤明确提示而非静默继续。</li>
+<li><strong>可读</strong>：步骤化进度 <code>[1/3]</code>、<code>[2/3]</code>、<code>[3/3]</code>；就绪横幅显示前端与 API Docs 地址。</li>
+<li><strong>兼容</strong>：纯 ASCII 输出保证跨代码页（GBK/UTF-8）一致显示；PowerShell 无额外依赖（仅标准 cmdlet）。</li>
+<li><strong>幂等</strong>：重复运行不破坏 <code>.env</code>（已存在即跳过）。</li>
+</ul>
+<h2 id="prd-windows一键启动脚本-6-验收标准ac">6. 验收标准（AC）</h2>
+<ul>
+<li>AC1：全新目录下双击 <code>start.bat</code> → 自动生成 <code>.env</code> → 启动服务 → 轮询就绪 → 打开 http://localhost:3000。</li>
+<li>AC2：<code>.env</code> 已存在时，脚本显示「already exists, skipping」且不覆盖。</li>
+<li>AC3：未安装 Docker 时，脚本显示明确错误与 Docker Desktop 安装链接，退出码非 0。</li>
+<li>AC4：<code>start.ps1</code> 在 PowerShell 下行为与 <code>start.bat</code> 一致（含就绪等待与浏览器打开）。</li>
+<li>AC5：在 GBK 代码页的 cmd 下运行，脚本输出无乱码（纯 ASCII）。</li>
+<li>AC6：Docker Compose 健康检查通过后，<code>http://localhost:8000/api/v1/health</code> 返回 200。</li>
+</ul>
+<h2 id="prd-windows一键启动脚本-7-里程碑">7. 里程碑</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>内容</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td>start.bat（cmd 路径）</td>
+<td>cmd 一键启动</td>
+</tr>
+<tr>
+<td>M2</td>
+<td>start.ps1（PowerShell 路径）</td>
+<td>PS 一键启动</td>
+</tr>
+<tr>
+<td>M3</td>
+<td>乱码修复（4396cad 纯 ASCII）</td>
+<td>跨代码页安全</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-windows一键启动脚本-8-变更追踪登记">8. 变更追踪登记</h2>
+<div class="table-wrap changelog"><table>
+<thead>
+<tr>
+<th>改动时间</th>
+<th>ID</th>
+<th>状态</th>
+<th>Git 提交</th>
+<th>作者</th>
+<th>改动类型</th>
+<th>影响范围</th>
+<th>改动内容</th>
+<th>前端技术</th>
+<th>后端技术</th>
+<th>是否有数据库</th>
+<th>破坏性变更</th>
+<th>验证结果</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-08-01 21:20</td>
+<td>C-007</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/fb94fb2">fb94fb2</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>部署</td>
+<td>新增 Windows 一键启动脚本</td>
+<td>start.bat / start.ps1</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>Docker Compose 封装；自动复制 .env + 等健康</td>
+</tr>
+<tr>
+<td>2026-08-02 23:36</td>
+<td>C-011</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/4396cad">4396cad</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>部署</td>
+<td>修复一键启动脚本中文乱码（UTF-8 被 cmd/PowerShell 按 ANSI 解析）</td>
+<td>脚本消息改纯 ASCII</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>跨代码页安全</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="prd-windows一键启动脚本-9-已实施摘要实施部分">9. 已实施摘要（实施部分）</h2>
+<p><strong>关键文件</strong>
+- 新增：<code>start.bat</code>、<code>start.ps1</code>
+- 参考：<code>docker-compose.yml</code>（服务编排）、<code>.env.example</code></p>
+<p><strong>验证结果</strong>：Docker Compose 封装，<code>copy .env</code> + 健康轮询 + 自动开浏览器；4396cad 将脚本消息改纯 ASCII 修复中文乱码。</p>
+<h1 id="prd-前端交互体验完善">PRD：前端交互体验完善</h1>
+<blockquote>
+<p>类型：新需求（Requirement）｜状态：已实施</p>
+</blockquote>
+<h2 id="prd-前端交互体验完善-1-背景与问题">1. 背景与问题</h2>
+<p>现有 Agent Console 已具备控制台、群聊、通讯录、任务与模型设置等核心页面，但部分高频操作仍缺少完整交互闭环：软件 Dock 仅展示状态而不可查看详情，聊天消息只能按纯文本显示，移动端缺少快捷指令入口，高风险配置操作缺少统一确认与结果反馈。</p>
+<h2 id="prd-前端交互体验完善-2-目标与非目标">2. 目标与非目标</h2>
+<p><strong>目标</strong>
+- G1：让软件 Dock 入口具备真实、键盘可达的连接详情交互。
+- G2：提升 Agent 输出的结构化阅读能力，支持安全 Markdown、代码与复制操作。
+- G3：为移动端聊天提供 Agent 与快捷指令选择入口。
+- G4：统一高风险操作确认与保存、删除、测试结果反馈。</p>
+<p><strong>非目标</strong>
+- N1：不修改后端 API、WebSocket 事件或数据库结构。
+- N2：不引入复杂动画框架或富文本编辑器。
+- N3：不改变现有路由及 Agent 调度流程。</p>
+<h2 id="prd-前端交互体验完善-3-用户故事">3. 用户故事</h2>
+<ul>
+<li>US1：作为运维人员，我可以点击软件 Dock 查看端口、连接状态和最近心跳，而不是点击后没有反馈。</li>
+<li>US2：作为开发者，我可以清晰阅读 Agent 返回的标题、列表、代码和链接，并快速复制代码或全文。</li>
+<li>US3：作为移动端用户，我可以通过操作面板选择 Agent 或快捷任务模板，无需记忆并手输完整名称。</li>
+</ul>
+<h2 id="prd-前端交互体验完善-4-功能需求">4. 功能需求</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>需求</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FR1</td>
+<td>Software Dock 每个入口使用语义化按钮，点击后显示软件名称、接入位、连接状态与可用操作</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR2</td>
+<td>Agent 消息支持安全 Markdown 渲染、代码块、列表与安全外链</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>FR3</td>
+<td>移动端聊天输入器提供快捷模板和 Agent 选择面板</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>FR4</td>
+<td>Agent 详情弹层支持 Escape、遮罩关闭、焦点恢复和背景滚动锁定</td>
+<td>P0</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-前端交互体验完善-5-非功能需求">5. 非功能需求</h2>
+<ul>
+<li>键盘可完整操作，弹层遵循 WAI-ARIA Dialog 模式。</li>
+<li>移动端触控目标不小于 44px。</li>
+<li>Markdown 不渲染不可信原始 HTML，外链提供安全属性。</li>
+<li>新能力不得破坏现有聊天发送、任务跳转和设置保存流程。</li>
+<li><code>lint</code>、前端测试、生产构建与冒烟测试全部通过。</li>
+</ul>
+<h2 id="prd-前端交互体验完善-6-验收标准">6. 验收标准</h2>
+<ul>
+<li>AC1：Software Dock 入口可通过鼠标、Enter 和 Space 展开或收起连接详情。</li>
+<li>AC2：Agent Markdown 中的标题、列表、行内代码、代码块和链接显示正确，原始 HTML 不执行。</li>
+<li>AC3：375px 宽度下可从输入区打开快捷操作并选择模板或 Agent。</li>
+<li>AC4：Agent 详情可用 Escape 和遮罩关闭，打开时背景不可滚动，关闭后焦点返回触发项。</li>
+<li>AC5：A/B 对比、关键页面冒烟、lint、test、build 全部通过。</li>
+</ul>
+<h2 id="prd-前端交互体验完善-7-分类说明">7. 分类说明</h2>
+<p>本 PRD 仅覆盖新增用户能力。既有行为不符合预期的问题归类为 BUG，样式统一、字号、动效和布局调整归类为 Optimization，不在本 PRD 内重复定义。</p>
+<h1 id="prd-前端视觉与响应式优化">PRD：前端视觉与响应式优化（含 /contacts 通讯录页）</h1>
+<blockquote>
+<p>类型：新需求（Requirement）｜状态：已实施｜关联提交：<code>9c2dd0e</code>（C-005）+ 并入 <code>0c46b78</code>（C-021）</p>
+</blockquote>
+<hr />
+<h2 id="prd-前端视觉与响应式优化-1-背景与问题">1. 背景与问题</h2>
+<p>MVP 功能齐全，但视觉与体验未达「可对外展示」标准：</p>
+<ol>
+<li><strong>桌面端观感粗糙</strong>：色板、间距、卡片缺乏统一视觉令牌，状态表达依赖颜色单通道，违背「技术感来自结构」的产品定位。</li>
+<li><strong>移动端不可用</strong>：布局非响应式，聊天/任务/设置在小屏上溢出或拥挤；PRODUCT.md 要求移动端像原生团队聊天。</li>
+<li><strong>缺少 Agent 目录</strong>：用户无法一眼看到工作区有哪些 Agent、各自职责与在线状态。</li>
+<li><strong>Agent 无人像</strong>：角色只以文字/色块出现，缺少 <code>agent-portrait</code> 头像组件承载状态光环。</li>
+</ol>
+<h3 id="prd-前端视觉与响应式优化-本轮要解决的问题">本轮要解决的问题</h3>
+<ol>
+<li>建立统一视觉令牌（oklch 色板、间距、圆角、字体分级）并全站响应式。</li>
+<li>新增 <code>/contacts</code> 通讯录页：Agent 实名目录 + 职责 + 在线状态 + 搜索。</li>
+<li>新增 <code>agent-portrait</code> 头像组件（语义状态光环）。</li>
+<li>重构聊天/任务/控制台/设置各组件，符合 PRODUCT.md 设计原则与 WCAG 2.1 AA。</li>
+<li>桌面端深色集群台 + 移动端浅色原生聊天的双表面系统（DESIGN.md）。</li>
+</ol>
+<h2 id="prd-前端视觉与响应式优化-2-目标与非目标">2. 目标与非目标</h2>
+<p><strong>目标</strong>
+- G1：<code>globals.css</code> 建立语义令牌（深色暖石墨底、信号琥珀强调、状态三重表达：颜色+图标+文字），并实现断点级响应式。
+- G2：新增 <code>/contacts</code> 通讯录页与 <code>agent-portrait</code> 头像组件。
+- G3：重构 agent-gallery / status-panel / app-sidebar / chat 系组件，遵循统一视觉语法。
+- G4：桌面与移动双表面：桌面深色运控台，移动浅色原生聊天节奏。
+- G5：与既有功能（API Key 管理、自定义模型）共存，不破坏设置页功能。</p>
+<p><strong>非目标（N1-N3）</strong>
+- N1：不做全新信息架构/路由重构（仅视觉与组件级调整）。
+- N2：不做动画框架引入（仅 CSS transition / prefers-reduced-motion 降级）。
+- N3：不改变 WebSocket 事件契约与后端 API。</p>
+<h2 id="prd-前端视觉与响应式优化-3-用户故事">3. 用户故事</h2>
+<ul>
+<li>US1：作为用户，我在桌面端看到一套统一的深色运控台：一致的卡片、间距、语义色，状态灯能反映 Agent 运行状态。</li>
+<li>US2：作为用户，我在手机上打开 /chats、/tasks、/settings，布局自适应、触控目标 ≥44px，像原生聊天工具一样顺畅。</li>
+<li>US3：作为用户，我打开 <code>/contacts</code> 通讯录，看到 6 个 Agent 的实名、职责与在线状态，输入姓名/职责可搜索。</li>
+</ul>
+<h2 id="prd-前端视觉与响应式优化-4-功能需求fr">4. 功能需求（FR）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>需求</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FR1</td>
+<td><code>globals.css</code> 视觉令牌：oklch 色板（deck-surface/raised-surface/rule/signal-mint…）、间距/圆角/字体分级（Segoe UI Variable / Microsoft YaHei UI；数据用 Cascadia Code）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR2</td>
+<td>响应式布局：<code>console-shell</code> 侧栏 <code>md:grid-cols-[76px_1fr]</code>，内容区 <code>px-4→xl:px-10</code> 渐变；聊天/任务/设置组件在 sm/md/lg/xl 断点自适应</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR3</td>
+<td>新增 <code>/contacts</code> 路由 + <code>contacts-page.tsx</code>：Agent 实名目录、角色职责描述、在线状态、搜索过滤（姓名/角色）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR4</td>
+<td>新增 <code>agent-portrait</code> 头像组件：首字母/图标 + 语义状态光环（仅运行中允许局部光环）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR5</td>
+<td>重构组件统一视觉：agent-gallery（角色群像）、status-panel（状态面板）、app-sidebar（侧栏）、chat-composer（输入器）、message-bubble（气泡）、task-detail/status-badge</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR6</td>
+<td>状态三重表达：颜色 + 图标 + 文字（不单靠颜色），低对比灰字退回 <code>text-foreground</code></td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR7</td>
+<td>设置页并入视觉样式，保留 API Key 管理 + 自定义模型功能（C-021 手工合并 1 处文本冲突）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR8</td>
+<td>异常可恢复：加载/空/断线/失败态均有说明与下一步操作</td>
+<td>P1</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-前端视觉与响应式优化-5-非功能需求nfr">5. 非功能需求（NFR）</h2>
+<ul>
+<li><strong>可访问性</strong>：WCAG 2.1 AA 基线；正文与占位文字对比度 ≥ 4.5:1；移动触控目标 ≥ 44px；键盘操作与清晰焦点态；<code>prefers-reduced-motion</code> 降级。</li>
+<li><strong>一致性</strong>：同一动作同一形状——导航、筛选、按钮、状态与数据字段全站统一视觉语法（DESIGN.md 原则 3）。</li>
+<li><strong>反模式约束</strong>：避免紫蓝渐变、玻璃拟态、卡片墙、伪终端雨、营销大标题（PRODUCT.md Anti-references）。</li>
+<li><strong>不回归</strong>：视觉重构不得改变功能与数据流；lint/test/build 全过。</li>
+</ul>
+<h2 id="prd-前端视觉与响应式优化-6-验收标准ac">6. 验收标准（AC）</h2>
+<ul>
+<li>AC1：桌面端（≥md）为深色运控台，移动端（&lt;md）布局自适应、无横向溢出；聊天/任务/设置/通讯录四页在 375/768/1280 宽度下均可浏览操作。</li>
+<li>AC2：<code>/contacts</code> 显示全部 Agent：实名 + 职责 + 在线状态灯；搜索可按姓名或职责过滤。</li>
+<li>AC3：Agent 头像带状态光环，颜色与文字/图标共同表达状态（不单靠颜色）。</li>
+<li>AC4：设置页视觉采用新样式，且 API Key 管理、自定义模型功能完好（回归通过）。</li>
+<li>AC5：<code>npm run lint &amp;&amp; npm test &amp;&amp; npm run build</code> 全过；后端 pytest 42 passed。</li>
+<li>AC6：A/B 对比通过后并入主分支（C-021 合并记录），仅 settings-page.tsx 1 处文本冲突手工合并。</li>
+</ul>
+<h2 id="prd-前端视觉与响应式优化-7-里程碑">7. 里程碑</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>内容</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td>globals.css 令牌 + 响应式基础</td>
+<td>视觉基座</td>
+</tr>
+<tr>
+<td>M2</td>
+<td>agent-portrait + /contacts 通讯录页</td>
+<td>目录 + 头像</td>
+</tr>
+<tr>
+<td>M3</td>
+<td>聊天/任务/控制台/设置组件重构</td>
+<td>全站统一</td>
+</tr>
+<tr>
+<td>M4</td>
+<td>A/B 对比验证并入主分支 + 设置页功能共存</td>
+<td>验收 AC1-AC6</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-前端视觉与响应式优化-8-变更追踪登记">8. 变更追踪登记</h2>
+<div class="table-wrap changelog"><table>
+<thead>
+<tr>
+<th>改动时间</th>
+<th>ID</th>
+<th>状态</th>
+<th>Git 提交</th>
+<th>作者</th>
+<th>改动类型</th>
+<th>影响范围</th>
+<th>改动内容</th>
+<th>前端技术</th>
+<th>后端技术</th>
+<th>是否有数据库</th>
+<th>破坏性变更</th>
+<th>验证结果</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-08-01 20:55</td>
+<td>C-005</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/9c2dd0e">9c2dd0e</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>其他、配置、文档、前端</td>
+<td>前端视觉与响应式优化，新增通讯录 /contacts 页面与 Agent 头像组件</td>
+<td>新增 agent-portrait.tsx、contacts-page.tsx(/contacts 路由)；agent-gallery/status-panel/app-sidebar/chat 组件重构；globals.css 视觉令牌与响应式优化</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>1203 插入/471 删除，21 文件；经 C-021 并入当前分支</td>
+</tr>
+<tr>
+<td>2026-08-03 14:36</td>
+<td>C-021</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/0c46b78">0c46b78</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>其他</td>
+<td>合并视觉重构提交 9c2dd0e（A/B 测试通过）：新增 /contacts 通讯录页、agent-portrait 头像组件、恢复 software-dock；globals.css 视觉与响应式优化；设置页与 API Key/自定义模型功能共存</td>
+<td>合并 settings-page.tsx（保留 API Key 管理 + 自定义模型功能并采用视觉样式）；新增 contacts 路由、agent-portrait.tsx、software-dock.tsx 恢复；agent-gallery/status-panel/app-sidebar/chat 视觉重构</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>lint/test/build/pytest 全过(42)</td>
+<td>仅 settings-page.tsx 1 处文本冲突手工合并</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="prd-前端视觉与响应式优化-9-已实施摘要实施部分">9. 已实施摘要（实施部分）</h2>
+<p><strong>关键文件</strong>
+- 新增：<code>frontend/src/components/console/agent-portrait.tsx</code>、<code>frontend/src/components/contacts/contacts-page.tsx</code>、<code>frontend/src/app/contacts/page.tsx</code>
+- 修改：<code>frontend/src/app/globals.css</code>（令牌 + 响应式）、<code>frontend/src/components/console/agent-gallery.tsx</code> / <code>status-panel.tsx</code> / <code>app-sidebar.tsx</code> / <code>software-dock.tsx</code>、<code>frontend/src/components/chat/chat-composer.tsx</code> / <code>message-bubble.tsx</code> / <code>chat-page.tsx</code>、<code>frontend/src/components/tasks/*</code>、<code>frontend/src/components/settings/settings-page.tsx</code>
+- 设计：<code>.impeccable/design.json</code>、<code>DESIGN.md</code>（双表面系统）</p>
+<p><strong>验证结果</strong>：1203 插入 / 471 删除，21 文件；lint/test/build + pytest(42) 全过；A/B 对比通过后并入主分支。</p>
+<h1 id="prd-后端访问控制与工作区隔离">PRD：后端访问控制与工作区隔离</h1>
+<blockquote>
+<p>类型：新需求（Requirement）｜状态：实施中</p>
+</blockquote>
+<h2 id="prd-后端访问控制与工作区隔离-1-背景">1. 背景</h2>
+<p>Agent Console 当前按本地单用户工具设计，REST API 与 WebSocket 默认无需认证。服务一旦监听非本机地址，工作区数据、模型配置与管理接口会缺少最基本的访问边界。同时，Agent 工具执行必须继承当前任务的工作区上下文，不能由模型自行指定数据范围。</p>
+<h2 id="prd-后端访问控制与工作区隔离-2-目标">2. 目标</h2>
+<ul>
+<li>G1：提供可配置的服务端 API Token，为 REST 与 WebSocket 建立统一访问门槛。</li>
+<li>G2：保持未配置 Token 时的本地开发体验，不改变现有默认启动方式。</li>
+<li>G3：工具调用始终继承可信任务上下文，并强制限定到当前工作区。</li>
+<li>G4：凭证接口只返回配置状态和掩码信息，不返回完整密钥。</li>
+</ul>
+<h2 id="prd-后端访问控制与工作区隔离-3-非目标">3. 非目标</h2>
+<ul>
+<li>N1：本阶段不建设用户注册、登录、组织、成员邀请和 RBAC 数据模型。</li>
+<li>N2：不修改 Agent 调度算法和模型供应商协议。</li>
+<li>N3：不提供已保存密钥的原文找回能力。</li>
+</ul>
+<h2 id="prd-后端访问控制与工作区隔离-4-功能需求">4. 功能需求</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>需求</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FR1</td>
+<td>配置 <code>APP_API_TOKEN</code> 后，除健康检查和 API 文档外的 HTTP 请求必须携带合法 Bearer Token 或 <code>X-API-Key</code></td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR2</td>
+<td>配置 Token 后，WebSocket 握手必须通过查询参数或请求头提供合法 Token</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR3</td>
+<td>未配置 Token 时保持 local-first 兼容模式，并在日志中明确提示</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR4</td>
+<td>Agent 工具执行上下文由 Orchestrator 注入 <code>workspace_id</code>，模型不能覆盖</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR5</td>
+<td>Provider Key 查询只返回状态、来源和掩码，不返回完整值</td>
+<td>P0</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-后端访问控制与工作区隔离-5-非功能需求">5. 非功能需求</h2>
+<ul>
+<li>Token 使用恒定时间比较，认证失败统一返回 401，不泄露校验细节。</li>
+<li>WebSocket 认证失败使用策略违规关闭码。</li>
+<li>密钥相关响应禁止缓存。</li>
+<li>工作区隔离必须有跨工作区自动化测试。</li>
+<li>不配置 Token 时现有前端、测试和本地一键启动保持兼容。</li>
+</ul>
+<h2 id="prd-后端访问控制与工作区隔离-6-验收标准">6. 验收标准</h2>
+<ul>
+<li>AC1：配置 Token 后，无凭证和错误凭证访问受保护 REST API 均返回 401，正确凭证通过。</li>
+<li>AC2：WebSocket 在配置 Token 时拒绝未认证连接。</li>
+<li>AC3：工具查询无法读取其他工作区的任务或 Agent。</li>
+<li>AC4：任何 Provider Key GET 响应均不包含数据库或环境变量中的完整密钥。</li>
+<li>AC5：完整后端测试、语法检查、依赖检查与 API 冒烟通过。</li>
+</ul>
+<h1 id="prd-工具调用能力">PRD：为 Agent 加上"手"（工具调用 / Function Calling）</h1>
+<blockquote>
+<p>类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-023</p>
+</blockquote>
+<hr />
+<h2 id="prd-工具调用能力-1-背景与问题">1. 背景与问题</h2>
+<p>Agent Console 当前所有 Agent 都是<strong>纯 LLM 调用</strong>：<code>litellm.chat_completion</code> 只传 <code>model/messages/temperature/api_key</code>，响应只解析 <code>content</code>，<strong>没有任何工具/函数调用能力</strong>。用户指出这是硬伤——「否则这只是个普通的 LLM」。</p>
+<p>缺少"手"导致的业务问题：
+1. Agent 只能"想"不能"做"——无法查数据、算数、获取系统实时状态，回答依赖模型训练知识，易过时/臆测。
+2. 无法触达系统内部真实数据（历史任务、Agent 状态、模型配置），Agent 是个"信息孤岛"。
+3. 面试/简历竞争力弱：2026 年 AI Agent 开发岗普遍要求 function calling / 工具调用能力。</p>
+<h2 id="prd-工具调用能力-2-目标与非目标">2. 目标与非目标</h2>
+<p><strong>目标</strong>
+- G1：Agent 具备经典 function-calling 循环——模型可请求调用工具 → 系统执行 → 结果回填 → 模型继续。
+- G2：内置至少 3 个安全、真实可用的工具（计算、查历史任务、查 Agent 状态、系统健康）。
+- G3：每次工具调用全程留痕（入参/出参/结果），在任务详情时间线可见。
+- G4：不破坏现有结构——不新增 WS 事件类型、不改已有表结构。</p>
+<p><strong>非目标</strong>
+- N1：不接入外部第三方工具/MCP 协议（v2 考虑）。
+- N2：不做 <code>fetch_url</code> 网页抓取（SSRF 风险，推迟）。
+- N3：不让 Manager/QA/Final 阶段启用工具（需结构化输出，避免干扰）。</p>
+<h2 id="prd-工具调用能力-3-用户故事">3. 用户故事</h2>
+<ul>
+<li>US1：派发"帮我算一下 1234*56.7 并总结"时，Agent 能调用计算工具而不是靠模型硬算。</li>
+<li>US2：派发"查一下最近有哪些失败任务"时，Agent 能查询系统内真实任务数据。</li>
+<li>US3：在任务详情页看到 Agent "调用了什么工具、传了什么参数、返回了什么"。</li>
+</ul>
+<h2 id="prd-工具调用能力-4-功能需求fr">4. 功能需求（FR）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>需求</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FR1</td>
+<td><code>chat_completion</code> 支持传入 <code>tools</code>（LiteLLM tools 格式），返回结果携带 <code>tool_calls</code></td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR2</td>
+<td>新增工具注册表 <code>tools.py</code>，内置 <code>calculate</code> / <code>query_tasks</code> / <code>get_agents</code> / <code>get_system_status</code></td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR3</td>
+<td>orchestrator 增加工具循环 <code>_run_agent_with_tools</code>（调用→执行→回填→再调，最大 5 轮）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR4</td>
+<td>工具调用持久化为 <code>TaskStep</code>（<code>step_name="tool_call"</code>），入参/出参完整落库</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR5</td>
+<td>单 Agent 路径与 Worker 阶段启用工具；由配置 <code>agent_tools_enabled</code>（默认 True）控制</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR6</td>
+<td>工具失败不中断流程：handler 异常/未知工具返回错误字符串给模型，循环继续</td>
+<td>P1</td>
+</tr>
+<tr>
+<td>FR7</td>
+<td>前端任务详情时间线展示「工具调用」步骤（<code>stepLabel</code> 映射）</td>
+<td>P1</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-工具调用能力-5-非功能需求nfr">5. 非功能需求（NFR）</h2>
+<ul>
+<li><strong>安全</strong>：计算器用 Python <code>ast</code> 白名单，拒绝 <code>__import__</code>/<code>os.system</code>/eval；内部查询只读；绝不在工具结果中暴露 API Key。</li>
+<li><strong>可控</strong>：工具循环最大 5 轮兜底，防止模型无限请求工具。</li>
+<li><strong>可观测</strong>：每个工具调用的 name/arguments/result 作为 TaskStep 落库并广播 <code>task.step_changed</code>。</li>
+<li><strong>兼容</strong>：不新增 WS 事件类型（避免破坏前端 TS 判别联合）；不新增 ModelCall 列（SQLite <code>create_all</code> 加列不生效）。</li>
+<li><strong>性能</strong>：工具调用串行执行（SQLite 单写者），单次毫秒级。</li>
+</ul>
+<h2 id="prd-工具调用能力-6-验收标准ac">6. 验收标准（AC）</h2>
+<ul>
+<li>AC1：<code>calculate("1+2*3")</code> 返回 <code>7.0</code>；<code>calculate("__import__('os').system('echo hi')")</code> 被拒绝并返回错误。</li>
+<li>AC2：mock 模型返回 tool_calls 后，能执行工具、回填结果、再调模型，最终返回内容答案；期间生成 1 条 <code>tool_call</code> TaskStep。</li>
+<li>AC3：工具 handler 抛异常 / 未知工具名 → 返回错误字符串，循环继续到有答案。</li>
+<li>AC4：模型一直请求工具 → 5 轮后终止，不无限循环。</li>
+<li>AC5：<code>python -m pytest -q</code> 全部通过（含新增 test_tools.py）；前端 <code>npm run lint &amp;&amp; npm test &amp;&amp; npm run build</code> 通过。</li>
+</ul>
+<h2 id="prd-工具调用能力-7-内置工具">7. 内置工具</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>工具</th>
+<th>参数</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>calculate</code></td>
+<td><code>{expression: string}</code></td>
+<td>ast 白名单（Add/Sub/Mult/Div/FloorDiv/Mod/Pow/UAdd/USub/常量），结果绝对值 ≤1e12</td>
+</tr>
+<tr>
+<td><code>query_tasks</code></td>
+<td><code>{status? enum, limit? 1..50}</code></td>
+<td>参数化只读 <code>select(Task)</code></td>
+</tr>
+<tr>
+<td><code>get_agents</code></td>
+<td><code>{workspace_id? integer}</code></td>
+<td>只读 <code>select(Agent)</code></td>
+</tr>
+<tr>
+<td><code>get_system_status</code></td>
+<td><code>{}</code></td>
+<td>健康 + <code>is_provider_configured</code>（仅布尔）</td>
+</tr>
+<tr>
+<td><code>fetch_url</code></td>
+<td>—</td>
+<td>v1 推迟（SSRF 风险）</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-工具调用能力-8-里程碑">8. 里程碑</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>内容</th>
+<th>状态</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td>litellm_service 支持 tools + tool_calls 解析</td>
+<td>✅ 完成</td>
+</tr>
+<tr>
+<td>M2</td>
+<td>tools.py 注册表 + 4 内置工具 + 安全计算</td>
+<td>✅ 完成</td>
+</tr>
+<tr>
+<td>M3</td>
+<td>orchestrator 工具循环 + TaskStep 持久化 + 路径接线</td>
+<td>✅ 完成</td>
+</tr>
+<tr>
+<td>M4</td>
+<td>前端 stepLabel + 全量回归</td>
+<td>✅ 完成</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-工具调用能力-9-变更登记">9. 变更登记</h2>
+<div class="table-wrap changelog"><table>
+<thead>
+<tr>
+<th>改动时间</th>
+<th>ID</th>
+<th>状态</th>
+<th>Git 提交</th>
+<th>作者</th>
+<th>改动类型</th>
+<th>影响范围</th>
+<th>改动内容</th>
+<th>前端技术</th>
+<th>后端技术</th>
+<th>是否有数据库</th>
+<th>破坏性变更</th>
+<th>验证结果</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>待填</td>
+<td>C-023</td>
+<td>已完成</td>
+<td>待填</td>
+<td>LI</td>
+<td>Requirement</td>
+<td>前端、后端</td>
+<td>Agent 工具调用能力（FR1-FR7）</td>
+<td>task-format.ts stepLabel</td>
+<td>litellm_service/orchestrator/tools.py</td>
+<td>否</td>
+<td>否</td>
+<td>pytest 54 + 前端 28/build pass</td>
+<td>PRD-工具调用</td>
+</tr>
+</tbody>
+</table></div>
+<h1 id="prd-自定义模型接入">PRD：自定义模型接入（任意 provider/model + fallback 降级）</h1>
+<blockquote>
+<p>类型：新需求（Requirement）｜状态：已实施｜关联提交：<code>48b3c47</code>（C-009）</p>
+</blockquote>
+<hr />
+<h2 id="prd-自定义模型接入-1-背景与问题">1. 背景与问题</h2>
+<p>MVP 阶段模型只能来自 <code>config/models.yaml</code> 里写死的 5 个预设别名，用户想用
+<code>models.yaml</code> 之外的模型（如 <code>openai/gpt-4o</code>、<code>anthropic/claude-sonnet-4</code>、或任意
+小众 provider/model 组合）必须改 YAML 并重启。问题：</p>
+<ol>
+<li><strong>不可热配</strong>：加一个模型 = 改文件 + 重启，无法在运行中接入。</li>
+<li><strong>不可独立配置降级</strong>：预设模型的 fallback 链在 YAML 里，新增模型无法单独声明自己的降级目标。</li>
+<li><strong>无连通性校验</strong>：配置完不知道 Key/模型是否真的可用，只能等真跑任务时才发现。</li>
+<li><strong>显示无区分</strong>：设置页模型列表无法区分「预设」与「用户自定义」。</li>
+</ol>
+<h3 id="prd-自定义模型接入-本轮要解决的问题">本轮要解决的问题</h3>
+<ol>
+<li>前端可添加/删除任意 <code>provider/model</code> 组合，存库即生效，无需改 YAML 或重启。</li>
+<li>自定义模型可配置独立 fallback 降级链，<code>chat_completion</code> 按链调用。</li>
+<li>自定义模型可立即「测试连通性与延迟」，失败能给出原因。</li>
+<li>模型列表以「自定义」徽章区分自定义模型，并可被 Agent 绑定使用。</li>
+</ol>
+<h2 id="prd-自定义模型接入-2-目标与非目标">2. 目标与非目标</h2>
+<p><strong>目标</strong>
+- G1：<code>custom_model_configs</code> 表 + <code>/api/custom-models</code> 增删查，前端免重启接入任意模型。
+- G2：<code>chat_completion</code> 运行时合并 DB 自定义模型（覆盖/补充 YAML 别名），fallback 链生效。
+- G3：前端模型卡片支持一键「测试连通性与延迟」（复用 <code>/api/models/test</code>）。
+- G4：自定义模型带「自定义」徽章，与 YAML 预设并列展示；名称唯一，冲突 409。</p>
+<p><strong>非目标（N1-N2）</strong>
+- N1：不做模型下拉「自动发现」/ 联网型号列表（用户手动输入 provider/model ID）。
+- N2：不校验模型 ID 真实性（由 LiteLLM 调用时失败并展示脱敏错误）。</p>
+<h2 id="prd-自定义模型接入-3-用户故事">3. 用户故事</h2>
+<ul>
+<li>US1：作为用户，我在设置页点「添加自定义模型」，填名称/Provider/模型 ID/用途/Fallback，保存后模型立即出现在列表并被 Agent 绑定使用。</li>
+<li>US2：作为用户，我想验证某个模型连通性——点「测试连通性与延迟」，看到 provider/model/延迟/token/输出或明确失败原因。</li>
+<li>US3：作为用户，我的主模型不稳定——给自定义模型配一个 fallback 别名，主模型失败自动降级并在测试结果中标 <code>Fallback</code>。</li>
+</ul>
+<h2 id="prd-自定义模型接入-4-功能需求fr">4. 功能需求（FR）</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>编号</th>
+<th>需求</th>
+<th>优先级</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>FR1</td>
+<td>新增 <code>custom_model_configs</code> 表（name 唯一、provider、model、purpose、fallback_model、时间戳）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR2</td>
+<td><code>GET /api/custom-models</code>：返回全部自定义模型</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR3</td>
+<td><code>POST /api/custom-models</code>：创建；name 已存在返回 409（含并发冲突兜底 <code>commit_or_conflict</code>）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR4</td>
+<td><code>DELETE /api/custom-models/{name}</code>：删除（不存在 404）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR5</td>
+<td><code>chat_completion</code> 接收 <code>custom_models</code> 参数：把 DB 自定义模型并入模型配置（已存在的 YAML 别名不覆盖，其余追加），参与 <code>_fallback_chain</code> 解析</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR6</td>
+<td>前端添加表单：名称/Provider/模型 ID（必填）+ 用途 + Fallback（可选，选项来自现有模型名）</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR7</td>
+<td>模型卡片「自定义」徽章 + 删除按钮；保留「测试连通性与延迟」能力</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR8</td>
+<td><code>GET /api/models/test</code>：POST 按 model_name 测试，返回 content/usage/latency/fallback_used/model_name</td>
+<td>P0</td>
+</tr>
+<tr>
+<td>FR9</td>
+<td>修复按 name 查主键的 BUG（此前按 name 过滤未命中主键路径导致查不到）</td>
+<td>P1</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-自定义模型接入-5-非功能需求nfr">5. 非功能需求（NFR）</h2>
+<ul>
+<li><strong>一致性</strong>：name 全局唯一；错误消息脱敏（不含 Key）；校验失败返回明确中文提示。</li>
+<li><strong>热配置</strong>：添加/删除不重启即对后续任务生效（每次 <code>chat_completion</code> 从 DB 读取）。</li>
+<li><strong>可观测</strong>：测试结果展示延迟/token/模型名/fallback 标记，失败展示原因。</li>
+<li><strong>兼容</strong>：DB 自定义模型与 YAML 别名共用同一 <code>ModelConfig</code> 校验模型；fallback 循环检测（<code>_fallback_chain</code> 抛错）。</li>
+</ul>
+<h2 id="prd-自定义模型接入-6-验收标准ac">6. 验收标准（AC）</h2>
+<ul>
+<li>AC1：POST 添加 <code>code_model</code>（openai/gpt-4o-mini，fallback=deepseek 别名）→ 列表出现且带「自定义」徽章；重复添加同名返回 409。</li>
+<li>AC2：<code>chat_completion("code_model", ...)</code> 使用 DB 配置，主模型失败时降级到 fallback 别名并标记 <code>fallback_used</code>。</li>
+<li>AC3：点「测试连通性与延迟」→ 成功展示 延迟/token/输出；Key 未配置或模型不可达 → 展示脱敏失败原因。</li>
+<li>AC4：删除自定义模型 → 列表移除；再调用该名称时回退 YAML 或报「Unknown model alias」。</li>
+<li>AC5：后端 pytest 全过（37→40，含自定义模型 CRUD/解析/集成）；<code>npm run lint &amp;&amp; npm test &amp;&amp; npm run build</code> 通过。</li>
+</ul>
+<h2 id="prd-自定义模型接入-7-里程碑">7. 里程碑</h2>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>阶段</th>
+<th>内容</th>
+<th>产出</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>M1</td>
+<td>CustomModelConfig 模型 + /api/custom-models 增删查</td>
+<td>后端可用</td>
+</tr>
+<tr>
+<td>M2</td>
+<td>chat_completion 合并自定义模型 + fallback 链 + 主键查询修复</td>
+<td>调用生效</td>
+</tr>
+<tr>
+<td>M3</td>
+<td>前端添加表单 + 徽章 + 删除 + 测试连通性</td>
+<td>设置页闭环</td>
+</tr>
+<tr>
+<td>M4</td>
+<td>测试补齐（CRUD/解析/集成）</td>
+<td>验收 AC1-AC5</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="prd-自定义模型接入-8-变更追踪登记">8. 变更追踪登记</h2>
+<div class="table-wrap changelog"><table>
+<thead>
+<tr>
+<th>改动时间</th>
+<th>ID</th>
+<th>状态</th>
+<th>Git 提交</th>
+<th>作者</th>
+<th>改动类型</th>
+<th>影响范围</th>
+<th>改动内容</th>
+<th>前端技术</th>
+<th>后端技术</th>
+<th>是否有数据库</th>
+<th>破坏性变更</th>
+<th>验证结果</th>
+<th>备注</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-08-02 23:28</td>
+<td>C-009</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/48b3c47">48b3c47</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>后端、数据库、前端</td>
+<td>新增自定义模型接入（任意 provider/model + fallback 降级）；修复 API Key 眼睛图标切换失效</td>
+<td>自定义模型添加/删除 UI +「自定义」徽章；眼睛图标切换修复(undefined 与 React 批处理冲突)</td>
+<td>CustomModelConfig 模型；/api/custom-models；chat_completion 自定义解析；修按 name 查 PK bug</td>
+<td>是(custom_model_configs)</td>
+<td>是</td>
+<td>后端 37→40</td>
+<td>新增表；含眼睛 BUG 修复</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="prd-自定义模型接入-9-已实施摘要实施部分">9. 已实施摘要（实施部分）</h2>
+<p><strong>关键文件</strong>
+- 后端：<code>backend/app/models/custom_model_config.py</code>、<code>backend/app/api/v1/endpoints/custom_models.py</code>、<code>backend/app/services/litellm_service.py</code>（<code>get_db_custom_models</code> / <code>chat_completion</code> 合并自定义配置）
+- 前端：<code>frontend/src/components/settings/settings-page.tsx</code>、<code>frontend/src/hooks/use-settings.ts</code>、<code>frontend/src/types/settings.ts</code></p>
+<p><strong>验证结果</strong>：后端 pytest 37→40 passed（自定义模型 CRUD、解析、集成）；lint/test/build 通过。</p>
+<p><strong>配套修复</strong>：API Key 眼睛图标切换失效（<code>undefined</code> 与 React 批处理冲突）、按 name 查主键 BUG。</p>
+<h2 id="后续维护约定">后续维护约定</h2>
+<ol>
+<li><strong>每次改动完成并推送后</strong>，运行 <code>python docs/generate_change_log.py</code> 重新生成
+   本表与 Excel（自动从 git history 爬取，ID 按 <code>C-XXX</code> 递增）。</li>
+<li>自动推断的新行（类型按 commit 前缀、前后端/数据库按变更路径）较粗略；
+   如需补充细节，在脚本 <code>CURATED</code> 字典按 commit sha 填写后重新运行。</li>
+<li>有数据库表新增/修改时，「是否有数据库」列填「是」并注明表名。</li>
+<li>改动类型限定 <code>Requirement</code> / <code>Optimization</code> / <code>BUG</code> / <code>Docs</code> 之一。</li>
+<li>重要技术决策（架构取舍）同步补充到 README 的「关键决策记录」。</li>
+</ol>
+    </article>
+    <footer class="content-foot">
+      <span>由 <code>docs/build_prd_html.py</code> 生成</span>
+      <span>源文件：docs/PRD.md · docs/prd/*.md</span>
+    </footer>
+  </main>
+</div>
+<script>
+(function () {
+  var root = document.documentElement;
+  var saved = null;
+  try { saved = localStorage.getItem("prd-theme"); } catch (e) {}
+  if (saved === "dark") { root.setAttribute("data-theme", "dark"); }
+
+  var toggle = document.getElementById("theme-toggle");
+  if (toggle) {
+    var sync = function () {
+      var dark = root.getAttribute("data-theme") === "dark";
+      toggle.textContent = dark ? "切换为浅色主题" : "切换为深色主题";
+    };
+    toggle.addEventListener("click", function () {
+      var dark = root.getAttribute("data-theme") === "dark";
+      root.setAttribute("data-theme", dark ? "light" : "dark");
+      try { localStorage.setItem("prd-theme", dark ? "light" : "dark"); } catch (e) {}
+      sync();
+    });
+    sync();
+  }
+
+  var menu = document.getElementById("menu-toggle");
+  var sidebar = document.getElementById("sidebar");
+  if (menu && sidebar) {
+    menu.addEventListener("click", function () { sidebar.classList.toggle("open"); });
+    sidebar.querySelectorAll("a").forEach(function (a) {
+      a.addEventListener("click", function () { sidebar.classList.remove("open"); });
+    });
+  }
+
+  // Collapsible PRD sub-headings in the TOC (state remembered per page view)
+  function collapseStore() {
+    try { return JSON.parse(localStorage.getItem("prd-toc-collapsed") || "[]"); }
+    catch (e) { return []; }
+  }
+  function saveCollapsed(id, collapsed) {
+    try {
+      var set = new Set(collapseStore());
+      if (collapsed) { set.add(id); } else { set.delete(id); }
+      localStorage.setItem("prd-toc-collapsed", JSON.stringify(Array.from(set)));
+    } catch (e) {}
+  }
+  collapseStore().forEach(function (id) {
+    var a = document.querySelector('.toc a[href="#' + id + '"]');
+    var li = a && a.closest("li.toc-item.has-children");
+    if (!li) return;
+    li.classList.add("collapsed");
+    var btn = li.querySelector(".toc-toggle");
+    if (btn) { btn.setAttribute("aria-expanded", "false"); }
+  });
+  document.querySelectorAll("li.toc-item.has-children").forEach(function (li) {
+    var btn = li.querySelector(".toc-toggle");
+    var a = li.querySelector("a");
+    if (!btn || !a) return;
+    var id = a.getAttribute("href").slice(1);
+    btn.addEventListener("click", function () {
+      var collapsed = li.classList.toggle("collapsed");
+      btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      saveCollapsed(id, collapsed);
+    });
+  });
+
+  var links = Array.prototype.slice.call(document.querySelectorAll(".toc a"));
+  var ids = links.map(function (a) { return a.getAttribute("href").replace(/^#/, ""); })
+                 .filter(function (id) { return id && document.getElementById(id); });
+  if ("IntersectionObserver" in window && ids.length) {
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          var href = "#" + entry.target.id;
+          links.forEach(function (a) {
+            a.classList.toggle("active", a.getAttribute("href") === href);
+          });
+        }
+      });
+    }, { rootMargin: "-15% 0px -70% 0px" });
+    ids.forEach(function (id) { observer.observe(document.getElementById(id)); });
+  }
+})();
+</script>
+</body>
+</html>
