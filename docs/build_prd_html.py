@@ -20,6 +20,40 @@ def slugify(value: str, separator: str) -> str:
     return re.sub(r"[\s\-]+", separator, value)
 
 
+def strip_document_title(text: str) -> str:
+    """Drop the document's leading '# ' title (the page has its own hero)."""
+    lines = text.splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        if re.match(r"^#\s+\S", line):
+            return "".join(lines[i + 1:])
+    return text
+
+
+def demote_headings(text: str) -> str:
+    """Shift every ATX heading one level down, skipping fenced code blocks.
+
+    PRD files use '# title' + '## N. section'; demoting makes the title an h2
+    and its sections h3 so they group correctly in the sidebar TOC.
+    """
+    out: list[str] = []
+    in_fence = False
+    for line in text.splitlines(keepends=True):
+        if re.match(r"^\s*(```|~~~)", line):
+            in_fence = not in_fence
+            out.append(line)
+            continue
+        if in_fence:
+            out.append(line)
+            continue
+        m = re.match(r"^(#{1,6})\s+(.*)$", line)
+        if m:
+            new_level = min(len(m.group(1)) + 1, 6)
+            out.append("#" * new_level + " " + m.group(2) + "\n")
+        else:
+            out.append(line)
+    return "".join(out)
+
+
 def render_markdown(text: str) -> str:
     return markdown.markdown(
         text,
@@ -30,7 +64,7 @@ def render_markdown(text: str) -> str:
 
 def prefix_section_ids(fragment: str, prefix: str) -> str:
     ids = re.findall(r'\sid="([^"]+)"', fragment)
-    for index, section_id in enumerate(sorted(ids, key=len, reverse=True)):
+    for index, section_id in enumerate(ids):
         namespaced = prefix if index == 0 else f"{prefix}-{section_id}"
         fragment = fragment.replace(f'id="{section_id}"', f'id="{namespaced}"')
         fragment = fragment.replace(f'href="#{section_id}"', f'href="#{namespaced}"')
@@ -48,6 +82,16 @@ def split_main_document(source: str) -> tuple[str, str]:
         return source, ""
     body, maintenance = source.split(marker, 1)
     return body.rstrip(), f"{marker}{maintenance}"
+
+
+def count_changelog_rows(source: str) -> int:
+    m = re.search(
+        r"<!-- CHANGELOG:START -->\n(.*?)<!-- CHANGELOG:END -->",
+        source, re.DOTALL)
+    if not m:
+        return 0
+    rows = [l for l in m.group(1).splitlines() if l.strip().startswith("|")]
+    return max(0, len(rows) - 2)
 
 
 def rewrite_index_links(fragment: str, prd_files: list[Path]) -> str:
@@ -82,7 +126,7 @@ def toc_item(section_id: str, title: str, children: list[tuple[str, str]]) -> st
     )
 
 
-def build_toc(fragment: str) -> str:
+def build_toc(fragment: str, prd_prefixes: set[str]) -> str:
     headings = collect_headings(fragment)
     items: list[str] = []
     index = 0
@@ -92,7 +136,7 @@ def build_toc(fragment: str) -> str:
         if level != 2:
             index += 1
             continue
-        if section_id.startswith("prd-") and not group_inserted:
+        if section_id in prd_prefixes and not group_inserted:
             items.append('<li class="toc-group"><span>PRD 文档</span></li>')
             group_inserted = True
         children: list[tuple[str, str]] = []
@@ -131,18 +175,21 @@ def build(output: Path) -> None:
     style, script, brand = extract_shell(existing)
     main_source = (DOCS / "PRD.md").read_text(encoding="utf-8")
     main_body, maintenance = split_main_document(main_source)
+    main_body = strip_document_title(main_body)
     prd_files = sorted((DOCS / "prd").glob("PRD-*.md"), key=lambda path: path.name.casefold())
+    prd_prefixes = {slugify(path.stem, "-") for path in prd_files}
 
     fragments = [rewrite_index_links(render_markdown(main_body), prd_files)]
     for path in prd_files:
         prefix = slugify(path.stem, "-")
-        fragments.append(prefix_section_ids(render_markdown(path.read_text(encoding="utf-8")), prefix))
+        fragments.append(prefix_section_ids(
+            render_markdown(demote_headings(path.read_text(encoding="utf-8"))), prefix))
     if maintenance:
         fragments.append(render_markdown(maintenance))
     article = wrap_tables("\n".join(fragments))
-    toc = build_toc(article)
+    toc = build_toc(article, prd_prefixes)
 
-    change_count = len(re.findall(r"\| C-\d{3} \|", main_source))
+    change_count = count_changelog_rows(main_source)
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M")
     document = f'''<!doctype html>
 <html lang="zh-CN" data-theme="light">

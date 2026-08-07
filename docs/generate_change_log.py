@@ -30,6 +30,10 @@ BASELINE_SHA = "64887a4"
 # overwritten by a force-push) that should still appear in the change log.
 EXTRA_SHAS = ["9c2dd0e"]
 
+# Commits touching only the PRD HTML reader (build script + generated output)
+# are excluded from the change-tracking table by convention.
+SKIP_PATHS = {"docs/build_prd_html.py", "PRD.html", "docs/PRD.html"}
+
 REPO = Path(__file__).resolve().parents[1]  # repo root
 PRD = REPO / "docs" / "PRD.md"
 XLSX = REPO / "docs" / "Agent_Console_变更追踪.xlsx"
@@ -235,6 +239,10 @@ def changed_files(sha: str) -> list[str]:
     return [l for l in out.splitlines() if l.strip()]
 
 
+def is_excluded(files: list[str]) -> bool:
+    return any(f.replace("\\", "/") in SKIP_PATHS for f in files)
+
+
 def infer_db(files: list[str]) -> str:
     names = []
     for f in files:
@@ -334,6 +342,8 @@ def git_rows():
     next_id = 1
     for sha, when, author, subject in commits:
         files = changed_files(sha)
+        if is_excluded(files):
+            continue
         curated = CURATED.get(sha) or CURATED_BY_SUBJECT.get(subject)
         details = curated.get("details") if curated else None
         if details:
