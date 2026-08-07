@@ -60,6 +60,9 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-06 21:37 | C-037 | 已完成 | [2d1e659](https://github.com/liwe123/Agent-Togterher/commit/2d1e659) | LI | Docs | 其他、文档 | docs: make change log entries Chinese for recent sync | - | - | 否 | 否 | - | - |
 | 2026-08-06 21:46 | C-038 | 已完成 | [7039e2a](https://github.com/liwe123/Agent-Togterher/commit/7039e2a) | LI | Docs | 其他 | 修复 GitHub Actions Python 包工作流以运行后端测试 | - | backend/requirements-dev.txt；backend/tests；.github/workflows/python-package-conda.yml | 否 | 否 | backend/tests/test_health.py 通过 | 移除缺失的 environment.yml 依赖，改为 pip 安装并在 backend 目录执行 pytest |
 | 2026-08-06 21:49 | C-039 | 已完成 | [0e0a15f](https://github.com/liwe123/Agent-Togterher/commit/0e0a15f) | LI | Docs | 其他、文档 | docs: record the GitHub Actions workflow fix in the change log | - | - | 否 | 否 | - | - |
+| 2026-08-06 22:42 | C-040 | 已完成 | [c190d7d](https://github.com/liwe123/Agent-Togterher/commit/c190d7d) | LI | BUG | 后端、数据库、其他、文档 | fix: harden provider lookup and task recovery | - | backend/app/api；backend/app/core；backend/app/db；backend/app/models；backend/app/schemas；backend/app/services；backend/tests/test_api.py；backend/tests/test_task_recovery.py；backend/tests/test_tools.py | 是(task) | 是 | - | - |
+| 2026-08-06 22:54 | C-041 | 已完成 | [c36bf54](https://github.com/liwe123/Agent-Togterher/commit/c36bf54) | LI | BUG | 后端 | fix: update database schema test for task lease fields | - | backend/tests/test_database.py | 否 | 否 | - | - |
+| 2026-08-07 21:40 | C-042 | 已完成 | [53268f4](https://github.com/liwe123/Agent-Togterher/commit/53268f4) | LI | Requirement | 其他、前端 | 前端交互体验完善：Software Dock 状态详情、移动端快捷指令、安全 Markdown；修复主题冲突、通讯录搜索分组、动态提及与 Agent 弹窗无障碍问题 | globals.css 统一深色主题；chat composer 动态 Agent/移动快捷操作；message bubble 安全 Markdown；Agent Dialog 焦点与键盘支持；Dock 可交互；通讯录和设置表单优化 | - | 否 | 否 | A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过 | PRD: docs/prd/PRD-前端交互体验完善.md；分类包含 Requirement、BUG、Optimization |
 <!-- CHANGELOG:END -->
 
 ---

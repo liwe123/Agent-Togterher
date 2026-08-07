@@ -141,6 +141,14 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "feat: improve frontend interaction and accessibility": {
+        "type": "Requirement",
+        "content": "前端交互体验完善：Software Dock 状态详情、移动端快捷指令、安全 Markdown；修复主题冲突、通讯录搜索分组、动态提及与 Agent 弹窗无障碍问题",
+        "frontend": "globals.css 统一深色主题；chat composer 动态 Agent/移动快捷操作；message bubble 安全 Markdown；Agent Dialog 焦点与键盘支持；Dock 可交互；通讯录和设置表单优化",
+        "backend": "-", "db": "否", "breaking": "否",
+        "verify": "A/B 代码与视觉对比通过；375/桌面冒烟通过；lint + 28 tests + build 通过",
+        "notes": "PRD: docs/prd/PRD-前端交互体验完善.md；分类包含 Requirement、BUG、Optimization",
+    },
     "docs: auto-generate change log from git history": {
         "type": "Docs", "content": "变更追踪表改为从 git history 自动生成",
         "frontend": "generate_change_log.py（爬取 git log + 自动推断列 + CURATED 人工覆盖 + 生成 PRD/Excel）",
