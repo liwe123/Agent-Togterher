@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.errors import AppError
 from app.api.persistence import commit_or_conflict
 from app.db.session import get_db
-from app.models import CustomModelConfig
+from app.models import Agent, CustomModelConfig
 from app.schemas import CustomModelCreate, CustomModelRead, SuccessResponse
 
 router = APIRouter(prefix="/custom-models", tags=["custom-models"])
@@ -38,6 +38,12 @@ async def delete_custom_model(name: str, session: AsyncSession = Depends(get_db)
     ).scalar_one_or_none()
     if cfg is None:
         raise AppError(404, f"Custom model '{name}' not found")
+    referencing_agent = await session.scalar(select(Agent).where(Agent.model_name == name))
+    fallback_reference = await session.scalar(
+        select(CustomModelConfig).where(CustomModelConfig.fallback_model == name)
+    )
+    if referencing_agent is not None or fallback_reference is not None:
+        raise AppError(409, f"Custom model '{name}' is still referenced")
     await session.delete(cfg)
     await session.commit()
     return SuccessResponse(data={"deleted": name})

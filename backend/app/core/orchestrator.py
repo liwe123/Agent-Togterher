@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
 from collections.abc import Awaitable
+from contextlib import suppress
 from datetime import timedelta
 from uuid import uuid4
 from decimal import Decimal
@@ -34,6 +36,8 @@ from app.websocket import WebSocketManager, create_event, websocket_manager
 logger = logging.getLogger(__name__)
 
 MODEL_STEP_NAME: Final = "call_agent_model"
+TASK_LEASE_DURATION: Final = timedelta(minutes=30)
+TASK_LEASE_RENEW_INTERVAL_SECONDS: Final = 300
 MANAGER_AGENT_NAME: Final = "项目总设计师"
 REVIEW_AGENT_NAME: Final = "测试专员"
 MANAGER_ROLE: Final = "project_architect"
@@ -78,16 +82,45 @@ class AgentOrchestrator:
 
     async def run_task(self, task_id: int) -> TaskRead:
         task = await self._claim_pending_task(task_id)
+        lease_token = task.execution_token
+        renewer = asyncio.create_task(self._renew_task_lease(task.id, lease_token))
+        try:
+            agent = (
+                await self._session.get(Agent, task.assigned_agent_id)
+                if task.assigned_agent_id is not None
+                else None
+            )
 
-        agent = (
-            await self._session.get(Agent, task.assigned_agent_id)
-            if task.assigned_agent_id is not None
-            else None
-        )
+            if agent is not None and self._is_manager(agent):
+                return await self._run_multi_agent_task(task, agent)
+            return await self._run_single_agent_task(task, agent)
+        finally:
+            renewer.cancel()
+            with suppress(asyncio.CancelledError):
+                await renewer
 
-        if agent is not None and self._is_manager(agent):
-            return await self._run_multi_agent_task(task, agent)
-        return await self._run_single_agent_task(task, agent)
+    async def _renew_task_lease(self, task_id: int, token: str | None) -> None:
+        if token is None:
+            return
+        while True:
+            await asyncio.sleep(TASK_LEASE_RENEW_INTERVAL_SECONDS)
+            async with AsyncSessionLocal() as session:
+                renewed = await session.execute(
+                    update(Task)
+                    .where(
+                        Task.id == task_id,
+                        Task.status == TaskStatus.RUNNING,
+                        Task.execution_token == token,
+                    )
+                    .values(
+                        execution_token_expires_at=utc_now() + TASK_LEASE_DURATION,
+                        updated_at=utc_now(),
+                    )
+                )
+                await session.commit()
+                if renewed.rowcount != 1:
+                    logger.warning("Task lease was lost", extra={"task_id": task_id})
+                    return
 
     async def _run_single_agent_task(
         self,
@@ -432,7 +465,7 @@ class AgentOrchestrator:
 
     async def _claim_pending_task(self, task_id: int) -> Task:
         claim_token = str(uuid4())
-        lease_expires_at = utc_now() + timedelta(minutes=30)
+        lease_expires_at = utc_now() + TASK_LEASE_DURATION
         claim = await self._session.execute(
             update(Task)
             .where(Task.id == task_id, Task.status == TaskStatus.PENDING)
@@ -592,6 +625,7 @@ class AgentOrchestrator:
                     tc.get("name", ""),
                     tc.get("arguments", "{}"),
                     session=self._session,
+                    workspace_id=task.workspace_id,
                 )
                 await self.save_task_step(
                     task,

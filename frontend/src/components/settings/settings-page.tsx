@@ -255,7 +255,7 @@ export function SettingsPage() {
 
   const handleSaveKey = async (provider: string) => {
     const apiKey = keyInputs[provider]?.trim()
-    if (!apiKey) return
+    if (!apiKey || apiKey.startsWith("****")) return
     setSavingKeys((prev) => ({ ...prev, [provider]: true }))
     setKeyErrors((prev) => ({ ...prev, [provider]: null }))
     try {
@@ -308,18 +308,14 @@ export function SettingsPage() {
 
   const handleToggleKey = async (provider: string) => {
     const isVisible = showKeys[provider] ?? false
-    // When revealing and the input is empty, fetch the stored key value so
-    // the eye toggle actually shows something (previously it only flipped
-    // type while value stayed empty, so the placeholder dots never changed).
     if (!isVisible && !(keyInputs[provider] ?? "").trim()) {
       try {
         const data = await getProviderKey(provider)
-        const key = data.api_key
-        if (key) {
-          setKeyInputs((prev) => ({ ...prev, [provider]: key }))
+        if (data.masked_key) {
+          setKeyInputs((prev) => ({ ...prev, [provider]: data.masked_key ?? "" }))
         }
       } catch {
-        // Key not retrievable; still toggle so the user sees an empty field.
+        // Keep the editor usable when credential metadata cannot be loaded.
       }
     }
     setShowKeys((prev) => ({

@@ -4,8 +4,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import get_db
 from app.core.message_hub import parse_mentions
@@ -88,6 +90,24 @@ def create_conversation(client: TestClient, workspace_id: int) -> dict:
     )
 
 
+def test_api_token_protects_non_public_routes(api_client: TestClient) -> None:
+    settings = get_settings()
+    original = settings.app_api_token
+    settings.app_api_token = SecretStr("test-api-token")
+    try:
+        assert api_client.get("/api/v1/health").status_code == 200
+        unauthorized = api_client.get("/api/workspaces")
+        assert unauthorized.status_code == 401
+        assert unauthorized.json()["error"] == "Authentication required"
+        authorized = api_client.get(
+            "/api/workspaces",
+            headers={"Authorization": "Bearer test-api-token"},
+        )
+        assert authorized.status_code == 200
+    finally:
+        settings.app_api_token = original
+
+
 def test_workspace_endpoints_and_duplicate_error(api_client: TestClient) -> None:
     workspace = create_workspace(api_client)
     assert assert_success(api_client.get("/api/workspaces"))[0]["id"] == workspace["id"]
@@ -143,22 +163,28 @@ def test_conversation_and_message_endpoints(api_client: TestClient) -> None:
         api_client.get(f"/api/conversations/{conversation['id']}")
     )["title"] == "API test chat"
 
-    message = assert_success(
+    forged = api_client.post(
+        f"/api/conversations/{conversation['id']}/messages",
+        json={
+            "sender_type": "agent",
+            "sender_id": agent["id"],
+            "content": "Test complete",
+            "message_type": "receipt",
+        },
+    )
+    assert forged.status_code == 403
+
+    user_result = assert_success(
         api_client.post(
             f"/api/conversations/{conversation['id']}/messages",
-            json={
-                "sender_type": "agent",
-                "sender_id": agent["id"],
-                "content": "Test complete",
-                "message_type": "receipt",
-            },
+            json={"sender_type": "user", "content": "@Tester Test complete"},
         ),
         201,
     )
     messages = assert_success(
         api_client.get(f"/api/conversations/{conversation['id']}/messages")
     )
-    assert messages == [message]
+    assert messages == [user_result["message"]]
 
 
 def test_task_endpoints(api_client: TestClient) -> None:
@@ -208,14 +234,17 @@ def test_task_endpoints(api_client: TestClient) -> None:
     }
     assert detail["duration_ms"] is None
 
-    updated = assert_success(
-        api_client.patch(
-            f"/api/tasks/{task['id']}",
-            json={"status": "completed", "result": "All tests passed"},
-        )
+    forbidden_state = api_client.patch(
+        f"/api/tasks/{task['id']}",
+        json={"status": "completed", "result": "All tests passed"},
     )
-    assert updated["status"] == "completed"
-    assert updated["result"] == "All tests passed"
+    assert forbidden_state.status_code == 422
+
+    updated = assert_success(
+        api_client.patch(f"/api/tasks/{task['id']}", json={"priority": "low"})
+    )
+    assert updated["status"] == "pending"
+    assert updated["priority"] == "low"
 
 
 def test_task_run_endpoint_executes_agent_and_returns_result(
@@ -307,9 +336,8 @@ def test_list_endpoints_support_bounded_pagination(api_client: TestClient) -> No
             api_client.post(
                 f"/api/conversations/{conversation['id']}/messages",
                 json={
-                    "sender_type": "agent",
-                    "sender_id": agent["id"],
-                    "content": f"message {index}",
+                    "sender_type": "user",
+                    "content": f"@Tester message {index}",
                 },
             ),
             201,
@@ -322,8 +350,8 @@ def test_list_endpoints_support_bounded_pagination(api_client: TestClient) -> No
         )
     )
     assert [message["content"] for message in latest_messages] == [
-        "message 1",
-        "message 2",
+        "@Tester message 1",
+        "@Tester message 2",
     ]
 
     paged_conversations = assert_success(
@@ -393,6 +421,7 @@ def test_model_endpoints(api_client: TestClient) -> None:
         "openai/test-model",
         [{"role": "user", "content": "Ping"}],
         api_keys={},
+        custom_models={},
     )
     assert result == {
         "requested_model": "openai/test-model",
@@ -479,13 +508,17 @@ def test_provider_keys_accept_any_custom_provider(api_client: TestClient) -> Non
     )
     assert created == {"provider": "moonshot", "configured": True}
 
-    # GET reveals the stored value for the custom provider.
+    # GET only returns masked metadata for the custom provider.
     revealed = assert_success(api_client.get("/api/provider-keys/moonshot"))
     assert revealed == {
         "provider": "moonshot",
         "configured": True,
-        "api_key": "sk-moonshot-test-key",
+        "masked_key": "****-key",
+        "source": "database",
     }
+    assert "sk-moonshot-test-key" not in api_client.get(
+        "/api/provider-keys/moonshot"
+    ).text
 
     # The list includes the custom provider (configured) and the DeepSeek preset.
     listed = assert_success(api_client.get("/api/provider-keys"))
@@ -659,16 +692,11 @@ def test_workspace_websocket_broadcasts_realtime_events(
             ),
             201,
         )
-        updated_task = assert_success(
-            api_client.patch(
-                f"/api/tasks/{task['id']}",
-                json={"status": "running"},
-            )
+        forbidden_state = api_client.patch(
+            f"/api/tasks/{task['id']}",
+            json={"status": "running"},
         )
-        assert websocket.receive_json() == {
-            "type": "task.status_changed",
-            "payload": updated_task,
-        }
+        assert forbidden_state.status_code == 422
 
         with patch(
             "app.api.v1.endpoints.models.litellm_service.chat_completion",

@@ -41,11 +41,17 @@ async def list_models(
         await session.scalars(select(Agent.model_name).distinct())
     )
     agent_model_names.add(configured_default or "openai/gpt-4.1-mini")
+    db_api_keys = await litellm_service.get_db_api_keys(session)
+
+    def provider_configured(provider: str) -> bool:
+        canonical = litellm_service.normalize_provider(provider)
+        return canonical in db_api_keys or _provider_is_configured(canonical)
+
     models_by_name = {
         name: ModelInfo(
             name=name,
             provider=_provider_for(name),
-            configured=_provider_is_configured(_provider_for(name)),
+            configured=provider_configured(_provider_for(name)),
         )
         for name in agent_model_names
         if name
@@ -54,7 +60,7 @@ async def list_models(
         models_by_name[alias] = ModelInfo(
             name=alias,
             provider=config.provider,
-            configured=_provider_is_configured(config.provider),
+            configured=provider_configured(config.provider),
         )
     custom_rows = (
         await session.execute(
@@ -158,10 +164,12 @@ async def test_model(
         raise AppError(404, "Workspace not found")
     try:
         db_api_keys = await litellm_service.get_db_api_keys(session)
+        db_custom_models = await litellm_service.get_db_custom_models(session)
         completion = await litellm_service.chat_completion(
             payload.model_name,
             [{"role": "user", "content": payload.prompt}],
             api_keys=db_api_keys,
+            custom_models=db_custom_models,
         )
     except litellm_service.ModelConfigurationError as exc:
         raise AppError(422, str(exc)) from exc

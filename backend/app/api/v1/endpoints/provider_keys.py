@@ -47,13 +47,14 @@ async def list_provider_keys(session: AsyncSession = Depends(get_db)):
     return SuccessResponse(data=result)
 
 
+def _mask_key(value: str) -> str:
+    suffix = value[-4:] if len(value) >= 4 else value[-1:]
+    return f"****{suffix}"
+
+
 @router.get("/{provider}", response_model=SuccessResponse[ProviderKeyValue])
 async def get_provider_key(provider: str, session: AsyncSession = Depends(get_db)):
-    """Return a provider's stored key value (DB first, then env).
-
-    Intended for explicit user-triggered reveal in this local-first tool.
-    The list endpoint still never exposes key values.
-    """
+    """Return credential metadata without exposing the complete secret."""
     canonical_provider = _canonical_provider(provider)
     rows = await _load_provider_rows(session)
     row = next(
@@ -65,7 +66,8 @@ async def get_provider_key(provider: str, session: AsyncSession = Depends(get_db
             data=ProviderKeyValue(
                 provider=canonical_provider,
                 configured=True,
-                api_key=row.api_key,
+                masked_key=_mask_key(row.api_key),
+                source="database",
             )
         )
     env_key = litellm_service.get_api_key_value(canonical_provider)
@@ -74,11 +76,12 @@ async def get_provider_key(provider: str, session: AsyncSession = Depends(get_db
             data=ProviderKeyValue(
                 provider=canonical_provider,
                 configured=True,
-                api_key=env_key,
+                masked_key=_mask_key(env_key),
+                source="environment",
             )
         )
     return SuccessResponse(
-        data=ProviderKeyValue(provider=canonical_provider, configured=False, api_key=None)
+        data=ProviderKeyValue(provider=canonical_provider, configured=False)
     )
 
 

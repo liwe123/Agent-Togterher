@@ -265,6 +265,40 @@ def test_execute_tool_invalid_arguments_returns_error_string() -> None:
 
 
 @pytest.mark.asyncio
+async def test_task_tools_are_scoped_to_trusted_workspace(orchestrator_session) -> None:
+    first_workspace = Workspace(name="First", description="first")
+    second_workspace = Workspace(name="Second", description="second")
+    orchestrator_session.add_all([first_workspace, second_workspace])
+    await orchestrator_session.flush()
+    orchestrator_session.add_all(
+        [
+            Task(
+                workspace_id=first_workspace.id,
+                title="Visible task",
+                description="visible",
+                status=TaskStatus.PENDING,
+            ),
+            Task(
+                workspace_id=second_workspace.id,
+                title="Hidden task",
+                description="hidden",
+                status=TaskStatus.PENDING,
+            ),
+        ]
+    )
+    await orchestrator_session.commit()
+
+    result = await execute_tool(
+        "query_tasks",
+        f'{{"workspace_id": {second_workspace.id}}}',
+        session=orchestrator_session,
+        workspace_id=first_workspace.id,
+    )
+    assert "Visible task" in result
+    assert "Hidden task" not in result
+
+
+@pytest.mark.asyncio
 async def test_tool_loop_calls_calculate_and_completes(orchestrator_session) -> None:
     agent, task = await create_task_graph(orchestrator_session)
     broadcaster = RecordingBroadcaster()

@@ -7,9 +7,10 @@ class ProviderKeyUpsert(BaseModel):
 
 
 class ProviderKeyValue(BaseModel):
-    """Key value returned only on explicit per-provider GET (local tool)."""
+    """Credential metadata safe to return through the API."""
 
     provider: str
     configured: bool
-    api_key: str | None = None
+    masked_key: str | None = None
+    source: str | None = None
 

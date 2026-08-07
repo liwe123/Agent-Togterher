@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.security import token_is_valid, token_required, websocket_token
 from app.db.session import get_db
 from app.models import Workspace
 from app.websocket.events import create_event
@@ -15,6 +16,11 @@ async def workspace_websocket(
     workspace_id: int,
     session: AsyncSession = Depends(get_db),
 ) -> None:
+    if token_required() and not token_is_valid(websocket_token(websocket)):
+        await websocket.accept()
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+        return
+
     workspace = await session.get(Workspace, workspace_id)
     if workspace is None:
         await websocket.accept()

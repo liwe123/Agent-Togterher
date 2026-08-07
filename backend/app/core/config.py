@@ -14,6 +14,7 @@ class Settings(BaseSettings):
 
     database_url: str = "sqlite+aiosqlite:///./data/agent_console.db"
     redis_url: str = "redis://localhost:6379/0"
+    app_api_token: SecretStr | None = None
 
     litellm_default_model: str = ""
     models_config_path: str = ""

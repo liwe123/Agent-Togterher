@@ -24,7 +24,6 @@ from app.schemas import (
     TaskTokenUsageRead,
     TaskUpdate,
 )
-from app.websocket import create_event, websocket_manager
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -192,7 +191,6 @@ async def update_task(
     if task is None:
         raise AppError(404, "Task not found")
     updates = payload.model_dump(exclude_unset=True)
-    previous_status = task.status
     await _validate_references(
         session,
         task.workspace_id,
@@ -204,10 +202,4 @@ async def update_task(
         setattr(task, field, value)
     await commit_or_conflict(session)
     await session.refresh(task)
-    if "status" in updates and task.status != previous_status:
-        task_data = TaskRead.model_validate(task)
-        await websocket_manager.broadcast_to_workspace(
-            task.workspace_id,
-            create_event("task.status_changed", task_data),
-        )
     return SuccessResponse(data=task)

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import re
+from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -87,9 +88,24 @@ async def recover_unfinished_tasks(
 
     await commit_or_conflict(session)
 
+    running_result = await session.execute(
+        select(Task.workspace_id, func.count(Task.id))
+        .where(Task.status == TaskStatus.RUNNING)
+        .group_by(Task.workspace_id)
+    )
+    running_by_workspace = dict(running_result.all())
+    dispatched_by_workspace: dict[int, int] = defaultdict(int)
+    dispatched = 0
     for task in tasks:
+        available = MAX_RUNNING_TASKS_PER_WORKSPACE - running_by_workspace.get(
+            task.workspace_id, 0
+        )
+        if dispatched_by_workspace[task.workspace_id] >= available:
+            continue
         task_dispatcher(task.id)
-    return len(tasks)
+        dispatched_by_workspace[task.workspace_id] += 1
+        dispatched += 1
+    return dispatched
 
 
 def parse_mentions(content: str) -> list[str]:
@@ -132,16 +148,16 @@ class MessageHub:
             raise AppError(422, "Message content cannot be empty")
 
         conversation = await self._get_conversation(conversation_id)
-        running_count = await self._session.scalar(
+        active_count = await self._session.scalar(
             select(func.count(Task.id)).where(
                 Task.workspace_id == conversation.workspace_id,
-                Task.status == TaskStatus.RUNNING,
+                Task.status.in_([TaskStatus.PENDING, TaskStatus.RUNNING]),
             )
         )
-        if running_count is not None and running_count >= MAX_RUNNING_TASKS_PER_WORKSPACE:
+        if active_count is not None and active_count >= MAX_RUNNING_TASKS_PER_WORKSPACE:
             raise AppError(
                 429,
-                f"Workspace has {running_count} running tasks (max {MAX_RUNNING_TASKS_PER_WORKSPACE}). Please wait for some to complete.",
+                f"Workspace has {active_count} active tasks (max {MAX_RUNNING_TASKS_PER_WORKSPACE}). Please wait for some to complete.",
             )
         agents = list(
             await self._session.scalars(
@@ -195,31 +211,15 @@ class MessageHub:
 
     async def receive_message(
         self, conversation_id: int, payload: MessageCreate
-    ) -> MessageHubResult | MessageRead:
-        """Route user messages through dispatch while preserving internal messages."""
-        if payload.sender_type == SenderType.USER:
-            return await self.receive_user_message(conversation_id, payload.content)
-
-        conversation = await self._get_conversation(conversation_id)
-        if payload.sender_type == SenderType.AGENT:
-            if payload.sender_id is None:
-                raise AppError(422, "sender_id is required when sender_type is agent")
-            agent = await self._session.get(Agent, payload.sender_id)
-            if agent is None or agent.workspace_id != conversation.workspace_id:
-                raise AppError(
-                    422, "Sender agent must belong to the conversation workspace"
-                )
-
-        message = Message(conversation_id=conversation_id, **payload.model_dump())
-        self._session.add(message)
-        await commit_or_conflict(self._session)
-        await self._session.refresh(message)
-        message_data = MessageRead.model_validate(message)
-        await self._broadcaster.broadcast_to_workspace(
-            conversation.workspace_id,
-            create_event("message.created", message_data),
-        )
-        return message_data
+    ) -> MessageHubResult:
+        """Accept public user messages; agent/system messages are internal only."""
+        if payload.sender_type != SenderType.USER:
+            raise AppError(403, "Only user messages can be created through this endpoint")
+        if payload.sender_id is not None:
+            raise AppError(422, "sender_id is not allowed for user messages")
+        if payload.message_type != MessageType.NORMAL:
+            raise AppError(422, "message_type must be normal for user messages")
+        return await self.receive_user_message(conversation_id, payload.content)
 
     async def _get_conversation(self, conversation_id: int) -> Conversation:
         conversation = await self._session.get(Conversation, conversation_id)

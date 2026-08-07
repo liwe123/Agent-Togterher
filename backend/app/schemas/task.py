@@ -14,12 +14,8 @@ class TaskCreate(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: str = ""
     assigned_agent_id: int | None = Field(default=None, gt=0)
-    status: TaskStatus = TaskStatus.PENDING
     priority: str = Field(default="normal", min_length=1, max_length=20)
     input_message_id: int | None = Field(default=None, gt=0)
-    result: str | None = None
-    execution_token: str | None = None
-    execution_token_expires_at: datetime | None = None
 
 
 class TaskUpdate(BaseModel):
@@ -29,16 +25,14 @@ class TaskUpdate(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=255)
     description: str | None = None
     assigned_agent_id: int | None = Field(default=None, gt=0)
-    status: TaskStatus | None = None
     priority: str | None = Field(default=None, min_length=1, max_length=20)
     input_message_id: int | None = Field(default=None, gt=0)
-    result: str | None = None
 
     @model_validator(mode="after")
     def reject_empty_update_and_null_required_fields(self) -> "TaskUpdate":
         if not self.model_fields_set:
             raise ValueError("At least one field must be provided")
-        required = {"title", "description", "status", "priority"}
+        required = {"title", "description", "priority"}
         if any(field in self.model_fields_set and getattr(self, field) is None for field in required):
             raise ValueError("Required task fields cannot be null")
         return self

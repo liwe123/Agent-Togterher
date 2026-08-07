@@ -37,9 +37,16 @@ async def _tool_calculate(*, session, expression: str) -> str:
         return f"Calculate failed: {exc}"
 
 
-async def _tool_query_tasks(*, session, status: str | None = None, limit: int = 10) -> str:
+async def _tool_query_tasks(
+    *, session, workspace_id: int, status: str | None = None, limit: int = 10
+) -> str:
     from app.models import Task
-    stmt = select(Task).order_by(Task.id.desc()).limit(max(1, min(limit, 50)))
+    stmt = (
+        select(Task)
+        .where(Task.workspace_id == workspace_id)
+        .order_by(Task.id.desc())
+        .limit(max(1, min(limit, 50)))
+    )
     if status:
         stmt = stmt.where(Task.status == status)
     rows = (await session.scalars(stmt)).all()
@@ -47,11 +54,9 @@ async def _tool_query_tasks(*, session, status: str | None = None, limit: int = 
     return json.dumps(items, ensure_ascii=False, default=str)
 
 
-async def _tool_get_agents(*, session, workspace_id: int | None = None) -> str:
+async def _tool_get_agents(*, session, workspace_id: int) -> str:
     from app.models import Agent
-    stmt = select(Agent)
-    if workspace_id:
-        stmt = stmt.where(Agent.workspace_id == workspace_id)
+    stmt = select(Agent).where(Agent.workspace_id == workspace_id)
     rows = (await session.scalars(stmt)).all()
     items = [{"id": a.id, "name": a.name, "role": a.role, "status": a.status, "model": a.model_name} for a in rows]
     return json.dumps(items, ensure_ascii=False, default=str)
@@ -97,13 +102,8 @@ TOOL_SPECS: list[dict] = [
         "type": "function",
         "function": {
             "name": "get_agents",
-            "description": "List configured agents, optionally filtered by workspace.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "workspace_id": {"type": "integer"},
-                },
-            },
+            "description": "List configured agents in the current workspace.",
+            "parameters": {"type": "object", "properties": {}}, 
         },
     },
     {
@@ -128,8 +128,10 @@ def get_tools_spec() -> list[dict]:
     return list(TOOL_SPECS)
 
 
-async def execute_tool(name: str, arguments: str, *, session) -> str:
-    """Dispatch a tool call. NEVER raises for model-facing errors."""
+async def execute_tool(
+    name: str, arguments: str, *, session, workspace_id: int | None = None
+) -> str:
+    """Dispatch a tool call with a trusted workspace execution context."""
     try:
         handler = _TOOL_HANDLERS.get(name)
         if handler is None:
@@ -137,6 +139,11 @@ async def execute_tool(name: str, arguments: str, *, session) -> str:
         args = json.loads(arguments) if arguments and arguments.strip() else {}
         if not isinstance(args, dict):
             return f"Tool '{name}' arguments must be a JSON object"
+        args.pop("workspace_id", None)
+        if name in {"query_tasks", "get_agents"}:
+            if workspace_id is None:
+                return f"Tool '{name}' requires a workspace context"
+            args["workspace_id"] = workspace_id
         return await handler(session=session, **args)
     except Exception as exc:
         return f"Tool '{name}' failed: {exc}"

@@ -24,11 +24,12 @@ export interface ProviderStatus {
 /** Status of a provider API key stored via /api/provider-keys. */
 export type ProviderKeyStatus = ProviderStatus
 
-/** Key value returned only on explicit per-provider GET. */
+/** Masked credential metadata returned by the per-provider endpoint. */
 export interface ProviderKeyValue {
   provider: string
   configured: boolean
-  api_key: string | null
+  masked_key: string | null
+  source: "database" | "environment" | null
 }
 
 export interface ModelTestResult {
