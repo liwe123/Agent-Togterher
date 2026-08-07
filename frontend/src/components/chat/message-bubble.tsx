@@ -1,5 +1,6 @@
 import { AlertTriangle, Bot, ExternalLink, UserRound } from "lucide-react"
 import Link from "next/link"
+import ReactMarkdown from "react-markdown"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -32,20 +33,43 @@ function formatTime(value: string): string {
 }
 
 function MessageContent({ content }: { content: string }) {
-  return content.split(/(@[^\s，。！？、:：]+)/g).map((part, index) =>
-    part.startsWith("@") ? (
-      <span
-        key={`${part}-${index}`}
-        className={cn(
-          "inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-xs font-semibold text-primary bg-primary/10 border border-primary/25 my-0.5",
-          (part === "@所有人" || part.toLowerCase() === "@all") && "text-emerald-600 md:text-emerald-400 bg-emerald-500/10 border-emerald-500/25",
-        )}
-      >
-        {part}
-      </span>
-    ) : (
-      part
-    ),
+  return (
+    <ReactMarkdown
+      skipHtml
+      components={{
+        a: ({ href, children }) => (
+          <a
+            href={href}
+            target="_blank"
+            rel="noreferrer noopener"
+            className="font-medium text-primary underline underline-offset-4"
+          >
+            {children}
+          </a>
+        ),
+        code: ({ className, children }) => {
+          const isBlock = className?.startsWith("language-")
+          return isBlock ? (
+            <code className={cn("block overflow-x-auto rounded-lg bg-background/85 p-3 font-mono text-xs leading-6", className)}>
+              {children}
+            </code>
+          ) : (
+            <code className="rounded bg-background/75 px-1.5 py-0.5 font-mono text-[0.9em] text-primary">
+              {children}
+            </code>
+          )
+        },
+        pre: ({ children }) => <pre className="my-3 overflow-x-auto">{children}</pre>,
+        ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>,
+        ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5">{children}</ol>,
+        h1: ({ children }) => <h1 className="mb-2 mt-3 text-lg font-bold">{children}</h1>,
+        h2: ({ children }) => <h2 className="mb-2 mt-3 text-base font-bold">{children}</h2>,
+        h3: ({ children }) => <h3 className="mb-1.5 mt-2 font-semibold">{children}</h3>,
+        p: ({ children }) => <p className="my-1.5 first:mt-0 last:mb-0">{children}</p>,
+      }}
+    >
+      {content}
+    </ReactMarkdown>
   )
 }
 

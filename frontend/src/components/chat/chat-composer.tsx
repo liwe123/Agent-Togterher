@@ -2,21 +2,21 @@
 
 import { CornerDownLeft, Send, Sparkles, Trash2, Zap } from "lucide-react"
 import { useSearchParams } from "next/navigation"
-import { useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 
 import { MentionMenu } from "@/components/chat/mention-menu"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import type { Agent } from "@/types/agent"
 
-const mentionNames = [
-  "项目总设计师",
-  "Agent工程师",
-  "前端设计师",
-  "知识库管理员",
-  "测试专员",
-  "运维",
-] as const
+const roleOrder: Record<string, number> = {
+  project_architect: 0,
+  agent_engineer: 1,
+  frontend_designer: 2,
+  knowledge_manager: 3,
+  qa_engineer: 4,
+  operations_engineer: 5,
+}
 
 const promptTemplates = [
   { label: "设计系统方案", text: "@项目总设计师 请分析并输出系统架构方案" },
@@ -66,12 +66,31 @@ export function ChatComposer({
   const [value, setValue] = useState(initialValue)
   const [mention, setMention] = useState<MentionMatch | null>(null)
   const [activeMentionIndex, setActiveMentionIndex] = useState(0)
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false)
+
+  useEffect(() => {
+    const mentionParam = searchParams.get("mention")
+    if (!mentionParam) return
+
+    const token = `@${mentionParam}`
+    const frame = requestAnimationFrame(() => {
+      setValue((current) => {
+        if (current.includes(token)) return current
+        return current.trim() ? `${current.trimEnd()} ${token} ` : `${token} `
+      })
+      textareaRef.current?.focus()
+    })
+    return () => cancelAnimationFrame(frame)
+  }, [searchParams])
 
   const orderedAgents = useMemo(
     () =>
-      mentionNames
-        .map((name) => agents.find((agent) => agent.name === name))
-        .filter((agent): agent is Agent => agent !== undefined),
+      [...agents].sort(
+        (left, right) =>
+          (roleOrder[left.role] ?? Number.MAX_SAFE_INTEGER) -
+            (roleOrder[right.role] ?? Number.MAX_SAFE_INTEGER) ||
+          left.name.localeCompare(right.name, "zh-CN"),
+      ),
     [agents],
   )
   const filteredAgents = useMemo(() => {
@@ -174,6 +193,47 @@ export function ChatComposer({
   return (
     <div className="border-t border-border bg-card/85 backdrop-blur-md px-3 py-3 md:px-5 md:py-4">
       <div className="relative mx-auto w-full max-w-4xl space-y-2.5">
+        {mobileActionsOpen ? (
+          <div className="space-y-3 rounded-xl border border-border bg-background/95 p-3 shadow-lg md:hidden">
+            <div>
+              <p className="mb-2 text-xs font-semibold">快捷指令</p>
+              <div className="flex flex-wrap gap-2">
+                {promptTemplates.map((template) => (
+                  <button
+                    key={template.label}
+                    type="button"
+                    className="min-h-11 rounded-lg border border-border px-3 text-xs"
+                    onClick={() => {
+                      appendTemplate(template.text)
+                      setMobileActionsOpen(false)
+                    }}
+                  >
+                    {template.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-semibold">选择 Agent</p>
+              <div className="flex flex-wrap gap-2">
+                {orderedAgents.map((agent) => (
+                  <button
+                    key={agent.id}
+                    type="button"
+                    className="min-h-11 rounded-lg border border-border px-3 text-xs"
+                    onClick={() => {
+                      selectMention(agent)
+                      setMobileActionsOpen(false)
+                    }}
+                  >
+                    @{agent.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
         {/* Quick prompt templates & agent mention chips */}
         <div className="hidden items-center justify-between gap-2 overflow-x-auto scrollbar-thin pb-1 md:flex">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -215,9 +275,15 @@ export function ChatComposer({
         )}
 
         <div className="flex items-end gap-1.5 rounded-[1.5rem] border border-input bg-background/80 p-1.5 transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20 md:block md:rounded-xl md:p-3 shadow-inner">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-full text-primary md:hidden" aria-hidden="true">
-            <Zap className="size-5" />
-          </span>
+          <button
+            type="button"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full text-primary md:hidden"
+            aria-label={mobileActionsOpen ? "关闭快捷操作" : "打开快捷操作"}
+            aria-expanded={mobileActionsOpen}
+            onClick={() => setMobileActionsOpen((open) => !open)}
+          >
+            <Zap aria-hidden="true" className="size-5" />
+          </button>
           <Textarea
             ref={textareaRef}
             value={value}

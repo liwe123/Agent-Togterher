@@ -35,11 +35,22 @@ export function ContactsPage() {
   const { agents, connectionStatus, isLoading, error, retry } = useAgentConsole()
   const [searchQuery, setSearchQuery] = useState("")
 
-  const filteredAgents = agents.filter(
-    (agent) =>
-      agent.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (roleLabels[agent.role] ?? agent.role).toLowerCase().includes(searchQuery.toLowerCase()),
-  )
+  const normalizedQuery = searchQuery.trim().toLocaleLowerCase("zh-CN")
+  const matchesSearch = (agent: Agent) =>
+    !normalizedQuery ||
+    agent.name.toLocaleLowerCase("zh-CN").includes(normalizedQuery) ||
+    (roleLabels[agent.role] ?? agent.role)
+      .toLocaleLowerCase("zh-CN")
+      .includes(normalizedQuery) ||
+    (roleDescriptions[agent.role] ?? agent.description)
+      .toLocaleLowerCase("zh-CN")
+      .includes(normalizedQuery)
+  const primaryAgents = agents.slice(0, 5).filter(matchesSearch)
+  const serviceAgents = agents.slice(5).filter(matchesSearch)
+  const filteredCount = primaryAgents.length + serviceAgents.length
+  const onlineCount = connectionStatus === "online"
+    ? agents.filter((agent) => agent.status !== "failed").length
+    : 0
 
   return (
     <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[76px_minmax(0,1fr)]">
@@ -55,7 +66,7 @@ export function ContactsPage() {
             <div className="flex items-center gap-3">
               <Badge className="connection-chip" variant={connectionStatus === "offline" ? "destructive" : "outline"}>
                 <span className="status-dot size-1.5 rounded-full" data-status={connectionStatus} aria-hidden="true" />
-                {agents.length} 人在线
+                {connectionStatus === "online" ? `${onlineCount} 人在线` : "连接断开"}
               </Badge>
             </div>
           </header>
@@ -64,9 +75,13 @@ export function ContactsPage() {
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
             <input
-              type="text"
+              type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setSearchQuery("")
+              }}
+              aria-label="搜索 Agent 姓名、角色或职责"
               placeholder="搜索 Agent 姓名或角色职责…"
               className="h-11 w-full rounded-xl border border-input bg-card/80 pl-10 pr-4 text-sm shadow-sm transition-colors focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
             />
@@ -93,12 +108,23 @@ export function ContactsPage() {
               </div>
               <Button variant="outline" onClick={retry}>重新连接</Button>
             </div>
+          ) : filteredCount === 0 ? (
+            <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-card/75 p-6 text-center">
+              <Search aria-hidden="true" className="size-6 text-muted-foreground" />
+              <div>
+                <h2 className="font-semibold">未找到匹配的 Agent</h2>
+                <p className="mt-1 text-sm text-muted-foreground">请尝试姓名、角色或职责关键词。</p>
+              </div>
+              <Button variant="outline" onClick={() => setSearchQuery("")}>清空搜索</Button>
+            </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-border bg-card/75 p-4 sm:p-6 shadow-md">
-              <ContactGroup label="TRAE Work CN" agents={filteredAgents.slice(0, 5)} startIndex={0} />
-              {filteredAgents.length > 5 ? (
-                <div className="mt-8 border-t border-border pt-8">
-                  <ContactGroup label="Sylway 服务" agents={filteredAgents.slice(5)} startIndex={5} />
+            <div className="overflow-hidden rounded-2xl border border-border bg-card/75 p-4 shadow-md sm:p-6">
+              {primaryAgents.length > 0 ? (
+                <ContactGroup label="TRAE Work CN" agents={primaryAgents} startIndex={0} />
+              ) : null}
+              {serviceAgents.length > 0 ? (
+                <div className={primaryAgents.length > 0 ? "mt-8 border-t border-border pt-8" : undefined}>
+                  <ContactGroup label="Sylway 服务" agents={serviceAgents} startIndex={5} />
                 </div>
               ) : null}
             </div>

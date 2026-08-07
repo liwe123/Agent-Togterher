@@ -327,42 +327,6 @@
 }
 
 @media (max-width: 767px) {
-  :root,
-  .dark {
-    --background: oklch(0.985 0.003 250);
-    --foreground: oklch(0.19 0.015 250);
-    --card: oklch(0.995 0.002 250);
-    --card-foreground: oklch(0.19 0.015 250);
-    --popover: oklch(0.995 0.002 250);
-    --popover-foreground: oklch(0.19 0.015 250);
-    --primary: oklch(0.57 0.17 268);
-    --primary-foreground: oklch(0.99 0.002 250);
-    --secondary: oklch(0.955 0.008 250);
-    --secondary-foreground: oklch(0.25 0.018 250);
-    --muted: oklch(0.96 0.006 250);
-    --muted-foreground: oklch(0.51 0.018 250);
-    --accent: oklch(0.94 0.022 268);
-    --accent-foreground: oklch(0.25 0.04 268);
-    --border: oklch(0.89 0.01 250);
-    --input: oklch(0.87 0.012 250);
-    --ring: oklch(0.57 0.17 268);
-    --sidebar: oklch(0.995 0.002 250);
-    --sidebar-foreground: oklch(0.42 0.018 250);
-    --sidebar-primary: oklch(0.57 0.17 268);
-    --sidebar-primary-foreground: oklch(0.99 0.002 250);
-    --sidebar-accent: oklch(0.95 0.018 268);
-    --sidebar-accent-foreground: oklch(0.4 0.12 268);
-    --sidebar-border: oklch(0.9 0.008 250);
-  }
-
-  html {
-    color-scheme: light;
-  }
-
-  .console-main {
-    background: var(--background);
-  }
-
   .console-main:not(.mobile-chat-main) {
     padding-bottom: calc(5.75rem + env(safe-area-inset-bottom)) !important;
   }

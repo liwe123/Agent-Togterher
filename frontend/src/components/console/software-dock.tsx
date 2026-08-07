@@ -1,3 +1,5 @@
+"use client"
+
 import {
   Bot,
   Braces,
@@ -7,17 +9,21 @@ import {
   Workflow,
 } from "lucide-react"
 import type { CSSProperties } from "react"
+import { useState } from "react"
 
 const software = [
-  { name: "TRAE Work CN", icon: Workflow, tone: 1 },
-  { name: "TRAE CN Solo", icon: Bot, tone: 4 },
-  { name: "Antigravity 2.0", icon: Sparkles, tone: 3 },
-  { name: "Codex", icon: Braces, tone: 2 },
-  { name: "Cursor", icon: MousePointer2, tone: 6 },
-  { name: "Claude", icon: CodeXml, tone: 5 },
+  { name: "TRAE Work CN", icon: Workflow, tone: 1, port: "接入位 1" },
+  { name: "TRAE CN Solo", icon: Bot, tone: 4, port: "接入位 2" },
+  { name: "Antigravity 2.0", icon: Sparkles, tone: 3, port: "接入位 3" },
+  { name: "Codex", icon: Braces, tone: 2, port: "接入位 4" },
+  { name: "Cursor", icon: MousePointer2, tone: 6, port: "接入位 5" },
+  { name: "Claude", icon: CodeXml, tone: 5, port: "接入位 6" },
 ]
 
 export function SoftwareDock() {
+  const [selectedName, setSelectedName] = useState<string | null>(null)
+  const selectedSoftware = software.find((item) => item.name === selectedName)
+
   return (
     <section aria-labelledby="software-dock" className="console-panel overflow-hidden rounded-2xl border border-border bg-card/82 p-4 sm:p-5">
       <div className="mb-5 flex items-center justify-between gap-4">
@@ -34,12 +40,15 @@ export function SoftwareDock() {
       </div>
 
       <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
-        {software.map((item, index) => {
+        {software.map((item) => {
           const Icon = item.icon
           return (
-            <div
+            <button
               key={item.name}
-              title={`${item.name} · 接入位 ${index + 1}`}
+              type="button"
+              aria-pressed={selectedName === item.name}
+              aria-label={`查看 ${item.name} 连接状态`}
+              onClick={() => setSelectedName((current) => current === item.name ? null : item.name)}
               className="group flex min-w-0 flex-col items-center gap-3 rounded-xl px-1 py-2 text-center transition-colors hover:bg-muted/35"
               style={{ "--tool-tone": `var(--avatar-${item.tone})` } as CSSProperties}
             >
@@ -48,10 +57,23 @@ export function SoftwareDock() {
                 <span className="absolute -bottom-1 size-2 rounded-full border-2 border-card bg-[var(--status-running)]" aria-hidden="true" />
               </span>
               <span className="w-full truncate text-[11px] font-medium text-foreground sm:text-xs">{item.name}</span>
-            </div>
+            </button>
           )
         })}
       </div>
+
+      {selectedSoftware ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-primary/25 bg-primary/8 px-4 py-3 text-xs" aria-live="polite">
+          <div>
+            <p className="font-semibold text-foreground">{selectedSoftware.name}</p>
+            <p className="mt-0.5 text-muted-foreground">{selectedSoftware.port} · 调试通道已登记</p>
+          </div>
+          <span className="flex items-center gap-2 font-medium text-primary">
+            <span className="status-dot size-2 rounded-full" data-status="online" aria-hidden="true" />
+            当前在线
+          </span>
+        </div>
+      ) : null}
     </section>
   )
 }

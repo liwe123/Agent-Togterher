@@ -2,7 +2,7 @@
 
 import { AlertCircle, Bot, Cpu, MessageSquare, UsersRound, X } from "lucide-react"
 import Link from "next/link"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 import { AgentPortrait } from "@/components/console/agent-portrait"
 import { Badge } from "@/components/ui/badge"
@@ -34,8 +34,36 @@ export function AgentGallery({
   onRetry,
 }: AgentGalleryProps) {
   const [selectedAgent, setSelectedAgent] = useState<{ agent: Agent; index: number } | null>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const lastTriggerRef = useRef<HTMLElement | null>(null)
   const running = agents.filter((agent) => agent.status === "running").length
   const failed = agents.filter((agent) => agent.status === "failed").length
+
+  function selectAgent(agent: Agent, index: number) {
+    lastTriggerRef.current = document.activeElement as HTMLElement | null
+    setSelectedAgent({ agent, index })
+  }
+
+  function closeAgent() {
+    setSelectedAgent(null)
+    requestAnimationFrame(() => lastTriggerRef.current?.focus())
+  }
+
+  useEffect(() => {
+    if (!selectedAgent) return
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    closeButtonRef.current?.focus()
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") closeAgent()
+    }
+    document.addEventListener("keydown", handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      document.removeEventListener("keydown", handleKeyDown)
+    }
+  }, [selectedAgent])
 
   return (
     <>
@@ -86,7 +114,7 @@ export function AgentGallery({
               label="TRAE Work"
               agents={agents.slice(0, 4)}
               startIndex={0}
-              onSelectAgent={(agent, index) => setSelectedAgent({ agent, index })}
+              onSelectAgent={selectAgent}
             />
             {agents.length > 4 ? (
               <RosterGroup
@@ -100,24 +128,37 @@ export function AgentGallery({
         )}
       </section>
 
-      {/* Agent Detail Modal */}
       {selectedAgent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="relative w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-2xl">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeAgent()
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="agent-detail-title"
+            aria-describedby="agent-detail-description"
+            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-2xl"
+          >
             <button
-              onClick={() => setSelectedAgent(null)}
+              ref={closeButtonRef}
+              type="button"
+              aria-label="关闭 Agent 详情"
+              onClick={closeAgent}
               className="absolute top-4 right-4 flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
             >
-              <X className="size-4" />
+              <X aria-hidden="true" className="size-4" />
             </button>
 
             <div className="flex flex-col items-center text-center">
               <AgentPortrait agent={selectedAgent.agent} index={selectedAgent.index} size="lg" />
-              <h3 className="mt-4 text-xl font-bold">{selectedAgent.agent.name}</h3>
+              <h3 id="agent-detail-title" className="mt-4 text-xl font-bold">{selectedAgent.agent.name}</h3>
               <Badge variant="outline" className="mt-1 border-primary/40 text-primary">
                 {roleLabels[selectedAgent.agent.role] ?? selectedAgent.agent.role}
               </Badge>
-              <p className="mt-3 text-sm leading-6 text-muted-foreground">
+              <p id="agent-detail-description" className="mt-3 text-sm leading-6 text-muted-foreground">
                 {selectedAgent.agent.description || "暂无描述"}
               </p>
 
@@ -139,7 +180,7 @@ export function AgentGallery({
               </div>
 
               <div className="mt-6 flex w-full gap-3">
-                <Button variant="outline" className="flex-1" onClick={() => setSelectedAgent(null)}>
+                <Button variant="outline" className="flex-1" onClick={closeAgent}>
                   关闭
                 </Button>
                 <Link
@@ -182,22 +223,24 @@ function RosterGroup({
         {agents.map((agent, localIndex) => {
           const index = startIndex + localIndex
           return (
-            <div key={agent.id} className="group flex min-w-0 flex-col items-center text-center">
-              <AgentPortrait agent={agent} index={index} onClick={() => onSelectAgent(agent, index)} />
-              <p
-                className="mt-2.5 w-full truncate text-xs font-semibold cursor-pointer hover:text-primary transition-colors"
-                title={agent.name}
-                onClick={() => onSelectAgent(agent, index)}
-              >
+            <button
+              key={agent.id}
+              type="button"
+              className="group flex min-w-0 flex-col items-center rounded-xl p-2 text-center transition-colors hover:bg-muted/35 focus-visible:bg-muted/35"
+              aria-label={`查看 ${agent.name} 的详情`}
+              onClick={() => onSelectAgent(agent, index)}
+            >
+              <AgentPortrait agent={agent} index={index} />
+              <span className="mt-2.5 w-full truncate text-xs font-semibold transition-colors group-hover:text-primary" title={agent.name}>
                 {agent.name}
-              </p>
-              <p className="mt-0.5 w-full truncate text-[11px] text-muted-foreground">
+              </span>
+              <span className="mt-0.5 w-full truncate text-[11px] text-muted-foreground">
                 {agent.status === "running" ? "工作中" : agent.status === "failed" ? "需要处理" : "小憩中"}
-              </p>
-              <p className="mt-1 hidden w-full truncate text-[10px] text-primary/85 group-hover:block md:block">
+              </span>
+              <span className="mt-1 hidden w-full truncate text-[11px] text-primary/85 group-hover:block md:block">
                 {roleLabels[agent.role] ?? agent.role}
-              </p>
-            </div>
+              </span>
+            </button>
           )
         })}
       </div>
