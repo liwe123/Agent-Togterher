@@ -16,7 +16,7 @@ from sqlalchemy.orm import selectinload
 
 from app.agents import final_agent, manager_agent, review_agent, worker_agent
 from app.core.config import get_settings
-from app.core.execution_trace import build_context_message
+from app.core.execution_trace import build_context_message, build_execution_trace, build_trace_summary
 from app.db.base import utc_now
 from app.db.session import AsyncSessionLocal
 from app.models import (
@@ -260,7 +260,7 @@ class AgentOrchestrator:
                 completion = await self._run_agent_with_tools(
                     task,
                     agent,
-                    call_factory=lambda tools, extra_messages: self.call_agent_model(
+                    call_factory=lambda tools, extra_messages, context_messages: self.call_agent_model(
                         task,
                         agent,
                         api_keys=db_api_keys,
@@ -270,6 +270,7 @@ class AgentOrchestrator:
                         context_messages=context_messages,
                     ),
                     tools=get_tools_spec(),
+                    context_messages=context_messages,
                 )
             else:
                 try:
@@ -278,7 +279,6 @@ class AgentOrchestrator:
                         agent,
                         api_keys=db_api_keys,
                         custom_models=db_custom_models,
-                        extra_messages=None,
                         context_messages=context_messages,
                     )
                 except Exception as exc:
@@ -300,6 +300,20 @@ class AgentOrchestrator:
             )
             await self.update_agent_status(agent, "idle")
             await self.send_result_message(task, agent, completion.content)
+            await self._session.refresh(task)
+            task.result = completion.content
+            task.execution_trace = build_execution_trace(
+                task,
+                current_stage="single_agent",
+                completed_steps=await self._load_task_steps(task.id),
+                model_calls=await self._load_task_model_calls(task.id),
+            )
+            task.trace_summary = build_trace_summary(
+                task,
+                current_stage="single_agent",
+                completed_steps=await self._load_task_steps(task.id),
+                model_calls=await self._load_task_model_calls(task.id),
+            )
             return TaskRead.model_validate(task)
         except Exception as exc:
             error_message = self._error_message(exc)
@@ -426,7 +440,7 @@ class AgentOrchestrator:
                     worker_completion = await self._run_agent_with_tools(
                         task,
                         active_agent,
-                        call_factory=lambda tools, extra_messages: worker_agent.execute_subtask(
+                        call_factory=lambda tools, extra_messages, context_messages: worker_agent.execute_subtask(
                             active_agent,
                             task.description,
                             plan,
@@ -435,9 +449,10 @@ class AgentOrchestrator:
                             custom_models=db_custom_models,
                             tools=tools,
                             extra_messages=extra_messages,
-                            context_messages=worker_context_messages,
+                            context_messages=context_messages,
                         ),
                         tools=get_tools_spec(),
+                        context_messages=worker_context_messages,
                     )
                 else:
                     worker_completion = await self._call_and_log(
@@ -682,6 +697,33 @@ class AgentOrchestrator:
             )
         )
 
+    async def _build_task_context_messages(
+        self,
+        task: Task,
+        agent: Agent | None,
+        *,
+        stage: str,
+        stage_payload: dict[str, object] | None = None,
+        note: str | None = None,
+        recent_steps_limit: int = 8,
+        recent_calls_limit: int = 8,
+    ) -> list[dict[str, str]]:
+        steps = await self._load_task_steps(task.id)
+        calls = await self._load_task_model_calls(task.id)
+        context_steps = steps[-recent_steps_limit:] if recent_steps_limit > 0 else []
+        context_calls = calls[-recent_calls_limit:] if recent_calls_limit > 0 else []
+        return [
+            build_context_message(
+                task,
+                current_stage=stage,
+                agent=agent,
+                completed_steps=context_steps,
+                model_calls=context_calls,
+                stage_payload=stage_payload,
+                failure_notes=note,
+            )
+        ]
+
     async def update_task_status(
         self,
         task: Task,
@@ -754,6 +796,7 @@ class AgentOrchestrator:
         call_factory,
         tools: list[dict],
         max_iterations: int = 5,
+        context_messages: list[dict] | None = None,
     ) -> ChatCompletionResult:
         """Run a classic function-calling loop against the configured agent.
 
@@ -765,7 +808,11 @@ class AgentOrchestrator:
         completion = await self._call_and_log(
             task,
             agent,
-            call_factory(tools=tools, extra_messages=history),
+            call_factory(
+                tools=tools,
+                extra_messages=history,
+                context_messages=context_messages,
+            ),
         )
         for _ in range(max_iterations):
             if not completion.tool_calls:
@@ -816,7 +863,11 @@ class AgentOrchestrator:
             completion = await self._call_and_log(
                 task,
                 agent,
-                call_factory(tools=tools, extra_messages=history),
+                call_factory(
+                    tools=tools,
+                    extra_messages=history,
+                    context_messages=context_messages,
+                ),
             )
         if completion.tool_calls:
             raise TaskNotRunnableError(

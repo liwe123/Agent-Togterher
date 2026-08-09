@@ -84,6 +84,7 @@ def _task_detail(task: Task) -> TaskDetailRead:
         execution_trace=[TaskTraceEventRead.model_validate(item) for item in trace_artifact.execution_trace],
         trace_summary=trace_artifact.trace_summary,
         context_snapshot=json.dumps(trace_artifact.context_payload, ensure_ascii=False, indent=2),
+        execution_context=trace_artifact.context_payload,
     )
 
 

@@ -1,5 +1,8 @@
+from __future__ import annotations
+
 from datetime import datetime
 from decimal import Decimal
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
 
@@ -128,11 +131,13 @@ class TaskStepEventPayload(BaseModel):
 
 
 class TaskTraceEventRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     type: str
-    stage: str
+    stage: str | None = None
     title: str
     actor: str | None = None
-    summary: str
+    summary: str | None = None
     detail: str | None = None
     status: str | None = None
     created_at: str | None = None
@@ -140,10 +145,34 @@ class TaskTraceEventRead(BaseModel):
     source_type: str | None = None
 
 
+class TaskExecutionContextRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    task_summary: dict[str, Any]
+    current_stage: str
+    current_stage_label: str
+    completed_steps: list[dict[str, Any]]
+    recent_tool_results: list[dict[str, Any]]
+    recent_model_calls: list[dict[str, Any]]
+    open_issues: list[str]
+    constraints: list[str]
+    failure_notes: str | None = None
+    stage_payload: dict[str, Any] | None = None
+
+
 class TaskTokenUsageRead(BaseModel):
     prompt_tokens: int
     completion_tokens: int
     total_tokens: int
+
+
+class TaskTraceRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    current_stage: str
+    trace_summary: str
+    execution_context: TaskExecutionContextRead
+    execution_trace: list[TaskTraceEventRead]
 
 
 class TaskDetailRead(TaskRead):
@@ -153,6 +182,7 @@ class TaskDetailRead(TaskRead):
     model_calls: list[ModelCallRead]
     token_usage: TaskTokenUsageRead
     duration_ms: int | None
-    execution_trace: list[TaskTraceEventRead] = Field(default_factory=list)
     trace_summary: str | None = None
     context_snapshot: str | None = None
+    execution_context: TaskExecutionContextRead | None = None
+    execution_trace: list[TaskTraceEventRead] = Field(default_factory=list)
