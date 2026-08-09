@@ -39,31 +39,127 @@ Manager 汇总 ──→ 最终结果回到群聊
 
 ## 架构
 
+```mermaid
+flowchart TB
+    U[用户] --> FE[前端 Next.js / React / Tailwind]
+
+    FE -->|REST API| API[FastAPI Backend]
+    FE -->|WebSocket 实时事件| WS[WebSocket Manager]
+
+    API --> TASKAPI[任务 API\n/api/v1/tasks]
+    API --> CHATAPI[消息 / 会话 API]
+    API --> AGENTAPI[Agent / 模型 / 设置 API]
+    API --> ORCH[任务编排器\nAgentOrchestrator]
+    API --> PERSIST[数据持久化层]
+
+    ORCH --> AGENTS[Agents 模块\nmanager / worker / review / final]
+    ORCH --> LITELLM[LiteLLM Service]
+    ORCH --> TOOLS[Tools 执行器]
+    ORCH --> DB[(SQLite / SQLAlchemy)]
+    ORCH --> WS
+
+    TASKAPI --> ORCH
+    CHATAPI --> WS
+    AGENTAPI --> DB
+
+    LITELLM --> MODELS[模型与密钥配置\nconfig/models.yaml + DB API Keys]
+    LITELLM --> PROVIDERS[OpenAI / Anthropic / Gemini / DeepSeek / Qwen]
+
+    DB --> ENTITIES[核心实体\nWorkspace / Conversation / Agent / Task / TaskStep / ModelCall / Message]
 ```
-┌─────────────────────────────────────────────┐
-│  Browser (Next.js 16 · React 19 · Tailwind) │
-│  ┌─────────┐ ┌──────┐ ┌──────┐ ┌─────────┐ │
-│  │ 运行总览 │ │ 群聊  │ │ 任务 │ │ 模型设置 │ │
-│  └─────────┘ └──────┘ └──────┘ └─────────┘ │
-│        ▲          ▲         ▲         ▲      │
-│        └──────────┼─────────┼─────────┘      │
-│                   │ WS live sync             │
-└───────────────────┼─────────────────────────┘
-                    │
-┌───────────────────┼─────────────────────────┐
-│  FastAPI Backend  │                          │
-│  ┌──────────┐ ┌───┴──────┐ ┌─────────────┐  │
-│  │MessageHub│ │Orchestrator│ │WebSocket Mgr│  │
-│  └──────────┘ └────┬──────┘ └─────────────┘  │
-│                    │                          │
-│  ┌─────────────────┼──────────────────────┐  │
-│  │ LiteLLM (gpt-4.1 → deepseek → qwen ↓)  │  │
-│  └────────────────────────────────────────┘  │
-│  ┌──────────┐                               │
-│  │  SQLite  │  (PostgreSQL 就等一条命令)     │
-│  └──────────┘                               │
-└─────────────────────────────────────────────┘
+
+### 架构说明
+
+- 前端负责控制台、群聊、任务流、模型设置与实时状态展示。
+- FastAPI 后端提供任务、消息、Agent、模型与设置接口。
+- `AgentOrchestrator` 负责任务领取、状态流转、步骤记录与结果回写。
+- `LiteLLM Service` 统一封装模型调用，支持自定义模型与 fallback。
+- `WebSocket Manager` 将任务、步骤、模型调用、Agent 状态变化实时推送给前端。
+- SQLite 作为当前默认存储，所有核心实体都通过 SQLAlchemy 持久化。
+
+## 任务流转
+
+```mermaid
+flowchart TD
+    A[创建任务] --> B[run_task(task_id)]
+    B --> C[_claim_pending_task\n领取 PENDING 任务并加租约]
+    C --> D[启动 lease 续期线程\n_renew_task_lease]
+    D --> E{assigned_agent 是 Manager?}
+
+    E -- 否 --> S1[单 Agent 流程]
+    E -- 是 --> M1[多 Agent 流程]
+
+    S1 --> S2[校验 agent / conversation]
+    S2 --> S3[update_agent_status(running)]
+    S3 --> S4[save_task_step(running)]
+    S4 --> S5{启用 tools?}
+    S5 -- 否 --> S6[call_agent_model]
+    S6 --> S7[save_model_call]
+    S5 -- 是 --> S8[_run_agent_with_tools]
+    S8 --> S8a[循环模型调用]
+    S8a --> S8b[保存 tool_call step]
+    S8b --> S8c[execute_tool]
+    S8c --> S8d[追加 tool 结果到 history]
+    S8d --> S8a
+    S8a --> S7
+    S7 --> S9[save_task_step(completed)]
+    S9 --> S10[update_task_status(COMPLETED)]
+    S10 --> S11[update_agent_status(idle)]
+    S11 --> S12[send_result_message]
+    S12 --> Z[结束]
+
+    M1 --> M2[读取 workspace 的全部 Agent]
+    M2 --> M3[Manager: running]
+    M3 --> M4[save_task_step(manager_plan)]
+    M4 --> M5[manager_agent.generate_plan]
+    M5 --> M6[parse / serialize plan]
+    M6 --> M7[save_task_step(completed)]
+    M7 --> M8[send_result_message: 任务拆解]
+    M8 --> M9[Manager: idle]
+
+    M9 --> M10[按 plan.subtasks 顺序执行]
+    M10 --> M11[选择对应 Worker Agent]
+    M11 --> M12[Worker: running]
+    M12 --> M13[save_task_step(worker_execute_x)]
+    M13 --> M14{启用 tools?}
+    M14 -- 否 --> M15[worker_agent.execute_subtask]
+    M14 -- 是 --> M16[_run_agent_with_tools]
+    M16 --> M16a[循环模型调用 + tool 执行]
+    M16a --> M15
+    M15 --> M17[save_task_step(completed)]
+    M17 --> M18[send_result_message: Worker 结果]
+    M18 --> M19[Worker: idle]
+    M19 --> M10
+
+    M10 --> M20[Review Agent: running]
+    M20 --> M21[save_task_step(review_results)]
+    M21 --> M22[review_agent.review_results]
+    M22 --> M23[save_task_step(completed)]
+    M23 --> M24[send_result_message: 审核结果]
+    M24 --> M25[Review Agent: idle]
+
+    M25 --> M26[Manager 再次 running]
+    M26 --> M27[save_task_step(final_summary)]
+    M27 --> M28[final_agent.build_final_result]
+    M28 --> M29[save_task_step(completed)]
+    M29 --> M30[update_task_status(COMPLETED)]
+    M30 --> M31[update_agent_status(idle)]
+    M31 --> M32[send_result_message: 最终汇总]
+    M32 --> Z
+
+    S1 -.异常.-> F[失败处理\nsave_task_step(failed) / save_model_call(failed)\nupdate_task_status(FAILED)\nupdate_agent_status(failed)]
+    M1 -.异常.-> F
+    F --> Z
 ```
+
+### 任务流转说明
+
+- 所有任务先进入 `PENDING`，由 Orchestrator 领取后切到 `RUNNING`。
+- 单 Agent 任务会直接调用目标 Agent 完成任务。
+- Manager 任务会先生成计划，再按子任务顺序交给 Worker 执行，之后由 QA 审核，再由 Manager 汇总。
+- 每个阶段都会记录 `TaskStep`，每次模型调用都会记录 `ModelCall`。
+- 任务结束时会更新任务状态、Agent 状态，并通过 WebSocket 推送结果。
+- 发生异常时会进入失败分支，尽可能保留失败步骤、失败调用和错误消息。
 
 ## 六人 Agent 编队
 
