@@ -328,14 +328,14 @@ async def test_tool_loop_calls_calculate_and_completes(orchestrator_session) -> 
         "role": "system",
         "content": "Return a concise implementation result.",
     }
-    assert second_messages[1] == {
-        "role": "user",
-        "content": "Implement the requested endpoint and report the result.",
-    }
-    assert second_messages[2]["role"] == "assistant"
-    assert second_messages[2]["content"] == ""
-    assert second_messages[2]["tool_calls"] == [tool_call]
-    assert second_messages[3] == {
+    assert second_messages[1]["role"] == "system"
+    assert "任务级上下文" in second_messages[1]["content"]
+    assert second_messages[2]["role"] == "user"
+    assert second_messages[2]["content"] == "Implement the requested endpoint and report the result."
+    assert second_messages[3]["role"] == "assistant"
+    assert second_messages[3]["content"] == ""
+    assert second_messages[3]["tool_calls"] == [tool_call]
+    assert second_messages[4] == {
         "role": "tool",
         "tool_call_id": "call_1",
         "content": "7.0",

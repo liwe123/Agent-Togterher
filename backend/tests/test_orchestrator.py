@@ -141,22 +141,24 @@ async def test_run_task_completes_and_persists_result(orchestrator_session) -> N
             orchestrator_session, broadcaster
         ).run_task(task.id)
 
-    model_call.assert_awaited_once_with(
-        "code_model",
-        [
-            {
-                "role": "system",
-                "content": "Return a concise implementation result.",
-            },
-            {
-                "role": "user",
-                "content": "Implement the requested endpoint and report the result.",
-            },
-        ],
-        tools=get_tools_spec(),
-        api_keys={},
-        custom_models={},
+    model_call.assert_awaited_once()
+    called_model_name, called_messages = model_call.await_args.args[:2]
+    assert called_model_name == "code_model"
+    assert called_messages[0] == {
+        "role": "system",
+        "content": "Return a concise implementation result.",
+    }
+    assert any(
+        message["role"] == "system" and "任务级上下文" in message["content"]
+        for message in called_messages
     )
+    assert called_messages[-1] == {
+        "role": "user",
+        "content": "Implement the requested endpoint and report the result.",
+    }
+    assert model_call.await_args.kwargs["tools"] == get_tools_spec()
+    assert model_call.await_args.kwargs["api_keys"] == {}
+    assert model_call.await_args.kwargs["custom_models"] == {}
     await orchestrator_session.refresh(agent)
     step = await orchestrator_session.scalar(
         select(TaskStep).where(TaskStep.task_id == task.id)

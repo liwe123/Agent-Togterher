@@ -24,6 +24,7 @@ from app.schemas.task import (
     TaskStepEventPayload,
     TaskStepRead,
     TaskTokenUsageRead,
+    TaskTraceEventRead,
     TaskUpdate,
 )
 from app.schemas.workspace import WorkspaceCreate, WorkspaceRead
@@ -59,6 +60,7 @@ __all__ = [
     "TaskStepEventPayload",
     "TaskStepRead",
     "TaskTokenUsageRead",
+    "TaskTraceEventRead",
     "TaskUpdate",
     "WorkspaceCreate",
     "WorkspaceRead",

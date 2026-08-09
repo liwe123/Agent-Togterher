@@ -16,6 +16,7 @@ async def review_results(
     worker_results: Sequence[dict[str, object]],
     api_keys: dict[str, str] | None = None,
     custom_models: dict[str, dict] | None = None,
+    context_messages: list[dict] | None = None,
 ) -> ChatCompletionResult:
     user_prompt = (
         "请作为测试专员审核本次多 Agent 执行结果。逐项检查是否满足原始需求和计划，"
@@ -29,6 +30,7 @@ async def review_results(
         reviewer.model_name,
         [
             {"role": "system", "content": reviewer.system_prompt},
+            *(context_messages or []),
             {"role": "user", "content": user_prompt},
         ],
         temperature=0.2,

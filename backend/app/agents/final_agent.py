@@ -17,6 +17,7 @@ async def build_final_result(
     review_result: str,
     api_keys: dict[str, str] | None = None,
     custom_models: dict[str, dict] | None = None,
+    context_messages: list[dict] | None = None,
 ) -> ChatCompletionResult:
     user_prompt = (
         "请作为项目总设计师汇总 Worker 执行结果和测试专员审核。"
@@ -31,6 +32,7 @@ async def build_final_result(
         manager.model_name,
         [
             {"role": "system", "content": manager.system_prompt},
+            *(context_messages or []),
             {"role": "user", "content": user_prompt},
         ],
         temperature=0.3,

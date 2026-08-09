@@ -31,6 +31,7 @@ async def execute_subtask(
     custom_models: dict[str, dict] | None = None,
     tools: list[dict] | None = None,
     extra_messages: list[dict] | None = None,
+    context_messages: list[dict] | None = None,
 ) -> ChatCompletionResult:
     expected_worker = worker_name_for_task_type(subtask.task_type)
     expected_role = WORKER_ROLE_BY_TASK_TYPE[subtask.task_type]
@@ -51,6 +52,7 @@ async def execute_subtask(
         worker.model_name,
         [
             {"role": "system", "content": worker.system_prompt},
+            *(context_messages or []),
             {"role": "user", "content": user_prompt},
             *(extra_messages or []),
         ],

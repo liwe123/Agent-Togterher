@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -5,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.api.errors import AppError
 from app.api.persistence import commit_or_conflict
+from app.core.execution_trace import build_trace_artifact
 from app.core.orchestrator import (
     AgentOrchestrator,
     TaskNotFoundError,
@@ -22,6 +25,7 @@ from app.schemas import (
     TaskRead,
     TaskStepRead,
     TaskTokenUsageRead,
+    TaskTraceEventRead,
     TaskUpdate,
 )
 
@@ -55,6 +59,16 @@ def _task_detail(task: Task) -> TaskDetailRead:
     if not has_active_step and started_at is not None and finished_at is not None:
         duration_ms = max(0, int((finished_at - started_at).total_seconds() * 1000))
 
+    trace_artifact = build_trace_artifact(
+        task,
+        current_stage=task.status.value,
+        completed_steps=steps,
+        model_calls=model_calls,
+        stage_payload={
+            "original_input": task.input_message.content if task.input_message else None,
+            "duration_ms": duration_ms,
+        },
+    )
     return TaskDetailRead(
         **TaskRead.model_validate(task).model_dump(),
         assigned_agent=task.assigned_agent,
@@ -67,6 +81,9 @@ def _task_detail(task: Task) -> TaskDetailRead:
             total_tokens=prompt_tokens + completion_tokens,
         ),
         duration_ms=duration_ms,
+        execution_trace=[TaskTraceEventRead.model_validate(item) for item in trace_artifact.execution_trace],
+        trace_summary=trace_artifact.trace_summary,
+        context_snapshot=json.dumps(trace_artifact.context_payload, ensure_ascii=False, indent=2),
     )
 
 

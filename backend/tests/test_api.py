@@ -278,16 +278,15 @@ def test_task_run_endpoint_executes_agent_and_returns_result(
     ) as model_call:
         completed = assert_success(api_client.post(f"/api/tasks/{task_id}/run"))
 
-    model_call.assert_awaited_once_with(
-        "openai/test-model",
-        [
-            {"role": "system", "content": "Test carefully."},
-            {"role": "user", "content": "@Tester Execute this task"},
-        ],
-        tools=get_tools_spec(),
-        api_keys={},
-        custom_models={},
-    )
+    model_call.assert_awaited_once()
+    messages = model_call.await_args.args[1]
+    assert messages[0] == {"role": "system", "content": "Test carefully."}
+    assert messages[1]["role"] == "system"
+    assert "任务级上下文" in messages[1]["content"]
+    assert messages[-1] == {"role": "user", "content": "@Tester Execute this task"}
+    assert model_call.await_args.kwargs["tools"] == get_tools_spec()
+    assert model_call.await_args.kwargs["api_keys"] == {}
+    assert model_call.await_args.kwargs["custom_models"] == {}
     assert completed["status"] == "completed"
     assert completed["result"] == "Task executed successfully"
     detail = assert_success(api_client.get(f"/api/tasks/{task_id}"))

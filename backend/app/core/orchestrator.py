@@ -12,9 +12,11 @@ from typing import Final
 
 from sqlalchemy import inspect as sqlalchemy_inspect, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import selectinload
 
 from app.agents import final_agent, manager_agent, review_agent, worker_agent
 from app.core.config import get_settings
+from app.core.execution_trace import build_context_message
 from app.db.base import utc_now
 from app.db.session import AsyncSessionLocal
 from app.models import (
@@ -79,6 +81,98 @@ class AgentOrchestrator:
         self._session = session
         self._broadcaster = broadcaster
         self._failure_session_factory = failure_session_factory or AsyncSessionLocal
+
+    @staticmethod
+    def _clip_text(value: str | None, limit: int = 800) -> str | None:
+        if value is None:
+            return None
+        text = value.strip()
+        if len(text) <= limit:
+            return text
+        return f"{text[:limit]}…"
+
+    @classmethod
+    def _summarize_step(cls, step: TaskStep) -> dict[str, object]:
+        return {
+            "id": step.id,
+            "step_name": step.step_name,
+            "status": step.status,
+            "input": cls._clip_text(step.input),
+            "output": cls._clip_text(step.output),
+        }
+
+    @staticmethod
+    def _summarize_call(call: ModelCall) -> dict[str, object]:
+        return {
+            "id": call.id,
+            "agent_id": call.agent_id,
+            "model_name": call.model_name,
+            "provider": call.provider,
+            "status": call.status,
+            "latency_ms": call.latency_ms,
+            "fallback_used": False,
+            "error_message": AgentOrchestrator._clip_text(call.error_message),
+        }
+
+    async def _build_task_context_messages(
+        self,
+        task: Task,
+        agent: Agent | None,
+        *,
+        stage: str,
+        note: str | None = None,
+        recent_steps_limit: int = 6,
+        recent_calls_limit: int = 6,
+    ) -> list[dict[str, str]]:
+        steps = list(
+            await self._session.scalars(
+                select(TaskStep)
+                .where(TaskStep.task_id == task.id)
+                .order_by(TaskStep.id.desc())
+                .limit(recent_steps_limit)
+            )
+        )
+        calls = list(
+            await self._session.scalars(
+                select(ModelCall)
+                .where(ModelCall.task_id == task.id)
+                .order_by(ModelCall.id.desc())
+                .limit(recent_calls_limit)
+            )
+        )
+        steps.reverse()
+        calls.reverse()
+        context_payload = {
+            "task": {
+                "id": task.id,
+                "title": task.title,
+                "status": task.status.value,
+                "priority": task.priority,
+                "assigned_agent": getattr(agent, "name", None),
+                "conversation_id": task.conversation_id,
+                "input": self._clip_text(task.description, 1200),
+                "result": self._clip_text(task.result, 1200),
+            },
+            "stage": stage,
+            "note": note,
+            "completed_steps": [
+                self._summarize_step(step)
+                for step in steps
+                if step.status == "completed"
+            ],
+            "recent_steps": [self._summarize_step(step) for step in steps],
+            "recent_model_calls": [self._summarize_call(call) for call in calls],
+        }
+        return [
+            {
+                "role": "system",
+                "content": (
+                    "你正在继续执行同一条任务。请严格继承下面的任务级上下文，"
+                    "优先基于已完成步骤、工具结果和失败信息继续推进，不要重复已经完成的工作。\n"
+                    f"任务级上下文：\n{json.dumps(context_payload, ensure_ascii=False)}"
+                ),
+            }
+        ]
 
     async def run_task(self, task_id: int) -> TaskRead:
         task = await self._claim_pending_task(task_id)
@@ -149,6 +243,14 @@ class AgentOrchestrator:
 
             db_api_keys = await litellm_service.get_db_api_keys(self._session)
             db_custom_models = await litellm_service.get_db_custom_models(self._session)
+            context_messages = await self._build_task_context_messages(
+                task,
+                agent,
+                stage="single_agent",
+                note=task.description,
+                recent_steps_limit=6,
+                recent_calls_limit=6,
+            )
 
             if get_settings().agent_tools_enabled:
                 # The tool loop owns _call_and_log for every attempt including
@@ -165,6 +267,7 @@ class AgentOrchestrator:
                         custom_models=db_custom_models,
                         tools=tools,
                         extra_messages=extra_messages,
+                        context_messages=context_messages,
                     ),
                     tools=get_tools_spec(),
                 )
@@ -175,6 +278,8 @@ class AgentOrchestrator:
                         agent,
                         api_keys=db_api_keys,
                         custom_models=db_custom_models,
+                        extra_messages=None,
+                        context_messages=context_messages,
                     )
                 except Exception as exc:
                     await self.save_model_call(task, agent, error=exc)
@@ -235,6 +340,14 @@ class AgentOrchestrator:
 
             db_api_keys = await litellm_service.get_db_api_keys(self._session)
             db_custom_models = await litellm_service.get_db_custom_models(self._session)
+            manager_context_messages = await self._build_task_context_messages(
+                task,
+                manager,
+                stage="manager_plan",
+                note=task.description,
+                recent_steps_limit=8,
+                recent_calls_limit=8,
+            )
 
             await self.update_agent_status(manager, "running")
             step = await self.save_task_step(
@@ -253,6 +366,7 @@ class AgentOrchestrator:
                     [agent.name for agent in workspace_agents],
                     api_keys=db_api_keys,
                     custom_models=db_custom_models,
+                    context_messages=manager_context_messages,
                 ),
             )
             plan = manager_agent.parse_manager_plan(manager_completion.content)
@@ -290,6 +404,14 @@ class AgentOrchestrator:
                         f"in workspace {task.workspace_id}"
                     )
 
+                worker_context_messages = await self._build_task_context_messages(
+                    task,
+                    active_agent,
+                    stage=step_name,
+                    note=subtask.model_dump_json(indent=2),
+                    recent_steps_limit=8,
+                    recent_calls_limit=8,
+                )
                 await self.update_agent_status(active_agent, "running")
                 step = await self.save_task_step(
                     task,
@@ -313,6 +435,7 @@ class AgentOrchestrator:
                             custom_models=db_custom_models,
                             tools=tools,
                             extra_messages=extra_messages,
+                            context_messages=worker_context_messages,
                         ),
                         tools=get_tools_spec(),
                     )
@@ -327,6 +450,7 @@ class AgentOrchestrator:
                             subtask,
                             api_keys=db_api_keys,
                             custom_models=db_custom_models,
+                            context_messages=worker_context_messages,
                         ),
                     )
                 result = {
@@ -367,6 +491,14 @@ class AgentOrchestrator:
                     f"in workspace {task.workspace_id}"
                 )
 
+            review_context_messages = await self._build_task_context_messages(
+                task,
+                active_agent,
+                stage=step_name,
+                note=json.dumps(worker_results, ensure_ascii=False),
+                recent_steps_limit=8,
+                recent_calls_limit=8,
+            )
             await self.update_agent_status(active_agent, "running")
             step = await self.save_task_step(
                 task,
@@ -385,6 +517,7 @@ class AgentOrchestrator:
                     worker_results,
                     api_keys=db_api_keys,
                     custom_models=db_custom_models,
+                    context_messages=review_context_messages,
                 ),
             )
             await self.save_task_step(
@@ -404,6 +537,14 @@ class AgentOrchestrator:
             step = None
             step_name = "final_summary"
             active_agent = manager
+            final_context_messages = await self._build_task_context_messages(
+                task,
+                manager,
+                stage=step_name,
+                note=review_completion.content,
+                recent_steps_limit=8,
+                recent_calls_limit=8,
+            )
             await self.update_agent_status(manager, "running")
             step = await self.save_task_step(
                 task,
@@ -423,6 +564,7 @@ class AgentOrchestrator:
                     review_completion.content,
                     api_keys=db_api_keys,
                     custom_models=db_custom_models,
+                    context_messages=final_context_messages,
                 ),
             )
             await self.save_task_step(
@@ -520,6 +662,26 @@ class AgentOrchestrator:
         await self.save_model_call(task, agent, completion=completion)
         return completion
 
+    async def _load_task_steps(self, task_id: int) -> list[TaskStep]:
+        return list(
+            await self._session.scalars(
+                select(TaskStep)
+                .where(TaskStep.task_id == task_id)
+                .options(selectinload(TaskStep.agent))
+                .order_by(TaskStep.id.asc())
+            )
+        )
+
+    async def _load_task_model_calls(self, task_id: int) -> list[ModelCall]:
+        return list(
+            await self._session.scalars(
+                select(ModelCall)
+                .where(ModelCall.task_id == task_id)
+                .options(selectinload(ModelCall.agent))
+                .order_by(ModelCall.id.asc())
+            )
+        )
+
     async def update_task_status(
         self,
         task: Task,
@@ -570,11 +732,13 @@ class AgentOrchestrator:
         custom_models: dict[str, dict] | None = None,
         tools: list[dict] | None = None,
         extra_messages: list[dict] | None = None,
+        context_messages: list[dict] | None = None,
     ) -> ChatCompletionResult:
         return await litellm_service.chat_completion(
             agent.model_name,
             [
                 {"role": "system", "content": agent.system_prompt},
+                *(context_messages or []),
                 {"role": "user", "content": task.description},
                 *(extra_messages or []),
             ],

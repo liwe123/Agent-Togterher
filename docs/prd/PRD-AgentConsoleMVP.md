@@ -88,6 +88,7 @@
 | 改动时间 | ID | 状态 | Git 提交 | 作者 | 改动类型 | 影响范围 | 改动内容 | 前端技术 | 后端技术 | 是否有数据库 | 破坏性变更 | 验证结果 | 备注 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | MVP 基线前 | 基线前（未入表） | 已完成 | [599e268](https://github.com/liwe123/Agent-Togterher/commit/599e268) | LI | Requirement | 前端、后端、数据库 | Agent Console MVP：多 Agent 编排、WebSocket 实时可视、任务/消息/模型调用持久化、前端四页 | Next.js 16 + React 19 + Tailwind；useChat/useTasks/useAgentConsole/useSettings | FastAPI + SQLite + LiteLLM；orchestrator/message_hub；Agent/Message/Task/TaskStep/ModelCall 模型 | 是(全表) | 是 | pytest + lint/test/build 通过 | 含加固 ca6322d/0a27d86 |
+| 2026-08-09 | 单任务上下文连续性保障 | 草案 | 待提交 | LI | Enhancement | 后端编排、Agent prompt、任务详情、测试 | 为同一条任务引入上下文回灌与轨迹摘要；模型每轮调用前注入任务级上下文；Manager/Worker/Review/Final 共享同一任务轨迹；补充 AB test 与冒烟测试 | Next.js 16 + React 19；任务详情页上下文视图 | FastAPI + SQLite + LiteLLM；orchestrator 上下文构建器；manager/worker/review/final agent prompt 扩展 | 是（新增上下文轨迹逻辑） | 否 | AB test / smoke test 待执行 | 以任务级上下文连续性为目标 |
 
 ---
 

@@ -127,6 +127,19 @@ class TaskStepEventPayload(BaseModel):
     finished_at: datetime | None = None
 
 
+class TaskTraceEventRead(BaseModel):
+    type: str
+    stage: str
+    title: str
+    actor: str | None = None
+    summary: str
+    detail: str | None = None
+    status: str | None = None
+    created_at: str | None = None
+    source_id: int | None = None
+    source_type: str | None = None
+
+
 class TaskTokenUsageRead(BaseModel):
     prompt_tokens: int
     completion_tokens: int
@@ -140,3 +153,6 @@ class TaskDetailRead(TaskRead):
     model_calls: list[ModelCallRead]
     token_usage: TaskTokenUsageRead
     duration_ms: int | None
+    execution_trace: list[TaskTraceEventRead] = Field(default_factory=list)
+    trace_summary: str | None = None
+    context_snapshot: str | None = None

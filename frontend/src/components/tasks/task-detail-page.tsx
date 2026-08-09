@@ -34,7 +34,7 @@ import {
   stepLabel,
 } from "@/lib/task-format"
 import { cn } from "@/lib/utils"
-import type { ModelCall, TaskDetail, TaskStep } from "@/types/task"
+import type { ModelCall, TaskDetail, TaskStep, TaskTraceEvent } from "@/types/task"
 
 const connectionLabels = {
   connecting: "连接中",
@@ -105,6 +105,7 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
                 {error ? <RealtimeError error={error} onRetry={retry} /> : null}
                 <TaskOverview task={task} />
                 <TaskMetrics task={task} />
+                <ExecutionTracePanel task={task} />
                 <OriginalInput task={task} />
                 <TaskSteps steps={task.task_steps} />
                 <ModelCallLogs calls={task.model_calls} />
@@ -230,6 +231,73 @@ function TaskMetrics({ task }: { task: TaskDetail }) {
         )
       })}
     </section>
+  )
+}
+
+function ExecutionTracePanel({ task }: { task: TaskDetail }) {
+  const trace = task.execution_trace
+  return (
+    <section className="console-panel overflow-hidden rounded-xl border border-border bg-card/72">
+      <SectionHeader
+        icon={Activity}
+        title="执行轨迹"
+        description={task.trace_summary ?? "结构化上下文、模型调用链和阶段摘要"}
+      />
+      <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+        <div className="min-w-0 space-y-3">
+          <TraceSummaryCard traceSummary={task.trace_summary} contextSnapshot={task.context_snapshot} />
+        </div>
+        <div className="min-w-0">
+          <div className="rounded-xl border border-border bg-background/55 p-3">
+            <p className="mb-2 text-xs font-medium text-muted-foreground">轨迹事件</p>
+            <div className="max-h-[26rem] space-y-2 overflow-auto pr-1 scrollbar-thin">
+              {trace.length === 0 ? (
+                <p className="py-8 text-center text-xs text-muted-foreground">当前任务尚未产生轨迹事件。</p>
+              ) : (
+                trace.map((item) => <TraceEventRow key={`${item.source_type ?? 'trace'}-${item.source_id ?? item.created_at}-${item.title}`} event={item} />)
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+function TraceSummaryCard({
+  traceSummary,
+  contextSnapshot,
+}: {
+  traceSummary: string | null
+  contextSnapshot: string | null
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="rounded-xl border border-border bg-background/55 p-4">
+        <p className="mb-2 text-xs font-medium text-muted-foreground">轨迹摘要</p>
+        <pre className="max-h-56 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-5 text-foreground/90 scrollbar-thin">{traceSummary ?? "暂无轨迹摘要。"}</pre>
+      </div>
+      <div className="rounded-xl border border-border bg-background/55 p-4">
+        <p className="mb-2 text-xs font-medium text-muted-foreground">模型上下文快照</p>
+        <pre className="max-h-[22rem] overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-5 text-foreground/90 scrollbar-thin">{contextSnapshot ?? "暂无上下文快照。"}</pre>
+      </div>
+    </div>
+  )
+}
+
+function TraceEventRow({ event }: { event: TaskTraceEvent }) {
+  return (
+    <article className="rounded-lg border border-border/80 bg-card/80 p-3 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{event.title}</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">{event.stage} · {event.actor ?? "系统"} · {event.type}</p>
+        </div>
+        <Badge variant="outline" className="shrink-0">{event.status ?? "trace"}</Badge>
+      </div>
+      <p className="mt-2 text-xs leading-5 text-foreground/85">{event.summary}</p>
+      {event.detail ? <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-md border border-border/70 bg-background/60 p-2 font-mono text-[11px] leading-5 scrollbar-thin">{event.detail}</pre> : null}
+    </article>
   )
 }
 

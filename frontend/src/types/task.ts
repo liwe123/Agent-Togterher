@@ -49,6 +49,19 @@ export interface TaskTokenUsage {
   total_tokens: number
 }
 
+export interface TaskTraceEvent {
+  type: string
+  stage: string
+  title: string
+  actor: string | null
+  summary: string
+  detail: string | null
+  status: string | null
+  created_at: string | null
+  source_id: number | null
+  source_type: string | null
+}
+
 export interface TaskDetail extends ChatTask {
   assigned_agent: TaskAgent | null
   original_input: string | null
@@ -56,6 +69,9 @@ export interface TaskDetail extends ChatTask {
   model_calls: ModelCall[]
   token_usage: TaskTokenUsage
   duration_ms: number | null
+  execution_trace: TaskTraceEvent[]
+  trace_summary: string | null
+  context_snapshot: string | null
 }
 
 export type TaskStatusEvent = ChatTask
