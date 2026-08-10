@@ -221,14 +221,34 @@ CURATED_BY_SUBJECT = {
         "verify": "pytest 42→54；前端 28/build pass",
         "notes": "详见 docs/prd/PRD-工具调用能力.md；不新增 WS 事件、不改表结构",
     },
+    "add task-level context continuity tracing": {
+        "type": "Requirement",
+        "content": "单任务上下文连续性保障（上游抽象设计）：任务级上下文构建器 + 模型调用前结构化上下文回灌 + 工具结果/失败信息稳定继承 + 多 Agent 阶段共享 + 失败重试可读历史 + 超长摘要裁剪",
+        "frontend": "任务详情页「任务上下文」模块（当前阶段/摘要/工具链/失败与恢复记录）",
+        "backend": "orchestrator.py 各阶段注入 build_context_message；execution_trace.py 上下文构建与摘要裁剪；schemas/task.py 上下文/轨迹字段",
+        "db": "否（复用 Task/TaskStep/ModelCall 拼装，未新增表）", "breaking": "是",
+        "verify": "后端 build/测试通过；前端 build pass",
+        "notes": "详见 docs/prd/PRD-单任务上下文连续性与执行过程可视化.md（2026-08-10 由两份 PRD 合并而来）；与 8e22c25 为同一能力的抽象层与实现层",
+    },
+    "add task execution trace context": {
+        "type": "Requirement",
+        "content": "任务执行过程可视化与工具调用追踪：新增执行轨迹层，模型每次继续执行前回灌结构化上下文（任务摘要/当前阶段/已完成步骤/工具结果/失败原因）；工具调用形成显式可回放链路；上下文过长时摘要裁剪；失败/重试可读取历史轨迹续跑",
+        "frontend": "task-detail-page.tsx 新增 ExecutionTracePanel（轨迹摘要卡 + 执行轨迹时间线渲染）；types/task.ts 定义 TaskTraceEvent",
+        "backend": "新增 core/execution_trace.py（TraceArtifact/build_context_message/build_execution_trace/build_trace_artifact，含上下文构建+工具链路提取+两级摘要裁剪+脱敏）；orchestrator.py 模型调用前注入 build_context_message、阶段推进写入轨迹；schemas/task.py 增 TaskTraceRead/TaskDetailRead 轨迹字段；tasks.py _task_detail 实时组装 trace；前端 HTTP 轮询实现实时刷新",
+        "db": "否（复用 Task/TaskStep/ModelCall 拼装，未新增表）", "breaking": "是",
+        "verify": "后端 build/测试通过；前端 build pass；任务详情页轨迹视图与工具链路可正常展示",
+        "notes": "详见 docs/prd/PRD-单任务上下文连续性与执行过程可视化.md（2026-08-10 由两份 PRD 合并而来）；FR8 WebSocket 推送、FR9 双层视图暂未落地（P1 级），AC6 由 HTTP 轮询达成",
+    },
 }
 
 MODEL_FILES = ("app/models/", "provider_credentials", "custom_model_configs")
 
 
 def run_git(args: list[str]) -> str:
+    # Force UTF-8 log output so commit subjects/paths stay intact on machines
+    # whose git defaults to a non-UTF-8 locale (e.g. Chinese Windows GBK).
     return subprocess.run(
-        ["git", "-C", str(REPO), *args],
+        ["git", "-c", "i18n.logOutputEncoding=UTF-8", "-C", str(REPO), *args],
         capture_output=True, text=True, encoding="utf-8",
         errors="replace", check=True,
     ).stdout
