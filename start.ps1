@@ -36,11 +36,23 @@ if ($LASTEXITCODE -ne 0) {
 
 # Wait for healthy
 Write-Host "[3/3] Waiting for services to become ready ..."
+$maxAttempts = 40
+$attempt = 0
+$healthy = $false
 do {
     Start-Sleep -Seconds 3
-    try { $null = Invoke-WebRequest -Uri "http://localhost:8000/api/v1/health" -TimeoutSec 2 -ErrorAction SilentlyContinue }
-    catch { }
-} until ($?)
+    $attempt++
+    try {
+        $resp = Invoke-WebRequest -Uri "http://localhost:8000/api/v1/health" -TimeoutSec 2 -ErrorAction Stop
+        $healthy = $resp.StatusCode -eq 200
+    } catch {
+        $healthy = $false
+    }
+} until ($healthy -or $attempt -ge $maxAttempts)
+
+if (-not $healthy) {
+    Write-Host "[WARN] 服务在等待期内未就绪，请检查 'docker compose logs'。"
+}
 
 Write-Host ""
 Write-Host "  =========================================="
