@@ -19,3 +19,9 @@ dist/
 .impeccable/
 .DS_Store
 Thumbs.db
+
+# Agent / WorkBuddy memory & local state (never commit)
+.workbuddy/
+
+# Change-tracking workbook backups (守则 4 排除项)
+docs/*_备份.xlsx
