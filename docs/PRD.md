@@ -102,6 +102,12 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-10 11:28 | C-079 | 已完成 | [f727400](https://github.com/liwe123/Agent-Togterher/commit/f727400) | LI | Optimization | 其他、文档 | docs: add Agent 任务守则 and sync change types (Docs->Requirement/Bug/Optimization) | - | - | 否 | 否 | - | - |
 | 2026-08-10 11:38 | C-080 | 已完成 | [0e3e1de](https://github.com/liwe123/Agent-Togterher/commit/0e3e1de) | LI | Optimization | 其他、文档 | docs: regenerate change log (register 守则 refinement as C-080) | - | - | 否 | 否 | - | - |
 | 2026-08-10 11:38 | C-081 | 已完成 | [897704c](https://github.com/liwe123/Agent-Togterher/commit/897704c) | LI | Optimization | 其他、文档 | docs: refine Agent 任务守则 (commit convention, CURATED workflow, test cmds, acceptance closure) | - | - | 否 | 否 | - | - |
+| 2026-08-10 12:33 | C-082 | 已完成 | [0c46dd7](https://github.com/liwe123/Agent-Togterher/commit/0c46dd7) | LI | BUG | 其他、部署 | fix(deploy): wire APP_API_TOKEN and AGENT_TOOLS_ENABLED through docker-compose/.env | - | - | 否 | 否 | - | - |
+| 2026-08-10 12:33 | C-083 | 已完成 | [19e6eae](https://github.com/liwe123/Agent-Togterher/commit/19e6eae) | LI | Optimization | 其他 | optimize: exclude .workbuddy and backup xlsx from git | - | - | 否 | 否 | - | - |
+| 2026-08-10 12:33 | C-084 | 已完成 | [5121ce1](https://github.com/liwe123/Agent-Togterher/commit/5121ce1) | LI | Optimization | 文档、其他 | docs: fix README inconsistencies and add code review report | - | - | 否 | 否 | - | - |
+| 2026-08-10 12:33 | C-085 | 已完成 | [55a8b1c](https://github.com/liwe123/Agent-Togterher/commit/55a8b1c) | LI | Optimization | 文档 | optimize(governance): drop illegal Docs enum from change log generator and PRD | - | - | 否 | 否 | - | - |
+| 2026-08-10 12:33 | C-086 | 已完成 | [69095e2](https://github.com/liwe123/Agent-Togterher/commit/69095e2) | LI | BUG | 部署 | fix(scripts): correct start.ps1 health-check wait loop | - | - | 否 | 否 | - | - |
+| 2026-08-10 12:33 | C-087 | 已完成 | [c0d1cd2](https://github.com/liwe123/Agent-Togterher/commit/c0d1cd2) | LI | BUG | 后端 | fix(security): guard safe_eval against exponent DoS | - | backend/app/services | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
