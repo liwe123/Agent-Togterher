@@ -279,7 +279,7 @@ Alembic 在 Schema 变频繁之前引入即可。
 
 - `useWorkspaceSocket` — 4 个 Hook 里一模一样的 35 行 WebSocket 逻辑，现在一处定义
 - `taskTimestamp` / `taskStatusRank` / `shouldApplyTaskStatus` — 两处各自定义，现在一个 `lib/task-utils.ts`
-- 死代码清退 — `SystemStatus`、`SoftwareDock`（6 个"待接入"占位符）、`selectConsoleAgents`（后端已过滤又过滤一遍）
+- 死代码清退 — `SystemStatus`、`selectConsoleAgents`（后端已过滤又过滤一遍）；`SoftwareDock` 保留为软件端口面板
 - `ErrorBoundary` — 5 个页面各套一层，组件崩了不白屏
 - `fetchedRef` — StrictMode 下不会重复请求两次
 - `TaskStepEventPayload` — 手写 dict 换成 Pydantic Schema，和其他事件一致
@@ -304,7 +304,7 @@ Alembic 在 Schema 变频繁之前引入即可。
 - [ ] Redis Pub/Sub 多进程广播
 - [ ] QA 不通过 → Worker 重试循环
 - [ ] 前端 WebSocket/Hook 端到端测试
-- [ ] `/contacts` 通讯录页面
+- [x] `/contacts` 通讯录页面
 
 ## License
 
