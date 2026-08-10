@@ -13,6 +13,13 @@ import json
 from sqlalchemy import select
 
 
+def _const_value(node: ast.AST) -> float | None:
+    """Return the numeric value of a literal node, or None if not a constant."""
+    if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+        return float(node.value)
+    return None
+
+
 def safe_eval_expression(expression: str) -> float:
     """Evaluate a math expression using an AST whitelist. Never eval()."""
     tree = ast.parse(expression, mode="eval")
@@ -24,6 +31,16 @@ def safe_eval_expression(expression: str) -> float:
             raise ValueError("unsupported expression")
         if isinstance(node, ast.Constant) and not isinstance(node.value, (int, float)):
             raise ValueError("unsupported literal")
+        # Guard against billion-scale exponent DoS (e.g. 9**9**9) before eval.
+        # Only the exponent needs to be constant and bounded: a non-constant
+        # exponent (e.g. 9**(9**9)) is the blow-up path, while a bounded constant
+        # exponent keeps the result finite (final value is also capped at 1e12).
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Pow):
+            exp = _const_value(node.right)
+            if exp is None:
+                raise ValueError("unsupported exponent")
+            if abs(exp) > 64:
+                raise ValueError("exponent too large")
     value = eval(compile(tree, "<calc>", "eval"), {"__builtins__": {}}, {})
     if abs(value) > 1e12:
         raise ValueError("result too large")
