@@ -247,6 +247,16 @@ CURATED_BY_SUBJECT = {
         "db": "否", "breaking": "否", "verify": "重跑生成脚本 77 行；Excel 无乱码；HTML 阅读器 9 PRDs",
         "notes": "合并版含 §8.4 决策记录与 §16 实施状态章节；两份旧 PRD 可从 git 历史找回",
     },
+    # 重跑生成脚本的提交（regen commit）主题固定登记，避免自身行回退为英文 git 主题
+    "docs: make change-log 改动内容 Chinese and regenerate": {
+        "type": "Optimization",
+        "content": "文档：将变更追踪表全部改动内容中文化，消除英文 git 主题 fallback；重跑生成脚本同步 PRD/xlsx",
+        "frontend": "-",
+        "backend": "generate_change_log.py 新增 _CONTENT_FIXES_BY_SHA（21 行 sha→中文内容）",
+        "db": "否", "breaking": "否",
+        "verify": "重跑后改动内容列零英文",
+        "notes": "守则① 改动内容中文化；regen 提交自身行由本 subject 登记保持中文",
+    },
 }
 
 # === 35 行「改动类型」耐久修正（原 Docs → Requirement / BUG / Optimization）===
@@ -287,6 +297,36 @@ _TYPE_FIXES_BY_SHA = {
 }
 for _sha, _t in _TYPE_FIXES_BY_SHA.items():
     CURATED.setdefault(_sha, {})["type"] = _t
+
+# === 改动内容中文化（覆盖无 CURATED 中文内容、fallback 到英文 git subject 的行）===
+# 守则①要求「改动内容中文」；生成器对无 CURATED 的行会把英文提交主题直接当内容，
+# 这里按 sha 补中文，不改类型（类型由 type_from_subject / _TYPE_FIXES 推断）。
+_CONTENT_FIXES_BY_SHA = {
+    "ffe1535": "将视觉重构提交 C-021（A/B 测试通过）登记进变更追踪表",
+    "d64090a": "变更追踪表新增「Git 提交」列，记录每次改动对应的提交哈希",
+    "08b8e10": "变更追踪表扩展为专业 14 列布局（含状态/类型/影响范围/前后端技术/数据库/破坏性变更等）",
+    "e4c9e20": "将工具调用能力需求 C-025 登记进变更追踪表",
+    "caaafe1": "新增 GitHub Actions 工作流（Python 包 + Conda 环境）用于后端测试",
+    "2d1e659": "将近期同步相关的变更表条目改为中文描述",
+    "0e0a15f": "将 GitHub Actions 工作流修复登记进变更追踪表",
+    "c190d7d": "修复 Provider 查询与任务恢复逻辑的健壮性问题",
+    "c36bf54": "更新数据库 schema 测试以覆盖任务租约字段",
+    "39dae3c": "将前端交互体验改动登记进变更追踪表",
+    "6816c87": "将每一项前端改动逐条拆登记进变更追踪表",
+    "555c064": "将后端访问控制加固改动登记进变更追踪表",
+    "6622d08": "整理合并版 PRD 文档（统一多份需求文档结构）",
+    "51bf567": "新增架构图与任务流转图到 PRD 文档",
+    "0c46dd7": "修复部署配置：在 docker-compose/.env 透传 APP_API_TOKEN 与 AGENT_TOOLS_ENABLED，使容器内鉴权可用",
+    "19e6eae": "优化：在 .gitignore 排除 .workbuddy/ 与备份 xlsx，机械落实守则④排除项",
+    "5121ce1": "文档：修正 README 两处不一致（SoftwareDock 保留面板、/contacts 已实现），新增代码审查报告",
+    "55a8b1c": "治理优化：从变更表生成器与 PRD 中移除非法的第 4 枚举 Docs，仅保留 Requirement/Optimization/BUG",
+    "69095e2": "修复脚本：修正 start.ps1 健康检查等待循环（until($?) 首轮恒真导致死循环）",
+    "c0d1cd2": "安全修复：safe_eval 增加指数 DoS 防护，限制常量指数 ≤64，拦截 9**9**9 类爆炸输入",
+    "398904e": "文档：重跑生成脚本，将本轮审查修复登记为 C-082~C-087，变更表无 Docs 残留",
+    "a3377e6": "治理优化：清除变更表生成脚本内残留的 Docs 字面量（源侧与输出一致），并重跑生成脚本同步 PRD/xlsx",
+}
+for _sha, _c in _CONTENT_FIXES_BY_SHA.items():
+    CURATED.setdefault(_sha, {})["content"] = _c
 
 # 已在 CURATED_BY_SUBJECT 的 4 条：原地改 type（避免被 sha 条目顶掉）
 _TYPE_FIXES_BY_SUBJECT = {
