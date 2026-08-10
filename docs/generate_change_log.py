@@ -52,8 +52,8 @@ SHA_COL = 3  # "Git 提交" column index in the row tuple
 PREFIX_TYPE = {
     "feat": "Requirement", "feat!": "Requirement", "fix": "BUG",
     "refactor": "Optimization", "optimize": "Optimization", "perf": "Optimization",
-    "style": "Optimization", "docs": "Docs", "chore": "Docs", "test": "Docs",
-    "build": "Docs", "ci": "Docs",
+    "style": "Optimization", "docs": "Optimization", "chore": "Optimization",
+    "test": "Optimization", "build": "Optimization", "ci": "Optimization",
 }
 
 # Curated rows: keyed by short commit sha. Fields override git inference.
@@ -118,25 +118,25 @@ CURATED = {
         "verify": "-", "notes": "1203 插入/471 删除，21 文件；经 C-021 并入当前分支；PRD: docs/prd/PRD-前端视觉与响应式优化.md",
     },
     "b7f7d27": {
-        "type": "Docs",
+        "type": "Optimization",
         "content": "同步优化版项目为新的 Git 基线",
         "frontend": "-", "backend": "-", "db": "否", "breaking": "否", "verify": "-",
         "notes": "将优化后的完整项目作为当前主线基线提交",
     },
     "29deb0e": {
-        "type": "Docs",
+        "type": "Optimization",
         "content": "合并远端历史并保留当前优化版项目状态",
         "frontend": "-", "backend": "-", "db": "否", "breaking": "否", "verify": "-",
         "notes": "采用 ours 策略合并远端历史后推送到 GitHub",
     },
     "6cab7da": {
-        "type": "Docs",
+        "type": "Optimization",
         "content": "同步优化版项目后刷新变更追踪表",
         "frontend": "更新 PRD 与 Excel 变更追踪表", "backend": "生成脚本重跑", "db": "否", "breaking": "否", "verify": "-",
         "notes": "将新基线提交一并纳入改动表",
     },
     "7039e2a": {
-        "type": "Docs",
+        "type": "Optimization",
         "content": "修复 GitHub Actions Python 包工作流以运行后端测试",
         "frontend": "-", "backend": "backend/requirements-dev.txt；backend/tests；.github/workflows/python-package-conda.yml", "db": "否", "breaking": "否", "verify": "backend/tests/test_health.py 通过", "notes": "移除缺失的 environment.yml 依赖，改为 pip 安装并在 backend 目录执行 pytest",
     },
@@ -185,13 +185,13 @@ CURATED_BY_SUBJECT = {
         "verify": "A/B 代码对比通过；API 冒烟通过；56 tests + compileall + pip check 通过",
     },
     "docs: auto-generate change log from git history": {
-        "type": "Docs", "content": "变更追踪表改为从 git history 自动生成",
+        "type": "Optimization", "content": "变更追踪表改为从 git history 自动生成",
         "frontend": "generate_change_log.py（爬取 git log + 自动推断列 + CURATED 人工覆盖 + 生成 PRD/Excel）",
         "backend": "-", "db": "否", "breaking": "否", "verify": "-",
         "notes": "新提交自动生成行；已知提交按 sha 覆盖",
     },
     "docs: add visual-aesthetics commit C-005 to change log": {
-        "type": "Docs", "content": "变更追踪表收录独立主线的视觉重构提交（C-005）",
+        "type": "Optimization", "content": "变更追踪表收录独立主线的视觉重构提交（C-005）",
         "frontend": "generate_change_log.py 支持 EXTRA_SHAS + 按 subject 覆盖",
         "backend": "-", "db": "否", "breaking": "否", "verify": "-",
         "notes": "9c2dd0e 强推覆盖后归位",
@@ -205,7 +205,7 @@ CURATED_BY_SUBJECT = {
         "notes": "仅 settings-page.tsx 1 处文本冲突手工合并；PRD: docs/prd/PRD-前端视觉与响应式优化.md",
     },
     "docs: 为 5 个历史需求补充详细 PRD 并登记到变更追踪表": {
-        "type": "Docs",
+        "type": "Optimization",
         "content": "为 5 个历史需求（Agent Console MVP / API Key 管理 / 自定义模型 / 前端视觉与响应式优化 / Windows 一键启动）补充详细 PRD 文档到 docs/prd/，并在追踪表对应行备注 PRD 链接",
         "frontend": "新增 docs/prd/PRD-AgentConsoleMVP.md、PRD-APIKey管理.md、PRD-自定义模型接入.md、PRD-前端视觉与响应式优化.md、PRD-Windows一键启动脚本.md",
         "backend": "generate_change_log.py CURATED 备注追加 PRD 链接",
@@ -240,7 +240,7 @@ CURATED_BY_SUBJECT = {
         "notes": "详见 docs/prd/PRD-单任务上下文连续性与执行过程可视化.md（2026-08-10 由两份 PRD 合并而来）；FR8 WebSocket 推送、FR9 双层视图暂未落地（P1 级），AC6 由 HTTP 轮询达成",
     },
     "docs: merge PRD-单任务上下文连续性保障 and PRD-任务执行过程可视化 into unified PRD": {
-        "type": "Docs",
+        "type": "Optimization",
         "content": "合并两份重叠 PRD（单任务上下文连续性保障 70e53ee/C-075 与 任务执行过程可视化与工具调用追踪 8e22c25/C-076）为统一版 PRD-单任务上下文连续性与执行过程可视化.md：背景缺口合并为 4 项、核心概念整合 5 个、FR 统一为 10 条、数据模型决策与实施状态（FR1-FR7/FR10 已落地，FR8/FR9 未落地）写入文档",
         "frontend": "docs/prd/ 目录 10→9 份（删除 2 份旧 PRD，新增 1 份合并版）；docs/PRD.md 索引同步 10→9 行",
         "backend": "generate_change_log.py：补登记 70e53ee（C-075 升级为完整 Requirement）、C-075/C-076 备注指向合并版、is_excluded 改为 all() 语义（仅纯生成物提交跳过，合并提交保留）",
@@ -409,10 +409,10 @@ def infer_backend(files: list[str]) -> str:
 
 
 def type_from_subject(subject: str) -> str:
-    m = re.match(r"^([a-z]+)(\([^)]*\))?(!)?:", subject)
+    m = re.match(r"^\s*([a-z]+)(\([^)]*\))?(!)?:", subject)
     if m:
-        return PREFIX_TYPE.get(m.group(1) + (m.group(3) or ""), "Docs")
-    return "Docs"
+        return PREFIX_TYPE.get(m.group(1) + (m.group(3) or ""), "Optimization")
+    return "Optimization"
 
 
 def _commit_info(sha: str) -> tuple[str, str, str, str]:
