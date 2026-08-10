@@ -108,6 +108,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-10 12:33 | C-085 | 已完成 | [55a8b1c](https://github.com/liwe123/Agent-Togterher/commit/55a8b1c) | LI | Optimization | 文档 | optimize(governance): drop illegal Docs enum from change log generator and PRD | - | - | 否 | 否 | - | - |
 | 2026-08-10 12:33 | C-086 | 已完成 | [69095e2](https://github.com/liwe123/Agent-Togterher/commit/69095e2) | LI | BUG | 部署 | fix(scripts): correct start.ps1 health-check wait loop | - | - | 否 | 否 | - | - |
 | 2026-08-10 12:33 | C-087 | 已完成 | [c0d1cd2](https://github.com/liwe123/Agent-Togterher/commit/c0d1cd2) | LI | BUG | 后端 | fix(security): guard safe_eval against exponent DoS | - | backend/app/services | 否 | 否 | - | - |
+| 2026-08-10 12:34 | C-088 | 已完成 | [398904e](https://github.com/liwe123/Agent-Togterher/commit/398904e) | LI | Optimization | 其他、文档 | docs: regenerate change log (register review fixes as C-082..C-087) | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
