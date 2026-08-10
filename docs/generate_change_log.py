@@ -239,7 +239,83 @@ CURATED_BY_SUBJECT = {
         "verify": "后端 build/测试通过；前端 build pass；任务详情页轨迹视图与工具链路可正常展示",
         "notes": "详见 docs/prd/PRD-单任务上下文连续性与执行过程可视化.md（2026-08-10 由两份 PRD 合并而来）；FR8 WebSocket 推送、FR9 双层视图暂未落地（P1 级），AC6 由 HTTP 轮询达成",
     },
+    "docs: merge PRD-单任务上下文连续性保障 and PRD-任务执行过程可视化 into unified PRD": {
+        "type": "Docs",
+        "content": "合并两份重叠 PRD（单任务上下文连续性保障 70e53ee/C-075 与 任务执行过程可视化与工具调用追踪 8e22c25/C-076）为统一版 PRD-单任务上下文连续性与执行过程可视化.md：背景缺口合并为 4 项、核心概念整合 5 个、FR 统一为 10 条、数据模型决策与实施状态（FR1-FR7/FR10 已落地，FR8/FR9 未落地）写入文档",
+        "frontend": "docs/prd/ 目录 10→9 份（删除 2 份旧 PRD，新增 1 份合并版）；docs/PRD.md 索引同步 10→9 行",
+        "backend": "generate_change_log.py：补登记 70e53ee（C-075 升级为完整 Requirement）、C-075/C-076 备注指向合并版、is_excluded 改为 all() 语义（仅纯生成物提交跳过，合并提交保留）",
+        "db": "否", "breaking": "否", "verify": "重跑生成脚本 77 行；Excel 无乱码；HTML 阅读器 9 PRDs",
+        "notes": "合并版含 §8.4 决策记录与 §16 实施状态章节；两份旧 PRD 可从 git 历史找回",
+    },
 }
+
+# === 35 行「改动类型」耐久修正（原 Docs → Requirement / BUG / Optimization）===
+# 仅覆盖 type 字段：新增条目由 git 推断其余列，已有条目保留原 content/tech 等。
+# bug 类型沿用脚本配色字面量 "BUG"（type_fill 无 "Bug"），保持单元格配色一致。
+_TYPE_FIXES_BY_SHA = {
+    # --- Optimization ---
+    "8ab4834": "Optimization",  # C-002
+    "5f3b6a1": "Optimization",  # C-003
+    "3a99015": "Optimization",  # C-004
+    "5b5e5d9": "Optimization",  # C-010
+    "6289107": "Optimization",  # C-016
+    "fc35e0b": "Optimization",  # C-017
+    "2ba41fc": "Optimization",  # C-018
+    "ffe1535": "Optimization",  # C-022
+    "d64090a": "Optimization",  # C-023
+    "08b8e10": "Optimization",  # C-024
+    "e4c9e20": "Optimization",  # C-026
+    "197f6e3": "Optimization",  # C-028
+    "2313960": "Optimization",  # C-029
+    "caaafe1": "Optimization",  # C-030
+    "1fd9aba": "Optimization",  # C-031
+    "42dcda5": "Optimization",  # C-032
+    "9d4a57e": "Optimization",  # C-033
+    "b7f7d27": "Optimization",  # C-034
+    "29deb0e": "Optimization",  # C-035
+    "6cab7da": "Optimization",  # C-036
+    "2d1e659": "Optimization",  # C-037
+    "0e0a15f": "Optimization",  # C-039
+    "39dae3c": "Optimization",  # C-056
+    "6816c87": "Optimization",  # C-057
+    "555c064": "Optimization",  # C-071
+    "6622d08": "Optimization",  # C-072
+    "51bf567": "Optimization",  # C-074
+    # --- BUG（沿用脚本配色字面量 BUG，非 Bug）---
+    "7039e2a": "BUG",           # C-038
+    "352503e": "BUG",           # C-073
+}
+for _sha, _t in _TYPE_FIXES_BY_SHA.items():
+    CURATED.setdefault(_sha, {})["type"] = _t
+
+# 已在 CURATED_BY_SUBJECT 的 4 条：原地改 type（避免被 sha 条目顶掉）
+_TYPE_FIXES_BY_SUBJECT = {
+    "docs: auto-generate change log from git history":
+        "Optimization",  # C-019
+    "docs: add visual-aesthetics commit C-005 to change log":
+        "Optimization",  # C-020
+    "docs: 为 5 个历史需求补充详细 PRD 并登记到变更追踪表":
+        "Requirement",   # C-027
+    "docs: merge PRD-单任务上下文连续性保障 and PRD-任务执行过程可视化 into unified PRD":
+        "Requirement",   # C-077
+}
+for _subj, _t in _TYPE_FIXES_BY_SUBJECT.items():
+    CURATED_BY_SUBJECT[_subj]["type"] = _t
+
+# details 展开行 2 条：改 details 内对应项（禁止加 CURATED[sha]，否则多行塌缩、ID 错位）
+_TYPE_FIXES_IN_DETAILS = [
+    ("feat: improve frontend interaction and accessibility",
+     "新增前端交互体验完善 PRD", "Requirement"),  # C-055
+    ("feat: harden backend access and task isolation",
+     "新增后端访问控制与工作区隔离 PRD", "Requirement"),  # C-070
+]
+for _subj, _content, _t in _TYPE_FIXES_IN_DETAILS:
+    for _d in CURATED_BY_SUBJECT[_subj]["details"]:
+        if _d["content"] == _content:
+            _d["type"] = _t
+            break
+    else:
+        raise KeyError(f"detail not found: {_subj} / {_content}")
 
 MODEL_FILES = ("app/models/", "provider_credentials", "custom_model_configs")
 
@@ -260,7 +336,14 @@ def changed_files(sha: str) -> list[str]:
 
 
 def is_excluded(files: list[str]) -> bool:
-    return any(f.replace("\\", "/") in SKIP_PATHS for f in files)
+    # Merge commits report an empty file list via diff-tree; they must stay
+    # in the table (all([]) == True would wrongly drop them).
+    if not files:
+        return False
+    # Only skip a commit when EVERY changed file is a pure artifact
+    # (build script / generated HTML). A commit that also touches real
+    # docs or code must still appear in the change-tracking table.
+    return all(f.replace("\\", "/") in SKIP_PATHS for f in files)
 
 
 def infer_db(files: list[str]) -> str:
