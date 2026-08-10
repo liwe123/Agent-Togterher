@@ -100,6 +100,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-10 09:58 | C-077 | 已完成 | [f8a84b7](https://github.com/liwe123/Agent-Togterher/commit/f8a84b7) | LI | Requirement | 其他、文档 | 合并两份重叠 PRD（单任务上下文连续性保障 70e53ee/C-075 与 任务执行过程可视化与工具调用追踪 8e22c25/C-076）为统一版 PRD-单任务上下文连续性与执行过程可视化.md：背景缺口合并为 4 项、核心概念整合 5 个、FR 统一为 10 条、数据模型决策与实施状态（FR1-FR7/FR10 已落地，FR8/FR9 未落地）写入文档 | docs/prd/ 目录 10→9 份（删除 2 份旧 PRD，新增 1 份合并版）；docs/PRD.md 索引同步 10→9 行 | generate_change_log.py：补登记 70e53ee（C-075 升级为完整 Requirement）、C-075/C-076 备注指向合并版、is_excluded 改为 all() 语义（仅纯生成物提交跳过，合并提交保留） | 否 | 否 | 重跑生成脚本 77 行；Excel 无乱码；HTML 阅读器 9 PRDs | 合并版含 §8.4 决策记录与 §16 实施状态章节；两份旧 PRD 可从 git 历史找回 |
 | 2026-08-10 11:28 | C-078 | 已完成 | [580daad](https://github.com/liwe123/Agent-Togterher/commit/580daad) | LI | Docs | 其他、文档 | docs: regenerate change log and PRD.html (register Agent 任务守则 as C-078) | - | - | 否 | 否 | - | - |
 | 2026-08-10 11:28 | C-079 | 已完成 | [f727400](https://github.com/liwe123/Agent-Togterher/commit/f727400) | LI | Docs | 其他、文档 | docs: add Agent 任务守则 and sync change types (Docs->Requirement/Bug/Optimization) | - | - | 否 | 否 | - | - |
+| 2026-08-10 11:38 | C-080 | 已完成 | [897704c](https://github.com/liwe123/Agent-Togterher/commit/897704c) | LI | Docs | 其他、文档 | docs: refine Agent 任务守则 (commit convention, CURATED workflow, test cmds, acceptance closure) | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
