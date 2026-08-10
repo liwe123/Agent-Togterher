@@ -21,6 +21,8 @@ services:
       APP_ENV: ${APP_ENV:-development}
       API_V1_PREFIX: ${API_V1_PREFIX:-/api/v1}
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000", "http://127.0.0.1:3000"]}
+      APP_API_TOKEN: ${APP_API_TOKEN:-}
+      AGENT_TOOLS_ENABLED: ${AGENT_TOOLS_ENABLED:-true}
       DATABASE_URL: sqlite+aiosqlite:///./data/agent_console.db
       REDIS_URL: ${COMPOSE_REDIS_URL:-redis://redis:6379/0}
       LITELLM_DEFAULT_MODEL: ${LITELLM_DEFAULT_MODEL:-}
