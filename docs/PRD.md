@@ -116,6 +116,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-14 21:03 | C-093 | 已完成 | [c6c8041](https://github.com/liwe123/Agent-Togterher/commit/c6c8041) | LI | Optimization | 其他、文档、前端 | optimize: 前端页面整体风格全面升级为 Google Pixel (Material You / M3) 设计风格 | frontend/src/app；frontend/src/components | - | 否 | 否 | - | - |
 | 2026-08-14 23:31 | C-094 | 已完成 | [4fc3875](https://github.com/liwe123/Agent-Togterher/commit/4fc3875) | LI | Optimization | 文档 | docs: refine README formatting and links | - | - | 否 | 否 | - | - |
 | 2026-08-15 00:07 | C-095 | 已完成 | [f4ec8c8](https://github.com/liwe123/Agent-Togterher/commit/f4ec8c8) | LI | Optimization | 文档、其他 | 完成项目 Phase 0 架构盘点，统一记录当前模块职责、任务主链路、任务状态机、Trace/Correlation 标识规范、风险清单与演进边界，为后续 PostgreSQL、TaskService、Worker 和事件总线改造提供约束基线 | - | docs/架构治理基线.md；基于 MessageHub、AgentOrchestrator、任务租约、启动恢复和 WebSocket 当前实现形成架构基线 | 否 | 否 | A/B 文档覆盖对比通过（改前无 Phase 0 基线，改后覆盖 6 类交付物）；文档冒烟通过；后端 56 tests passed | 任务类型为 Optimization，无需新增 PRD；独立验收通过；生成脚本与 PRD.html 已重跑对齐 |
+| 2026-08-15 00:08 | C-096 | 已完成 | [d3f256f](https://github.com/liwe123/Agent-Togterher/commit/d3f256f) | LI | Optimization | 其他、文档 | docs: 同步 Phase 0 变更追踪与 PRD 阅读器 | - | - | 否 | 否 | - | - |
+| 2026-08-15 00:35 | C-097 | 已完成 | [2ada67f](https://github.com/liwe123/Agent-Togterher/commit/2ada67f) | LI | Requirement | 其他、后端、数据库 | 新增持久化任务队列与独立 Worker，将消息接入和任务执行解耦，并提供优先级、执行租约、失败重试、超时回收、死信和并发控制能力 | - | 新增 TaskQueueItem、TaskService 与独立 Worker；MessageHub 统一入队；支持 inline/worker 两种执行模式 | 是(task_queue_items) | 否（默认保持 inline 模式兼容） | A/B 执行模式对比通过；后端 59 tests passed；启动模式与队列复验 8 passed；git diff --check 通过 | PRD: docs/prd/PRD-Phase2持久化任务队列与独立Worker.md；独立只读验收通过；生成脚本与 PRD.html 已重跑对齐 |
 <!-- CHANGELOG:END -->
 
 ---
@@ -135,6 +137,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-后端访问控制与工作区隔离.md](prd/PRD-后端访问控制与工作区隔离.md) | API Token、可信工作区上下文与 Provider Key 脱敏 | 71ea26f | C-058～C-060、C-070 |
 | [PRD-Windows一键启动脚本.md](prd/PRD-Windows一键启动脚本.md) | Windows 一键启动脚本 | fb94fb2 | C-007 |
 | [PRD-单任务上下文连续性与执行过程可视化.md](prd/PRD-单任务上下文连续性与执行过程可视化.md) | 单任务上下文连续性与执行过程可视化（结构化上下文回灌 / 工具调用链路 / 执行轨迹视图） | 70e53ee、8e22c25 | C-075、C-076 |
+| [PRD-Phase2持久化任务队列与独立Worker.md](prd/PRD-Phase2持久化任务队列与独立Worker.md) | Phase 2 持久化队列、任务治理与独立 Worker | 2ada67f | C-097 |
 
 ---
 

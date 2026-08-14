@@ -145,6 +145,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "feat: 增加持久化任务队列与独立 Worker": {
+        "type": "Requirement",
+        "content": "新增持久化任务队列与独立 Worker，将消息接入和任务执行解耦，并提供优先级、执行租约、失败重试、超时回收、死信和并发控制能力",
+        "frontend": "-",
+        "backend": "新增 TaskQueueItem、TaskService 与独立 Worker；MessageHub 统一入队；支持 inline/worker 两种执行模式",
+        "db": "是(task_queue_items)",
+        "breaking": "否（默认保持 inline 模式兼容）",
+        "verify": "A/B 执行模式对比通过；后端 59 tests passed；启动模式与队列复验 8 passed；git diff --check 通过",
+        "notes": "PRD: docs/prd/PRD-Phase2持久化任务队列与独立Worker.md；独立只读验收通过；生成脚本与 PRD.html 已重跑对齐",
+    },
     "docs: 建立 Phase 0 架构治理基线": {
         "type": "Optimization",
         "content": "完成项目 Phase 0 架构盘点，统一记录当前模块职责、任务主链路、任务状态机、Trace/Correlation 标识规范、风险清单与演进边界，为后续 PostgreSQL、TaskService、Worker 和事件总线改造提供约束基线",
