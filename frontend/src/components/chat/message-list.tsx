@@ -89,24 +89,24 @@ export function MessageList({
       >
         {isLoading ? (
           <div className="mx-auto flex w-full max-w-4xl flex-col gap-5" aria-label="正在加载消息">
-            <div className="flex items-end gap-2.5">
-              <Skeleton className="size-9 rounded-full" />
-              <Skeleton className="h-24 w-[62%] rounded-xl" />
+            <div className="flex items-end gap-3">
+              <Skeleton className="size-9.5 rounded-full" />
+              <Skeleton className="h-20 w-[62%] rounded-3xl" />
             </div>
-            <div className="flex items-end justify-end gap-2.5">
-              <Skeleton className="h-20 w-[54%] rounded-xl" />
-              <Skeleton className="size-9 rounded-full" />
+            <div className="flex items-end justify-end gap-3">
+              <Skeleton className="h-16 w-[54%] rounded-3xl" />
+              <Skeleton className="size-9.5 rounded-full" />
             </div>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex h-full min-h-64 flex-col items-center justify-center gap-3 text-center">
-            <span className="section-mark flex size-12 items-center justify-center rounded-lg">
-              <MessagesSquare aria-hidden="true" className="size-5" />
+            <span className="flex size-14 items-center justify-center rounded-3xl bg-primary/15 text-primary shadow-sm">
+              <MessagesSquare aria-hidden="true" className="size-6" />
             </span>
             <div className="space-y-1">
-              <p className="text-sm font-medium">开始第一次协作</p>
-              <p className="max-w-sm text-xs leading-5 text-muted-foreground">
-                直接输入需求会交给项目总设计师，也可以输入 @ 指定一位 Agent。
+              <p className="text-base font-semibold text-foreground">开始第一次协作</p>
+              <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
+                直接输入需求会交给项目总设计师，也可以输入 @ 指定一位 Agent 分工协同。
               </p>
             </div>
           </div>
@@ -141,9 +141,9 @@ export function MessageList({
           variant="secondary"
           size="sm"
           onClick={() => scrollToBottom()}
-          className="absolute right-4 bottom-3 z-10 rounded-full border border-border shadow-md sm:right-6"
+          className="absolute right-4 bottom-4 z-10 rounded-full border border-border/80 bg-card/90 px-4 shadow-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 sm:right-6"
         >
-          <ArrowDown data-icon="inline-start" />
+          <ArrowDown data-icon="inline-start" className="size-3.5 text-primary" />
           回到底部
         </Button>
       )}

@@ -110,6 +110,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-10 12:33 | C-087 | 已完成 | [c0d1cd2](https://github.com/liwe123/Agent-Togterher/commit/c0d1cd2) | LI | BUG | 后端 | 安全修复：safe_eval 增加指数 DoS 防护，限制常量指数 ≤64，拦截 9**9**9 类爆炸输入 | - | backend/app/services | 否 | 否 | - | - |
 | 2026-08-10 12:34 | C-088 | 已完成 | [398904e](https://github.com/liwe123/Agent-Togterher/commit/398904e) | LI | Optimization | 其他、文档 | 文档：重跑生成脚本，将本轮审查修复登记为 C-082~C-087，变更表无 Docs 残留 | - | - | 否 | 否 | - | - |
 | 2026-08-10 12:38 | C-089 | 已完成 | [a3377e6](https://github.com/liwe123/Agent-Togterher/commit/a3377e6) | LI | Optimization | 其他、文档 | 治理优化：清除变更表生成脚本内残留的 Docs 字面量（源侧与输出一致），并重跑生成脚本同步 PRD/xlsx | - | - | 否 | 否 | - | - |
+| 2026-08-10 19:53 | C-090 | 已完成 | [d41840a](https://github.com/liwe123/Agent-Togterher/commit/d41840a) | LI | Optimization | 其他、文档 | 文档：将变更追踪表全部改动内容中文化，消除英文 git 主题 fallback；重跑生成脚本同步 PRD/xlsx | - | generate_change_log.py 新增 _CONTENT_FIXES_BY_SHA（21 行 sha→中文内容） | 否 | 否 | 重跑后改动内容列零英文 | 守则① 改动内容中文化；regen 提交自身行由本 subject 登记保持中文 |
+| 2026-08-14 20:50 | C-091 | 已完成 | [d88bc6a](https://github.com/liwe123/Agent-Togterher/commit/d88bc6a) | LI | Optimization | 文档 | docs: update README to reflect latest architecture and multi-agent pipeline | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---

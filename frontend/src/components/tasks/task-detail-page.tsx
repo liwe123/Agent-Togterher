@@ -66,19 +66,19 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
               <div className="flex min-w-0 flex-col gap-3">
                 <Link
                   href="/tasks"
-                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2 w-fit text-muted-foreground")}
+                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2 w-fit rounded-full text-muted-foreground hover:bg-secondary")}
                 >
                   <ArrowLeft aria-hidden="true" className="size-3.5" />
                   返回任务列表
                 </Link>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-xs text-muted-foreground">
+                    <span className="rounded-full bg-secondary/70 px-2.5 py-0.5 font-mono text-xs font-semibold text-primary">
                       TASK #{taskId}
                     </span>
                     {task ? <TaskStatusBadge status={task.status} /> : null}
                   </div>
-                  <h1 className="mt-1 max-w-[42ch] text-balance break-words text-[1.75rem] font-semibold tracking-[-0.025em]">
+                  <h1 className="mt-1.5 max-w-[42ch] text-balance break-words text-[1.85rem] font-bold tracking-[-0.03em] text-foreground">
                     {task?.title ?? "任务详情"}
                   </h1>
                 </div>
@@ -120,27 +120,27 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
 
 function TaskOverview({ task }: { task: TaskDetail }) {
   return (
-    <section className="console-panel overflow-hidden rounded-xl border border-border bg-card/72">
-      <div className="grid gap-6 p-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(260px,0.8fr)] lg:p-6">
+    <section className="console-panel overflow-hidden rounded-3xl border border-border/70 bg-card/90 shadow-sm">
+      <div className="grid gap-6 p-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(260px,0.8fr)] lg:p-7">
         <div className="min-w-0 space-y-5">
           <div>
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+            <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               任务描述
             </p>
-            <p className="whitespace-pre-wrap text-sm leading-6 text-foreground/90">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
               {task.description || "暂无任务描述"}
             </p>
           </div>
           <div>
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">
+            <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               任务结果
             </p>
             <div
               className={cn(
-                "rounded-lg border px-4 py-3 text-sm leading-6",
+                "rounded-2xl border px-4.5 py-3.5 text-sm leading-relaxed shadow-inner",
                 task.status === "failed"
-                  ? "border-destructive/30 bg-destructive/8 text-destructive"
-                  : "border-border bg-background/45 text-foreground/90",
+                  ? "border-destructive/30 bg-destructive/10 text-destructive"
+                  : "border-border/70 bg-secondary/40 text-foreground",
               )}
             >
               <p className="max-h-52 overflow-y-auto whitespace-pre-wrap scrollbar-thin">
@@ -150,31 +150,31 @@ function TaskOverview({ task }: { task: TaskDetail }) {
           </div>
         </div>
 
-        <dl className="grid content-start gap-4 rounded-lg border border-border bg-background/35 p-4 sm:grid-cols-2 lg:grid-cols-1">
+        <dl className="grid content-start gap-4 rounded-2xl border border-border/70 bg-secondary/30 p-5 sm:grid-cols-2 lg:grid-cols-1">
           <OverviewItem icon={UserRound} label="负责 Agent">
             <div className="flex min-w-0 items-center gap-2.5">
-              <Avatar size="sm">
-                <AvatarFallback>
+              <Avatar size="sm" className="rounded-full ring-1 ring-border">
+                <AvatarFallback className="rounded-full bg-secondary text-foreground text-xs font-semibold">
                   {task.assigned_agent?.avatar ??
                     task.assigned_agent?.name.slice(0, 1) ??
                     "—"}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <p className="truncate text-xs font-medium">
+                <p className="truncate text-xs font-medium text-foreground">
                   {task.assigned_agent?.name ?? "未分配"}
                 </p>
-                <p className="truncate text-[11px] text-muted-foreground">
+                <p className="truncate text-[10px] text-muted-foreground">
                   {task.assigned_agent?.role ?? "—"}
                 </p>
               </div>
             </div>
           </OverviewItem>
           <OverviewItem icon={CalendarClock} label="创建时间">
-            <p className="font-mono text-xs">{formatDateTime(task.created_at)}</p>
+            <p className="font-mono text-xs text-foreground/90">{formatDateTime(task.created_at)}</p>
           </OverviewItem>
           <OverviewItem icon={RefreshCw} label="更新时间">
-            <p className="font-mono text-xs">{formatDateTime(task.updated_at)}</p>
+            <p className="font-mono text-xs text-foreground/90">{formatDateTime(task.updated_at)}</p>
           </OverviewItem>
         </dl>
       </div>
@@ -193,11 +193,11 @@ function OverviewItem({
 }) {
   return (
     <div className="flex gap-3">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-muted text-muted-foreground">
+      <span className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-secondary text-primary">
         <Icon aria-hidden="true" className="size-3.5" />
       </span>
       <div className="min-w-0">
-        <dt className="mb-1 text-[11px] text-muted-foreground">{label}</dt>
+        <dt className="mb-1 text-[11px] font-medium text-muted-foreground">{label}</dt>
         <dd>{children}</dd>
       </div>
     </div>
@@ -213,17 +213,17 @@ function TaskMetrics({ task }: { task: TaskDetail }) {
   ]
 
   return (
-    <section aria-label="任务执行指标" className="console-panel grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-card/65 lg:grid-cols-4">
+    <section aria-label="任务执行指标" className="console-panel grid grid-cols-2 overflow-hidden rounded-3xl border border-border/70 bg-card/85 shadow-sm lg:grid-cols-4">
       {metrics.map((metric) => {
         const Icon = metric.icon
         return (
-          <div key={metric.label} className="flex items-center gap-3 border-r border-b border-border/75 p-4 lg:border-b-0">
-            <span className="section-mark flex size-9 shrink-0 items-center justify-center rounded-md">
-              <Icon aria-hidden="true" className="size-4" />
+          <div key={metric.label} className="flex items-center gap-3.5 border-r border-b border-border/60 p-5 lg:border-b-0 last:border-r-0">
+            <span className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary shadow-sm">
+              <Icon aria-hidden="true" className="size-4.5" />
             </span>
             <div className="min-w-0">
-              <span className="block text-xs text-muted-foreground">{metric.label}</span>
-              <p className="mt-0.5 truncate font-mono text-base font-semibold sm:text-lg">
+              <span className="block text-xs font-medium text-muted-foreground">{metric.label}</span>
+              <p className="mt-0.5 truncate font-mono text-base font-bold text-foreground sm:text-lg">
                 {metric.value}
               </p>
             </div>
@@ -237,20 +237,20 @@ function TaskMetrics({ task }: { task: TaskDetail }) {
 function ExecutionTracePanel({ task }: { task: TaskDetail }) {
   const trace = task.execution_trace
   return (
-    <section className="console-panel overflow-hidden rounded-xl border border-border bg-card/72">
+    <section className="console-panel overflow-hidden rounded-3xl border border-border/70 bg-card/90 shadow-sm">
       <SectionHeader
         icon={Activity}
         title="执行轨迹"
         description={task.trace_summary ?? "结构化上下文、模型调用链和阶段摘要"}
       />
-      <div className="grid gap-4 p-4 sm:p-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+      <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div className="min-w-0 space-y-3">
           <TraceSummaryCard traceSummary={task.trace_summary} contextSnapshot={task.context_snapshot} />
         </div>
         <div className="min-w-0">
-          <div className="rounded-xl border border-border bg-background/55 p-3">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">轨迹事件</p>
-            <div className="max-h-[26rem] space-y-2 overflow-auto pr-1 scrollbar-thin">
+          <div className="rounded-2xl border border-border/70 bg-secondary/30 p-4">
+            <p className="mb-2.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">轨迹事件</p>
+            <div className="max-h-[26rem] space-y-2.5 overflow-auto pr-1 scrollbar-thin">
               {trace.length === 0 ? (
                 <p className="py-8 text-center text-xs text-muted-foreground">当前任务尚未产生轨迹事件。</p>
               ) : (
@@ -272,14 +272,14 @@ function TraceSummaryCard({
   contextSnapshot: string | null
 }) {
   return (
-    <div className="space-y-3">
-      <div className="rounded-xl border border-border bg-background/55 p-4">
-        <p className="mb-2 text-xs font-medium text-muted-foreground">轨迹摘要</p>
-        <pre className="max-h-56 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-5 text-foreground/90 scrollbar-thin">{traceSummary ?? "暂无轨迹摘要。"}</pre>
+    <div className="space-y-3.5">
+      <div className="rounded-2xl border border-border/70 bg-secondary/30 p-4.5">
+        <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">轨迹摘要</p>
+        <pre className="max-h-56 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground scrollbar-thin">{traceSummary ?? "暂无轨迹摘要。"}</pre>
       </div>
-      <div className="rounded-xl border border-border bg-background/55 p-4">
-        <p className="mb-2 text-xs font-medium text-muted-foreground">模型上下文快照</p>
-        <pre className="max-h-[22rem] overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-5 text-foreground/90 scrollbar-thin">{contextSnapshot ?? "暂无上下文快照。"}</pre>
+      <div className="rounded-2xl border border-border/70 bg-secondary/30 p-4.5">
+        <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">模型上下文快照</p>
+        <pre className="max-h-[22rem] overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground scrollbar-thin">{contextSnapshot ?? "暂无上下文快照。"}</pre>
       </div>
     </div>
   )
@@ -287,30 +287,30 @@ function TraceSummaryCard({
 
 function TraceEventRow({ event }: { event: TaskTraceEvent }) {
   return (
-    <article className="rounded-lg border border-border/80 bg-card/80 p-3 shadow-sm">
+    <article className="rounded-2xl border border-border/70 bg-card/90 p-3.5 shadow-sm transition-all hover:border-primary/30">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{event.title}</p>
+          <p className="truncate text-sm font-semibold text-foreground">{event.title}</p>
           <p className="mt-0.5 text-[11px] text-muted-foreground">{event.stage} · {event.actor ?? "系统"} · {event.type}</p>
         </div>
-        <Badge variant="outline" className="shrink-0">{event.status ?? "trace"}</Badge>
+        <Badge variant="outline" className="shrink-0 rounded-full text-[10px]">{event.status ?? "trace"}</Badge>
       </div>
-      <p className="mt-2 text-xs leading-5 text-foreground/85">{event.summary}</p>
-      {event.detail ? <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-md border border-border/70 bg-background/60 p-2 font-mono text-[11px] leading-5 scrollbar-thin">{event.detail}</pre> : null}
+      <p className="mt-2 text-xs leading-relaxed text-foreground/90">{event.summary}</p>
+      {event.detail ? <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-xl border border-border/60 bg-secondary/40 p-2.5 font-mono text-[11px] leading-relaxed scrollbar-thin">{event.detail}</pre> : null}
     </article>
   )
 }
 
 function OriginalInput({ task }: { task: TaskDetail }) {
   return (
-    <section className="console-panel overflow-hidden rounded-xl border border-border bg-card/72">
+    <section className="console-panel overflow-hidden rounded-3xl border border-border/70 bg-card/90 shadow-sm">
       <SectionHeader
         icon={FileInput}
         title="原始输入"
         description={task.input_message_id ? `消息 #${task.input_message_id}` : "未关联输入消息"}
       />
-      <div className="p-4 sm:p-5">
-        <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-lg border border-border bg-background/55 p-4 font-sans text-sm leading-6 text-foreground/90 scrollbar-thin">
+      <div className="p-5 sm:p-6">
+        <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded-2xl border border-border/70 bg-secondary/35 p-4.5 font-sans text-sm leading-relaxed text-foreground scrollbar-thin">
           {task.original_input ?? "暂无原始输入。"}
         </pre>
       </div>
@@ -320,7 +320,7 @@ function OriginalInput({ task }: { task: TaskDetail }) {
 
 function TaskSteps({ steps }: { steps: TaskStep[] }) {
   return (
-    <section className="console-panel overflow-hidden rounded-xl border border-border bg-card/80 shadow-md">
+    <section className="console-panel overflow-hidden rounded-3xl border border-border/70 bg-card/90 shadow-sm">
       <SectionHeader
         icon={ListChecks}
         title="Task Steps Pipeline"
@@ -329,7 +329,7 @@ function TaskSteps({ steps }: { steps: TaskStep[] }) {
       {steps.length === 0 ? (
         <EmptySection icon={ListChecks} text="任务开始执行后，步骤流程图会实时推送到这里。" />
       ) : (
-        <div className="p-4 sm:p-6 space-y-6">
+        <div className="p-5 sm:p-6 space-y-6">
           {steps.map((step, index) => (
             <article key={step.id} className="relative flex gap-4 lg:gap-6">
               {/* Stepper Guide Line & Node Badge */}
@@ -340,28 +340,28 @@ function TaskSteps({ steps }: { steps: TaskStep[] }) {
                     step.status === "failed"
                       ? "border-destructive/60 bg-destructive/15 text-destructive shadow-[0_0_10px_var(--destructive)]"
                       : step.status === "completed"
-                        ? "border-primary/50 bg-primary/15 text-primary shadow-[0_0_10px_color-mix(in_oklch,var(--primary)_25%,transparent)]"
+                        ? "border-primary/50 bg-primary/20 text-primary shadow-[0_0_10px_color-mix(in_oklch,var(--primary)_25%,transparent)]"
                         : step.status === "running"
                           ? "border-[var(--status-running)] bg-[var(--status-running)]/20 text-foreground animate-pulse"
-                          : "border-border bg-muted/60 text-muted-foreground",
+                          : "border-border bg-secondary text-muted-foreground",
                   )}
                 >
                   {index + 1}
                 </span>
                 {index < steps.length - 1 ? (
-                  <span className="my-1.5 h-full w-0.5 min-h-12 bg-border/70 rounded-full" />
+                  <span className="my-1.5 h-full w-0.5 min-h-12 bg-border/60 rounded-full" />
                 ) : null}
               </div>
 
               {/* Step Main Card */}
-              <div className="min-w-0 flex-1 rounded-xl border border-border/80 bg-background/50 p-4 shadow-sm transition-colors hover:border-primary/30">
-                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/60 pb-3">
+              <div className="min-w-0 flex-1 rounded-2xl border border-border/70 bg-secondary/30 p-4.5 shadow-sm transition-all hover:border-primary/30">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/50 pb-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <h3 className="truncate text-sm font-semibold">{stepLabel(step.step_name)}</h3>
+                      <h3 className="truncate text-sm font-semibold text-foreground">{stepLabel(step.step_name)}</h3>
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-                      <span className="flex items-center gap-1.5 font-medium text-foreground/80">
+                      <span className="flex items-center gap-1.5 font-medium text-foreground">
                         <Bot aria-hidden="true" className="size-3.5 text-primary" />
                         {step.agent?.name ?? "未记录 Agent"}
                       </span>
@@ -395,13 +395,13 @@ function TaskSteps({ steps }: { steps: TaskStep[] }) {
 function StepPayload({ label, value, isError = false }: { label: string; value: string | null; isError?: boolean }) {
   return (
     <div className="min-w-0">
-      <p className="mb-1.5 text-[11px] font-semibold text-muted-foreground">{label}</p>
+      <p className="mb-1.5 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{label}</p>
       <pre
         className={cn(
-          "max-h-64 min-h-24 overflow-auto whitespace-pre-wrap rounded-xl border p-3.5 font-mono text-[11px] leading-5 scrollbar-thin shadow-inner",
+          "max-h-64 min-h-24 overflow-auto whitespace-pre-wrap rounded-2xl border p-3.5 font-mono text-[11px] leading-relaxed scrollbar-thin shadow-inner",
           isError
             ? "border-destructive/35 bg-destructive/10 text-destructive"
-            : "border-border/70 bg-card/70 text-foreground/90",
+            : "border-border/60 bg-card/80 text-foreground",
         )}
       >
         {value ?? "暂无内容"}
@@ -412,7 +412,7 @@ function StepPayload({ label, value, isError = false }: { label: string; value: 
 
 function ModelCallLogs({ calls }: { calls: ModelCall[] }) {
   return (
-    <section className="console-panel overflow-hidden rounded-xl border border-border bg-card/80 shadow-md">
+    <section className="console-panel overflow-hidden rounded-3xl border border-border/70 bg-card/90 shadow-sm">
       <SectionHeader
         icon={Activity}
         title="模型调用 Trace 日志"
@@ -421,7 +421,7 @@ function ModelCallLogs({ calls }: { calls: ModelCall[] }) {
       {calls.length === 0 ? (
         <EmptySection icon={ServerCog} text="模型调用完成后，Trace 日志会实时出现在这里。" />
       ) : (
-        <div className="divide-y divide-border/70">
+        <div className="divide-y divide-border/60">
           {calls.map((call, index) => (
             <ModelCallRow key={call.id} call={call} index={index} />
           ))}
@@ -433,23 +433,23 @@ function ModelCallLogs({ calls }: { calls: ModelCall[] }) {
 
 function ModelCallRow({ call, index }: { call: ModelCall; index: number }) {
   return (
-    <article className="p-4 sm:p-5 hover:bg-muted/15 transition-colors">
+    <article className="p-5 hover:bg-secondary/30 transition-colors">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary/80 font-mono text-xs font-bold text-foreground">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-secondary font-mono text-xs font-bold text-primary">
             #{index + 1}
           </span>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
-              <h3 className="truncate font-mono text-sm font-semibold">{call.model_name}</h3>
-              <Badge variant="outline" className="border-primary/30 text-primary">{call.provider}</Badge>
+              <h3 className="truncate font-mono text-sm font-semibold text-foreground">{call.model_name}</h3>
+              <Badge variant="outline" className="rounded-full border-primary/30 bg-primary/10 text-primary text-[10px]">{call.provider}</Badge>
             </div>
             <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-              <span className="flex items-center gap-1.5">
-                <Bot aria-hidden="true" className="size-3 text-primary" />
+              <span className="flex items-center gap-1.5 text-foreground">
+                <Bot aria-hidden="true" className="size-3.5 text-primary" />
                 {call.agent?.name ?? "未记录 Agent"}
               </span>
-              <span className="font-mono text-foreground/70">CALL #{call.id}</span>
+              <span className="font-mono text-muted-foreground">CALL #{call.id}</span>
               <span className="font-mono">{formatDateTime(call.created_at)}</span>
             </p>
           </div>
@@ -457,7 +457,7 @@ function ModelCallRow({ call, index }: { call: ModelCall; index: number }) {
         <TaskStatusBadge status={call.status} />
       </div>
 
-      <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border/80 bg-border/80 sm:grid-cols-3 xl:grid-cols-6 shadow-sm">
+      <dl className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-border/70 bg-border/70 sm:grid-cols-3 xl:grid-cols-6 shadow-sm">
         <CallMetric label="Prompt Token" value={formatTokens(call.prompt_tokens)} />
         <CallMetric label="Completion Token" value={formatTokens(call.completion_tokens)} />
         <CallMetric label="Total Token" value={formatTokens(call.total_tokens)} />
@@ -467,7 +467,7 @@ function ModelCallRow({ call, index }: { call: ModelCall; index: number }) {
       </dl>
 
       {call.error_message ? (
-        <div className="mt-3 flex gap-2.5 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs leading-5 text-destructive">
+        <div className="mt-3.5 flex gap-2.5 rounded-2xl border border-destructive/40 bg-destructive/10 p-3.5 text-xs leading-relaxed text-destructive shadow-sm">
           <AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <div className="min-w-0">
             <p className="font-semibold">错误信息</p>
@@ -481,9 +481,9 @@ function ModelCallRow({ call, index }: { call: ModelCall; index: number }) {
 
 function CallMetric({ label, value, highlight = false }: { label: string; value: string; highlight?: boolean }) {
   return (
-    <div className="bg-card/90 px-3 py-2.5">
-      <dt className="text-[10px] font-medium text-muted-foreground">{label}</dt>
-      <dd className={cn("mt-1 truncate font-mono text-xs font-semibold", highlight ? "text-orange-400" : "text-foreground")}>
+    <div className="bg-card/95 px-3.5 py-3">
+      <dt className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</dt>
+      <dd className={cn("mt-1 truncate font-mono text-xs font-semibold", highlight ? "text-amber-400" : "text-foreground")}>
         {value}
       </dd>
     </div>
@@ -500,13 +500,13 @@ function SectionHeader({
   description: string
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-border px-4 py-4 sm:px-5">
+    <div className="flex items-center justify-between gap-4 border-b border-border/60 px-5 py-4 sm:px-6 bg-card/40">
       <div className="flex min-w-0 items-center gap-3">
-        <span className="section-mark flex size-9 shrink-0 items-center justify-center rounded-md">
-          <Icon aria-hidden="true" className="size-4" />
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+          <Icon aria-hidden="true" className="size-4.5" />
         </span>
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold sm:text-base">{title}</h2>
+          <h2 className="text-sm font-semibold sm:text-base text-foreground">{title}</h2>
           <p className="truncate text-[11px] text-muted-foreground sm:text-xs">{description}</p>
         </div>
       </div>
@@ -518,8 +518,8 @@ function SectionHeader({
 function EmptySection({ icon: Icon, text }: { icon: typeof ListChecks; text: string }) {
   return (
     <div className="flex min-h-44 flex-col items-center justify-center gap-3 p-8 text-center">
-      <span className="flex size-10 items-center justify-center rounded-xl bg-muted text-muted-foreground">
-        <Icon aria-hidden="true" className="size-4" />
+      <span className="flex size-11 items-center justify-center rounded-2xl bg-secondary text-muted-foreground">
+        <Icon aria-hidden="true" className="size-5" />
       </span>
       <p className="text-xs text-muted-foreground">{text}</p>
     </div>
@@ -528,10 +528,10 @@ function EmptySection({ icon: Icon, text }: { icon: typeof ListChecks; text: str
 
 function RealtimeError({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-destructive/30 bg-destructive/8 px-4 py-3 text-sm text-destructive">
+    <div className="flex items-center gap-2 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive shadow-sm">
       <AlertCircle aria-hidden="true" className="size-4 shrink-0" />
       <p className="min-w-0 flex-1 truncate">{error}</p>
-      <Button type="button" size="sm" variant="ghost" onClick={onRetry}>
+      <Button type="button" size="sm" variant="ghost" className="rounded-full" onClick={onRetry}>
         重试
       </Button>
     </div>
@@ -541,39 +541,39 @@ function RealtimeError({ error, onRetry }: { error: string; onRetry: () => void 
 function TaskDetailSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-card/72 p-6">
-        <Skeleton className="h-4 w-24" />
-        <Skeleton className="mt-3 h-5 w-full max-w-2xl" />
-        <Skeleton className="mt-2 h-5 w-full max-w-xl" />
-        <Skeleton className="mt-6 h-28 w-full" />
+      <div className="rounded-3xl border border-border/70 bg-card/85 p-6">
+        <Skeleton className="h-4 w-24 rounded-full" />
+        <Skeleton className="mt-3 h-5 w-full max-w-2xl rounded-full" />
+        <Skeleton className="mt-2 h-5 w-full max-w-xl rounded-full" />
+        <Skeleton className="mt-6 h-28 w-full rounded-2xl" />
       </div>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton key={index} className="h-24 rounded-xl" />
+          <Skeleton key={index} className="h-24 rounded-3xl" />
         ))}
       </div>
-      <Skeleton className="h-56 rounded-xl" />
-      <Skeleton className="h-80 rounded-xl" />
+      <Skeleton className="h-56 rounded-3xl" />
+      <Skeleton className="h-80 rounded-3xl" />
     </div>
   )
 }
 
 function TaskDetailError({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
-    <section className="flex min-h-[55vh] items-center justify-center rounded-xl border border-destructive/35 bg-card/80 p-6">
+    <section className="flex min-h-[55vh] items-center justify-center rounded-3xl border border-destructive/35 bg-card/85 p-6 shadow-sm">
       <div className="flex max-w-md flex-col items-center gap-4 text-center">
-        <span className="flex size-12 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+        <span className="flex size-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
           <AlertCircle aria-hidden="true" className="size-5" />
         </span>
         <div className="space-y-1.5">
-          <h2 className="text-base font-semibold">无法打开任务详情</h2>
+          <h2 className="text-base font-semibold text-foreground">无法打开任务详情</h2>
           <p className="text-sm leading-6 text-muted-foreground">{error}</p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/tasks" className={buttonVariants({ variant: "outline" })}>
+        <div className="flex gap-2.5">
+          <Link href="/tasks" className={cn(buttonVariants({ variant: "outline" }), "rounded-full")}>
             返回列表
           </Link>
-          <Button type="button" onClick={onRetry}>重新加载</Button>
+          <Button type="button" className="rounded-full" onClick={onRetry}>重新加载</Button>
         </div>
       </div>
     </section>

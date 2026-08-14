@@ -60,7 +60,7 @@ export function ContactsPage() {
         <div className="mx-auto flex w-full max-w-5xl flex-col gap-7">
           <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-[-0.03em] md:text-[1.75rem]">通讯录</h1>
+              <h1 className="text-3xl font-bold tracking-[-0.03em] md:text-[1.85rem] text-foreground">通讯录</h1>
               <p className="mt-1 text-sm text-muted-foreground">工作区 Agent 实名目录与服务归属</p>
             </div>
             <div className="flex items-center gap-3">
@@ -71,9 +71,9 @@ export function ContactsPage() {
             </div>
           </header>
 
-          {/* Search bar */}
+          {/* Pixel M3 Pill Search Bar */}
           <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search className="absolute left-4 top-1/2 size-4.5 -translate-y-1/2 text-muted-foreground" />
             <input
               type="search"
               value={searchQuery}
@@ -83,48 +83,48 @@ export function ContactsPage() {
               }}
               aria-label="搜索 Agent 姓名、角色或职责"
               placeholder="搜索 Agent 姓名或角色职责…"
-              className="h-11 w-full rounded-xl border border-input bg-card/80 pl-10 pr-4 text-sm shadow-sm transition-colors focus:border-ring focus:outline-none focus:ring-2 focus:ring-ring/20"
+              className="m3-pill-input h-12 w-full pl-11 pr-5 text-sm shadow-sm placeholder:text-muted-foreground/70 focus:outline-none"
             />
           </div>
 
           {isLoading ? (
             <div className="flex flex-col gap-5">
               {Array.from({ length: 6 }, (_, index) => (
-                <div key={index} className="flex items-center gap-4">
-                  <Skeleton className="size-14 rounded-full" />
+                <div key={index} className="flex items-center gap-4 rounded-2xl bg-card/60 p-4">
+                  <Skeleton className="size-14 rounded-2xl" />
                   <div className="flex flex-1 flex-col gap-2">
-                    <Skeleton className="h-4 w-36" />
-                    <Skeleton className="h-3 w-64 max-w-full" />
+                    <Skeleton className="h-4 w-36 rounded-full" />
+                    <Skeleton className="h-3 w-64 max-w-full rounded-full" />
                   </div>
                 </div>
               ))}
             </div>
           ) : error ? (
-            <div className="flex min-h-64 flex-col items-center justify-center gap-4 rounded-xl border border-destructive/30 bg-card p-6 text-center">
+            <div className="flex min-h-64 flex-col items-center justify-center gap-4 rounded-3xl border border-destructive/30 bg-card p-6 text-center shadow-sm">
               <AlertCircle aria-hidden="true" className="size-6 text-destructive" />
               <div>
-                <h2 className="font-semibold">无法加载通讯录</h2>
+                <h2 className="font-semibold text-foreground">无法加载通讯录</h2>
                 <p className="mt-1 text-sm text-muted-foreground">{error}</p>
               </div>
-              <Button variant="outline" onClick={retry}>重新连接</Button>
+              <Button variant="outline" className="rounded-full" onClick={retry}>重新连接</Button>
             </div>
           ) : filteredCount === 0 ? (
-            <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-border bg-card/75 p-6 text-center">
+            <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-3xl border border-border/70 bg-card/80 p-6 text-center shadow-sm">
               <Search aria-hidden="true" className="size-6 text-muted-foreground" />
               <div>
-                <h2 className="font-semibold">未找到匹配的 Agent</h2>
+                <h2 className="font-semibold text-foreground">未找到匹配的 Agent</h2>
                 <p className="mt-1 text-sm text-muted-foreground">请尝试姓名、角色或职责关键词。</p>
               </div>
-              <Button variant="outline" onClick={() => setSearchQuery("")}>清空搜索</Button>
+              <Button variant="outline" className="rounded-full" onClick={() => setSearchQuery("")}>清空搜索</Button>
             </div>
           ) : (
-            <div className="overflow-hidden rounded-2xl border border-border bg-card/75 p-4 shadow-md sm:p-6">
+            <div className="overflow-hidden rounded-3xl border border-border/70 bg-card/90 p-5 shadow-sm sm:p-7">
               {primaryAgents.length > 0 ? (
-                <ContactGroup label="TRAE Work CN" agents={primaryAgents} startIndex={0} />
+                <ContactGroup label="TRAE Work 核心架构组" agents={primaryAgents} startIndex={0} />
               ) : null}
               {serviceAgents.length > 0 ? (
-                <div className={primaryAgents.length > 0 ? "mt-8 border-t border-border pt-8" : undefined}>
-                  <ContactGroup label="Sylway 服务" agents={serviceAgents} startIndex={5} />
+                <div className={primaryAgents.length > 0 ? "mt-8 border-t border-border/60 pt-8" : undefined}>
+                  <ContactGroup label="Sylway 扩展服务组" agents={serviceAgents} startIndex={5} />
                 </div>
               ) : null}
             </div>
@@ -143,39 +143,39 @@ function ContactGroup({ label, agents, startIndex }: { label: string; agents: Ag
           <ContactRound aria-hidden="true" className="size-4 text-primary" />
           {label}
         </h2>
-        <span className="font-mono text-xs text-muted-foreground">{agents.length} 人</span>
+        <span className="rounded-full bg-secondary/60 px-2.5 py-0.5 font-mono text-xs text-muted-foreground">{agents.length} 人</span>
       </div>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3.5">
         {agents.map((agent, localIndex) => (
           <article
             key={agent.id}
-            className="group flex min-w-0 flex-col gap-3 rounded-xl border border-border/60 bg-muted/20 p-3.5 transition-all hover:border-primary/40 hover:bg-muted/50 sm:flex-row sm:items-center sm:gap-4"
+            className="group flex min-w-0 flex-col gap-3 rounded-2xl border border-border/60 bg-secondary/30 p-4 transition-all duration-200 hover:border-primary/40 hover:bg-secondary/60 active:scale-[0.99] sm:flex-row sm:items-center sm:gap-4"
           >
             <AgentPortrait agent={agent} index={startIndex + localIndex} size="sm" />
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <h3 className="truncate text-base font-bold text-foreground">{agent.name}</h3>
-                <Badge variant="outline" className="border-primary/30 text-primary text-[11px]">
+                <Badge variant="outline" className="rounded-full border-primary/30 bg-primary/8 text-primary text-[11px]">
                   {roleLabels[agent.role] ?? agent.role}
                 </Badge>
                 {agent.role === "project_architect" || agent.role === "operations_engineer" ? (
-                  <Badge className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 md:text-emerald-300 text-[10px]" variant="outline">
+                  <Badge className="rounded-full border-emerald-500/30 bg-emerald-500/10 text-emerald-400 text-[10px]" variant="outline">
                     管理员
                   </Badge>
                 ) : null}
               </div>
-              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                 {roleDescriptions[agent.role] ?? agent.description}
               </p>
-              <div className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
+              <div className="mt-2.5 flex items-center gap-2 text-[11px] text-muted-foreground">
                 <Cpu className="size-3 text-muted-foreground" />
-                <span className="font-mono">{agent.model_name}</span>
+                <span className="font-mono text-primary/80">{agent.model_name}</span>
               </div>
             </div>
 
             <Link
               href={`/chats?mention=${encodeURIComponent(agent.name)}`}
-              className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "shrink-0 group-hover:bg-primary group-hover:text-primary-foreground transition-colors")}
+              className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "shrink-0 rounded-full group-hover:bg-primary group-hover:text-primary-foreground shadow-sm transition-all")}
             >
               <MessageSquare className="mr-1.5 size-3.5" />
               发起对话

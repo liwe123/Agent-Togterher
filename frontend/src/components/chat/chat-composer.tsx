@@ -88,7 +88,7 @@ export function ChatComposer({
       [...agents].sort(
         (left, right) =>
           (roleOrder[left.role] ?? Number.MAX_SAFE_INTEGER) -
-            (roleOrder[right.role] ?? Number.MAX_SAFE_INTEGER) ||
+          (roleOrder[right.role] ?? Number.MAX_SAFE_INTEGER) ||
           left.name.localeCompare(right.name, "zh-CN"),
       ),
     [agents],
@@ -111,7 +111,6 @@ export function ChatComposer({
 
   function selectMention(agent: Agent) {
     if (!mention) {
-      // If mention state is not active, append @AgentName to current text
       setValue((prev) => `${prev.trim()} @${agent.name} `.trimStart())
       textareaRef.current?.focus()
       return
@@ -191,18 +190,18 @@ export function ChatComposer({
   }
 
   return (
-    <div className="border-t border-border bg-card/85 backdrop-blur-md px-3 py-3 md:px-5 md:py-4">
-      <div className="relative mx-auto w-full max-w-4xl space-y-2.5">
+    <div className="border-t border-border/70 bg-card/90 backdrop-blur-xl px-4 py-3 md:px-6 md:py-4">
+      <div className="relative mx-auto w-full max-w-4xl space-y-3">
         {mobileActionsOpen ? (
-          <div className="space-y-3 rounded-xl border border-border bg-background/95 p-3 shadow-lg md:hidden">
+          <div className="space-y-3 rounded-3xl border border-border/80 bg-card p-4 shadow-xl md:hidden">
             <div>
-              <p className="mb-2 text-xs font-semibold">快捷指令</p>
+              <p className="mb-2 text-xs font-semibold text-foreground">快捷指令</p>
               <div className="flex flex-wrap gap-2">
                 {promptTemplates.map((template) => (
                   <button
                     key={template.label}
                     type="button"
-                    className="min-h-11 rounded-lg border border-border px-3 text-xs"
+                    className="min-h-10 rounded-full border border-border/80 bg-secondary/60 px-3.5 text-xs text-foreground font-medium"
                     onClick={() => {
                       appendTemplate(template.text)
                       setMobileActionsOpen(false)
@@ -214,13 +213,13 @@ export function ChatComposer({
               </div>
             </div>
             <div>
-              <p className="mb-2 text-xs font-semibold">选择 Agent</p>
+              <p className="mb-2 text-xs font-semibold text-foreground">选择 Agent</p>
               <div className="flex flex-wrap gap-2">
                 {orderedAgents.map((agent) => (
                   <button
                     key={agent.id}
                     type="button"
-                    className="min-h-11 rounded-lg border border-border px-3 text-xs"
+                    className="min-h-10 rounded-full border border-border/80 bg-secondary/60 px-3.5 text-xs text-foreground font-medium"
                     onClick={() => {
                       selectMention(agent)
                       setMobileActionsOpen(false)
@@ -235,29 +234,29 @@ export function ChatComposer({
         ) : null}
 
         {/* Quick prompt templates & agent mention chips */}
-        <div className="hidden items-center justify-between gap-2 overflow-x-auto scrollbar-thin pb-1 md:flex">
+        <div className="hidden items-center justify-between gap-2 overflow-x-auto scrollbar-thin pb-0.5 md:flex">
           <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Sparkles className="size-3.5 text-primary" />
-            <span className="font-medium">快捷指令：</span>
+            <span className="font-medium text-foreground/80">快捷指令：</span>
             {promptTemplates.map((tmpl) => (
               <button
                 key={tmpl.label}
                 type="button"
                 onClick={() => appendTemplate(tmpl.text)}
-                className="rounded-full border border-border/80 bg-background/60 px-2.5 py-1 text-[11px] font-medium text-foreground/80 hover:border-primary/50 hover:bg-primary/10 hover:text-primary transition-all"
+                className="rounded-full border border-border/70 bg-secondary/50 px-3 py-1 text-[11px] font-medium text-foreground/90 hover:border-primary/50 hover:bg-primary/15 hover:text-primary transition-all active:scale-95"
               >
                 {tmpl.label}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             {orderedAgents.map((agent) => (
               <button
                 key={agent.id}
                 type="button"
                 title={`@${agent.name}`}
                 onClick={() => selectMention(agent)}
-                className="flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] text-muted-foreground hover:border-primary/40 hover:text-foreground transition-all"
+                className="flex items-center gap-1 rounded-full border border-border/60 bg-secondary/40 px-2.5 py-0.5 text-[11px] text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-foreground transition-all active:scale-95"
               >
                 <span>{agent.avatar ?? "🤖"}</span>
                 <span>@{agent.name.slice(0, 4)}</span>
@@ -274,10 +273,11 @@ export function ChatComposer({
           />
         )}
 
-        <div className="flex items-end gap-1.5 rounded-[1.5rem] border border-input bg-background/80 p-1.5 transition-colors focus-within:border-ring focus-within:ring-2 focus-within:ring-ring/20 md:block md:rounded-xl md:p-3 shadow-inner">
+        {/* Pixel M3 Pill Composer Container */}
+        <div className="flex items-end gap-2 rounded-3xl border border-border/80 bg-secondary/40 p-2 transition-all focus-within:border-primary focus-within:bg-card/90 focus-within:ring-2 focus-within:ring-primary/20 md:block md:rounded-3xl md:p-3.5 shadow-sm">
           <button
             type="button"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full text-primary md:hidden"
+            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary md:hidden"
             aria-label={mobileActionsOpen ? "关闭快捷操作" : "打开快捷操作"}
             aria-expanded={mobileActionsOpen}
             onClick={() => setMobileActionsOpen((open) => !open)}
@@ -306,20 +306,20 @@ export function ChatComposer({
               updateMention(event.currentTarget.value, event.currentTarget.selectionStart)
             }}
             onKeyDown={handleKeyDown}
-            className="min-h-10 min-w-0 flex-1 max-h-36 border-0 bg-transparent px-1.5 py-2 text-base shadow-none focus-visible:border-transparent focus-visible:ring-0 md:min-h-20 md:w-full md:px-2 md:py-1 md:text-sm"
+            className="min-h-10 min-w-0 flex-1 max-h-36 border-0 bg-transparent px-2 py-2 text-base shadow-none focus-visible:border-transparent focus-visible:ring-0 md:min-h-20 md:w-full md:px-2 md:py-1 md:text-sm"
           />
 
-          <div className="flex shrink-0 items-center gap-3 md:w-full md:justify-between md:pt-2 md:border-t md:border-border/60">
+          <div className="flex shrink-0 items-center gap-3 md:w-full md:justify-between md:pt-2.5 md:border-t md:border-border/50">
             <p className="hidden items-center gap-1.5 px-2 text-[11px] text-muted-foreground md:flex">
-              <CornerDownLeft aria-hidden="true" className="size-3" />
-              Enter 发送 · Shift + Enter 换行 · 输入 @ 选择 Agent
+              <CornerDownLeft aria-hidden="true" className="size-3 text-primary" />
+              Enter 发送 · Shift + Enter 换行 · 输入 @ 召唤 Agent
             </p>
             <div className="ml-auto flex items-center gap-2">
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="hidden md:inline-flex"
+                className="hidden size-9 rounded-full md:inline-flex"
                 disabled={!value || isSending}
                 onClick={clearInput}
                 aria-label="清空输入框"
@@ -330,12 +330,12 @@ export function ChatComposer({
               <Button
                 type="button"
                 size="lg"
-                className="size-10 rounded-full px-0 md:h-9 md:w-auto md:rounded-lg md:px-4 shadow-[0_0_12px_color-mix(in_oklch,var(--primary)_25%,transparent)]"
+                className="size-10 rounded-full px-0 md:h-9.5 md:w-auto md:px-5 shadow-md transition-all active:scale-95"
                 disabled={!value.trim() || disabled || isSending}
                 onClick={() => void submitMessage()}
               >
                 <Send data-icon="inline-start" className="size-4" />
-                <span className="hidden md:inline font-semibold">{isSending ? "发送中…" : "发送消息"}</span>
+                <span className="hidden md:inline font-semibold">{isSending ? "发送中…" : "发送任务"}</span>
               </Button>
             </div>
           </div>

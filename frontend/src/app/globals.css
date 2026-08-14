@@ -7,8 +7,8 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "Segoe UI Variable", "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
-  --font-mono: "Cascadia Code", Consolas, monospace;
+  --font-sans: "Google Sans", "Plus Jakarta Sans", "Inter", "Segoe UI Variable", -apple-system, BlinkMacSystemFont, "Microsoft YaHei UI", sans-serif;
+  --font-mono: "Google Sans Mono", "Cascadia Code", "SFMono-Regular", Consolas, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -39,59 +39,67 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.75);
   --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xl: calc(var(--radius) * 1.25);
+  --radius-2xl: calc(var(--radius) * 1.5);
+  --radius-3xl: calc(var(--radius) * 1.75);
+  --radius-4xl: calc(var(--radius) * 2.25);
 }
 
 :root,
 .dark {
-  --background: oklch(0.105 0.012 155);
-  --foreground: oklch(0.94 0.008 155);
-  --card: oklch(0.145 0.013 155);
-  --card-foreground: oklch(0.94 0.008 155);
-  --popover: oklch(0.175 0.015 155);
-  --popover-foreground: oklch(0.94 0.008 155);
-  --primary: oklch(0.76 0.16 160);
-  --primary-foreground: oklch(0.14 0.025 160);
-  --secondary: oklch(0.19 0.016 155);
-  --secondary-foreground: oklch(0.89 0.01 155);
-  --muted: oklch(0.18 0.015 155);
-  --muted-foreground: oklch(0.69 0.018 155);
-  --accent: oklch(0.215 0.035 160);
-  --accent-foreground: oklch(0.95 0.01 155);
-  --destructive: oklch(0.65 0.2 28);
-  --border: oklch(0.285 0.02 155 / 76%);
-  --input: oklch(0.27 0.021 155);
-  --ring: oklch(0.76 0.16 160);
-  --chart-1: oklch(0.72 0.15 155);
-  --chart-2: oklch(0.76 0.16 65);
-  --chart-3: oklch(0.65 0.2 28);
-  --chart-4: oklch(0.66 0.1 210);
-  --chart-5: oklch(0.7 0.09 315);
-  --radius: 0.7rem;
-  --sidebar: oklch(0.085 0.011 155);
-  --sidebar-foreground: oklch(0.86 0.012 155);
-  --sidebar-primary: oklch(0.76 0.16 160);
-  --sidebar-primary-foreground: oklch(0.14 0.025 160);
-  --sidebar-accent: oklch(0.19 0.03 160);
-  --sidebar-accent-foreground: oklch(0.95 0.01 155);
-  --sidebar-border: oklch(0.25 0.018 155 / 78%);
-  --sidebar-ring: oklch(0.76 0.16 160);
-  --status-running: oklch(0.72 0.15 155);
-  --status-idle: oklch(0.64 0.025 70);
-  --status-pending: oklch(0.77 0.16 80);
-  --status-failed: oklch(0.65 0.2 28);
-  --avatar-1: oklch(0.63 0.11 45);
-  --avatar-2: oklch(0.58 0.09 205);
-  --avatar-3: oklch(0.61 0.1 315);
-  --avatar-4: oklch(0.61 0.1 155);
-  --avatar-5: oklch(0.64 0.12 80);
-  --avatar-6: oklch(0.57 0.08 245);
+  /* Google Pixel Material You (M3) Dark Theme - Slate/Obsidian Base */
+  --background: oklch(0.125 0.015 260); /* M3 Surface / Background */
+  --foreground: oklch(0.95 0.008 260); /* M3 On Surface */
+  --card: oklch(0.165 0.018 260); /* M3 Surface Container */
+  --card-foreground: oklch(0.95 0.008 260); /* M3 On Surface Container */
+  --popover: oklch(0.19 0.02 260); /* M3 Surface Container High */
+  --popover-foreground: oklch(0.95 0.008 260);
+  --primary: oklch(0.76 0.14 235); /* Pixel Bay Blue / Dynamic Google Blue */
+  --primary-foreground: oklch(0.15 0.03 235); /* On Primary */
+  --secondary: oklch(0.21 0.022 260); /* M3 Surface Container Highest */
+  --secondary-foreground: oklch(0.92 0.01 260);
+  --muted: oklch(0.20 0.018 260);
+  --muted-foreground: oklch(0.72 0.015 260); /* M3 On Surface Variant */
+  --accent: oklch(0.24 0.035 235); /* Pixel Tonal Accent */
+  --accent-foreground: oklch(0.96 0.01 235);
+  --destructive: oklch(0.68 0.19 25); /* Pixel Coral Red */
+  --border: oklch(0.28 0.02 260 / 60%); /* M3 Outline Variant */
+  --input: oklch(0.22 0.02 260);
+  --ring: oklch(0.76 0.14 235);
+  
+  /* Material You Dynamic Accents */
+  --chart-1: oklch(0.76 0.14 235); /* Google Blue */
+  --chart-2: oklch(0.78 0.15 150); /* Google Mint */
+  --chart-3: oklch(0.82 0.14 80);  /* Google Amber */
+  --chart-4: oklch(0.70 0.18 25);  /* Google Coral */
+  --chart-5: oklch(0.74 0.12 300); /* Google Lavender */
+  
+  --radius: 1rem;
+  --sidebar: oklch(0.105 0.012 260); /* M3 Navigation Rail Base */
+  --sidebar-foreground: oklch(0.88 0.012 260);
+  --sidebar-primary: oklch(0.76 0.14 235);
+  --sidebar-primary-foreground: oklch(0.15 0.03 235);
+  --sidebar-accent: oklch(0.22 0.035 235); /* M3 Active Pill Container */
+  --sidebar-accent-foreground: oklch(0.96 0.01 235);
+  --sidebar-border: oklch(0.24 0.018 260 / 60%);
+  --sidebar-ring: oklch(0.76 0.14 235);
+  
+  /* Pixel Status Colors */
+  --status-running: oklch(0.78 0.15 150); /* Pixel Live Green */
+  --status-idle: oklch(0.68 0.02 260);    /* Pixel Slate */
+  --status-pending: oklch(0.82 0.14 82);   /* Pixel Honey Amber */
+  --status-failed: oklch(0.68 0.19 25);    /* Pixel Coral */
+  
+  /* Pixel Multi-Tone Avatars */
+  --avatar-1: oklch(0.72 0.14 235); /* Pixel Bay Blue */
+  --avatar-2: oklch(0.76 0.15 150); /* Pixel Mint Green */
+  --avatar-3: oklch(0.80 0.14 80);  /* Pixel Amber Yellow */
+  --avatar-4: oklch(0.72 0.17 25);  /* Pixel Coral Red */
+  --avatar-5: oklch(0.74 0.12 300); /* Pixel Lavender Purple */
+  --avatar-6: oklch(0.70 0.13 195); /* Pixel Ice Teal */
 }
 
 @layer base {
@@ -102,6 +110,7 @@
   html {
     @apply bg-background font-sans;
     color-scheme: dark;
+    letter-spacing: -0.011em;
   }
 
   body {
@@ -112,7 +121,7 @@
 
   ::selection {
     color: var(--primary-foreground);
-    background: color-mix(in oklch, var(--primary) 82%, transparent);
+    background: color-mix(in oklch, var(--primary) 80%, transparent);
   }
 
   button,
@@ -129,38 +138,45 @@
 
   .console-main {
     min-width: 0;
-    background: color-mix(in oklch, var(--background) 97%, var(--primary) 3%);
+    background: radial-gradient(circle at 50% 0%, color-mix(in oklch, var(--primary) 5%, transparent), transparent 45%),
+                var(--background);
   }
 
+  /* Pixel M3 Surface Container Panel */
   .console-panel {
-    box-shadow: inset 0 1px 0 oklch(0.94 0.006 70 / 3.5%), 0 4px 20px -2px oklch(0 0 0 / 25%);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 1.5rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    box-shadow: 0 4px 24px -4px oklch(0 0 0 / 30%);
+    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s ease;
   }
   .console-panel:hover {
-    border-color: color-mix(in oklch, var(--primary) 22%, var(--border));
+    border-color: color-mix(in oklch, var(--primary) 30%, var(--border));
   }
 
+  /* Pixel M3 Interactive Card */
   .agent-card {
+    border-radius: 1.25rem;
     transition:
-      border-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
-      background-color 200ms cubic-bezier(0.16, 1, 0.3, 1),
-      transform 200ms cubic-bezier(0.16, 1, 0.3, 1),
-      box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      border-color 220ms cubic-bezier(0.2, 0, 0, 1),
+      background-color 220ms cubic-bezier(0.2, 0, 0, 1),
+      transform 220ms cubic-bezier(0.2, 0, 0, 1),
+      box-shadow 220ms cubic-bezier(0.2, 0, 0, 1);
   }
 
   .agent-card:hover {
-    border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
-    background: color-mix(in oklch, var(--card) 92%, var(--primary) 8%);
+    border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
+    background: color-mix(in oklch, var(--card) 88%, var(--primary) 12%);
     transform: translateY(-2px);
-    box-shadow: 0 8px 24px -4px color-mix(in oklch, var(--primary) 15%, transparent);
+    box-shadow: 0 8px 24px -4px color-mix(in oklch, var(--primary) 18%, transparent);
   }
 
   .agent-card[data-agent-status="running"] {
-    border-color: color-mix(in oklch, var(--status-running) 48%, var(--border));
+    border-color: color-mix(in oklch, var(--status-running) 50%, var(--border));
   }
 
   .agent-card[data-agent-status="failed"] {
-    border-color: color-mix(in oklch, var(--destructive) 54%, var(--border));
+    border-color: color-mix(in oklch, var(--destructive) 55%, var(--border));
   }
 
   .agent-avatar[data-tone="0"] { --avatar-tone: var(--avatar-1); }
@@ -172,10 +188,11 @@
 
   .agent-avatar [data-slot="avatar-fallback"] {
     color: var(--foreground);
-    background: color-mix(in oklch, var(--avatar-tone) 72%, var(--card));
-    border: 1px solid color-mix(in oklch, var(--avatar-tone) 58%, var(--border));
+    background: color-mix(in oklch, var(--avatar-tone) 75%, var(--card));
+    border: 1px solid color-mix(in oklch, var(--avatar-tone) 60%, var(--border));
   }
 
+  /* Pixel Status Dot */
   .status-dot {
     background: var(--muted-foreground);
     transition: background-color 0.2s ease, box-shadow 0.2s ease;
@@ -184,7 +201,7 @@
   .status-dot[data-status="running"],
   .status-dot[data-status="online"] {
     background: var(--status-running);
-    box-shadow: 0 0 0 3px color-mix(in oklch, var(--status-running) 18%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--status-running) 22%, transparent);
     animation: statusPulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
 
@@ -199,7 +216,7 @@
   .status-dot[data-status="failed"],
   .status-dot[data-status="offline"] {
     background: var(--status-failed);
-    box-shadow: 0 0 0 2px color-mix(in oklch, var(--destructive) 20%, transparent);
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--destructive) 25%, transparent);
   }
 
   .status-dot[data-status="connecting"] {
@@ -212,42 +229,45 @@
   }
 
   .section-mark {
+    border-radius: 9999px;
     border: 1px solid color-mix(in oklch, var(--primary) 36%, var(--border));
     color: var(--primary);
-    background: color-mix(in oklch, var(--primary) 10%, var(--card));
+    background: color-mix(in oklch, var(--primary) 12%, var(--card));
     box-shadow: 0 2px 8px color-mix(in oklch, var(--primary) 12%, transparent);
   }
 
   .connection-chip {
-    min-height: 1.75rem;
+    min-height: 1.85rem;
+    border-radius: 9999px;
     border-color: color-mix(in oklch, var(--border) 86%, transparent);
-    background: color-mix(in oklch, var(--card) 76%, transparent);
-    backdrop-filter: blur(8px);
-    transition: all 0.2s ease;
+    background: color-mix(in oklch, var(--card) 85%, transparent);
+    backdrop-filter: blur(12px);
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
   }
 
+  /* Pixel Squircle / Circular Portrait */
   .agent-portrait {
     position: relative;
     display: grid;
     place-items: center;
     width: 4.75rem;
     height: 4.75rem;
+    border-radius: 1.5rem;
     border: 1.5px solid color-mix(in oklch, var(--portrait-tone) 52%, var(--border));
-    border-radius: 50%;
     color: var(--foreground);
     background:
-      radial-gradient(circle at 50% 30%, color-mix(in oklch, var(--portrait-tone) 26%, var(--card)), var(--card) 75%);
-    box-shadow: inset 0 1px 0 color-mix(in oklch, var(--foreground) 14%, transparent), 0 4px 14px color-mix(in oklch, var(--portrait-tone) 10%, transparent);
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      radial-gradient(circle at 50% 30%, color-mix(in oklch, var(--portrait-tone) 28%, var(--card)), var(--card) 75%);
+    box-shadow: inset 0 1px 0 color-mix(in oklch, var(--foreground) 16%, transparent), 0 4px 14px color-mix(in oklch, var(--portrait-tone) 12%, transparent);
+    transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
     cursor: pointer;
   }
 
   .agent-portrait:hover {
-    transform: scale(1.05);
+    transform: scale(1.06);
     border-color: color-mix(in oklch, var(--portrait-tone) 80%, var(--primary));
     box-shadow:
       inset 0 1px 0 color-mix(in oklch, var(--foreground) 20%, transparent),
-      0 0 0 4px color-mix(in oklch, var(--portrait-tone) 20%, transparent),
+      0 0 0 4px color-mix(in oklch, var(--portrait-tone) 22%, transparent),
       0 0 24px color-mix(in oklch, var(--portrait-tone) 35%, transparent);
   }
 
@@ -255,8 +275,8 @@
     border-color: color-mix(in oklch, var(--portrait-tone) 85%, var(--primary));
     box-shadow:
       inset 0 1px 0 color-mix(in oklch, var(--foreground) 20%, transparent),
-      0 0 0 3px color-mix(in oklch, var(--portrait-tone) 16%, transparent),
-      0 0 26px color-mix(in oklch, var(--portrait-tone) 38%, transparent);
+      0 0 0 3px color-mix(in oklch, var(--portrait-tone) 20%, transparent),
+      0 0 26px color-mix(in oklch, var(--portrait-tone) 40%, transparent);
     animation: portraitPulse 2.4s ease-in-out infinite;
   }
 
@@ -272,25 +292,39 @@
   .agent-portrait[data-tone="5"] { --portrait-tone: var(--avatar-6); }
 
   .tool-launcher {
+    border-radius: 1.25rem;
     box-shadow:
-      inset 0 1px 0 color-mix(in oklch, var(--tool-tone) 28%, white),
-      0 10px 26px color-mix(in oklch, var(--tool-tone) 20%, transparent);
-    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      inset 0 1px 0 color-mix(in oklch, var(--tool-tone) 30%, white),
+      0 8px 20px color-mix(in oklch, var(--tool-tone) 18%, transparent);
+    transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
   }
 
   .tool-launcher:hover {
-    transform: translateY(-3px) scale(1.04);
+    transform: translateY(-3px) scale(1.05);
     box-shadow:
-      inset 0 1px 0 color-mix(in oklch, var(--tool-tone) 40%, white),
-      0 14px 32px color-mix(in oklch, var(--tool-tone) 35%, transparent);
+      inset 0 1px 0 color-mix(in oklch, var(--tool-tone) 42%, white),
+      0 12px 28px color-mix(in oklch, var(--tool-tone) 32%, transparent);
+  }
+
+  /* Pixel M3 Pill Input */
+  .m3-pill-input {
+    border-radius: 9999px;
+    background: color-mix(in oklch, var(--secondary) 85%, transparent);
+    border: 1px solid var(--border);
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+  }
+  .m3-pill-input:focus-within {
+    background: var(--card);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 20%, transparent);
   }
 
 @keyframes statusPulse {
   0%, 100% {
-    box-shadow: 0 0 0 3px color-mix(in oklch, var(--status-running) 24%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--status-running) 26%, transparent);
   }
   50% {
-    box-shadow: 0 0 0 7px color-mix(in oklch, var(--status-running) 4%, transparent);
+    box-shadow: 0 0 0 8px color-mix(in oklch, var(--status-running) 4%, transparent);
   }
 }
 
@@ -298,13 +332,13 @@
   0%, 100% {
     box-shadow:
       inset 0 1px 0 color-mix(in oklch, var(--foreground) 20%, transparent),
-      0 0 0 3px color-mix(in oklch, var(--portrait-tone) 16%, transparent),
-      0 0 20px color-mix(in oklch, var(--portrait-tone) 30%, transparent);
+      0 0 0 3px color-mix(in oklch, var(--portrait-tone) 18%, transparent),
+      0 0 20px color-mix(in oklch, var(--portrait-tone) 32%, transparent);
   }
   50% {
     box-shadow:
       inset 0 1px 0 color-mix(in oklch, var(--foreground) 24%, transparent),
-      0 0 0 6px color-mix(in oklch, var(--portrait-tone) 8%, transparent),
+      0 0 0 6px color-mix(in oklch, var(--portrait-tone) 10%, transparent),
       0 0 32px color-mix(in oklch, var(--portrait-tone) 48%, transparent);
   }
 }
@@ -338,6 +372,7 @@
   .agent-portrait {
     width: 4.25rem;
     height: 4.25rem;
+    border-radius: 1.25rem;
   }
 }
 

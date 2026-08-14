@@ -42,7 +42,7 @@ function MessageContent({ content }: { content: string }) {
             href={href}
             target="_blank"
             rel="noreferrer noopener"
-            className="font-medium text-primary underline underline-offset-4"
+            className="font-medium text-primary underline underline-offset-4 hover:opacity-80"
           >
             {children}
           </a>
@@ -50,11 +50,11 @@ function MessageContent({ content }: { content: string }) {
         code: ({ className, children }) => {
           const isBlock = className?.startsWith("language-")
           return isBlock ? (
-            <code className={cn("block overflow-x-auto rounded-lg bg-background/85 p-3 font-mono text-xs leading-6", className)}>
+            <code className={cn("block overflow-x-auto rounded-2xl bg-secondary/80 p-3.5 font-mono text-xs leading-6 border border-border/60", className)}>
               {children}
             </code>
           ) : (
-            <code className="rounded bg-background/75 px-1.5 py-0.5 font-mono text-[0.9em] text-primary">
+            <code className="rounded-md bg-secondary/80 px-1.5 py-0.5 font-mono text-[0.88em] text-primary font-medium">
               {children}
             </code>
           )
@@ -62,9 +62,9 @@ function MessageContent({ content }: { content: string }) {
         pre: ({ children }) => <pre className="my-3 overflow-x-auto">{children}</pre>,
         ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>,
         ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5">{children}</ol>,
-        h1: ({ children }) => <h1 className="mb-2 mt-3 text-lg font-bold">{children}</h1>,
-        h2: ({ children }) => <h2 className="mb-2 mt-3 text-base font-bold">{children}</h2>,
-        h3: ({ children }) => <h3 className="mb-1.5 mt-2 font-semibold">{children}</h3>,
+        h1: ({ children }) => <h1 className="mb-2 mt-3 text-lg font-bold tracking-tight text-foreground">{children}</h1>,
+        h2: ({ children }) => <h2 className="mb-2 mt-3 text-base font-bold tracking-tight text-foreground">{children}</h2>,
+        h3: ({ children }) => <h3 className="mb-1.5 mt-2 font-semibold text-foreground">{children}</h3>,
         p: ({ children }) => <p className="my-1.5 first:mt-0 last:mb-0">{children}</p>,
       }}
     >
@@ -106,11 +106,11 @@ export function MessageBubble({
 
   if (isSystem && !isError) {
     return (
-      <article className="flex justify-center px-2 py-1">
-        <div className="flex max-w-[88%] items-center gap-2 rounded-full border border-border/70 bg-muted/55 px-3 py-1.5 text-xs text-muted-foreground shadow-sm">
+      <article className="flex justify-center px-2 py-1.5">
+        <div className="flex max-w-[88%] items-center gap-2 rounded-full border border-border/60 bg-secondary/50 px-4 py-1.5 text-xs text-muted-foreground shadow-sm">
           <Avatar size="sm">
-            <AvatarFallback>
-              <Bot aria-hidden="true" className="size-3" />
+            <AvatarFallback className="rounded-full bg-secondary text-primary">
+              <Bot aria-hidden="true" className="size-3.5" />
             </AvatarFallback>
           </Avatar>
           <span className="whitespace-pre-wrap break-words">{message.content}</span>
@@ -125,14 +125,14 @@ export function MessageBubble({
   return (
     <article
       className={cn(
-        "flex w-full items-start gap-2.5",
+        "flex w-full items-start gap-3",
         isUser ? "justify-end" : "justify-start",
       )}
       data-message-type={message.message_type}
     >
       {!isUser && (
-        <Avatar className="agent-avatar size-9 shadow-sm" data-tone={agentIndex % 6}>
-          <AvatarFallback>
+        <Avatar className="agent-avatar size-9.5 shadow-sm rounded-full ring-2 ring-card" data-tone={agentIndex % 6}>
+          <AvatarFallback className="rounded-full">
             {agent?.avatar ??
               agentInitials[agent?.name ?? ""] ?? (
                 <Bot aria-hidden="true" className="size-4" />
@@ -151,8 +151,8 @@ export function MessageBubble({
           )}
           <span
             className={cn(
-              "truncate text-sm font-semibold",
-              isUser ? "text-primary" : "text-foreground",
+              "truncate text-xs font-semibold",
+              isUser ? "text-primary font-bold" : "text-foreground",
               isError && "text-destructive",
             )}
           >
@@ -168,10 +168,10 @@ export function MessageBubble({
                 <Badge
                   variant={taskBadgeVariant}
                   className={cn(
-                    "h-4.5 px-1.5 text-[10px] gap-1 cursor-pointer",
+                    "h-5 rounded-full px-2 text-[10px] gap-1 cursor-pointer shadow-sm",
                     isUser &&
                       task?.status !== "failed" &&
-                      "border-primary/30 bg-primary/10 text-primary",
+                      "border-primary/30 bg-primary/15 text-primary",
                   )}
                 >
                   <span>Task #{task.id} · {taskLabel}</span>
@@ -182,8 +182,8 @@ export function MessageBubble({
               <Badge
                 variant={taskBadgeVariant}
                 className={cn(
-                  "h-4.5 px-1.5 text-[10px]",
-                  isUser && "border-primary/30 bg-primary/10 text-primary",
+                  "h-5 rounded-full px-2 text-[10px]",
+                  isUser && "border-primary/30 bg-primary/15 text-primary",
                 )}
               >
                 {taskLabel}
@@ -192,22 +192,23 @@ export function MessageBubble({
           )}
         </div>
 
+        {/* Pixel Messages Asymmetrical Rounded Bubble */}
         <div
           className={cn(
-            "rounded-2xl px-4 py-3 text-foreground md:rounded-xl md:border md:px-4.5 md:py-3.5 shadow-sm",
+            "px-4.5 py-3.5 text-foreground shadow-sm transition-all duration-200",
             isUser
-              ? "rounded-tr-md bg-primary/10 md:border-primary/35 md:bg-primary/14"
-              : "rounded-tl-md bg-muted/90 md:border-border md:bg-card/90",
-            isError && "bg-destructive/10 text-foreground md:border-destructive/40 md:bg-destructive/12",
+              ? "rounded-3xl rounded-tr-md bg-primary/20 border border-primary/30 text-foreground"
+              : "rounded-3xl rounded-tl-md bg-secondary/60 border border-border/70 text-foreground",
+            isError && "bg-destructive/15 text-foreground border-destructive/40",
           )}
         >
-          <div className="whitespace-pre-wrap break-words text-[15px] leading-7 md:text-sm md:leading-6">
+          <div className="whitespace-pre-wrap break-words text-[15px] leading-relaxed md:text-sm md:leading-6">
             <MessageContent content={message.content} />
           </div>
         </div>
 
         <time
-          className="mt-1 px-1 font-mono text-[10px] text-muted-foreground"
+          className="mt-1 px-1.5 font-mono text-[10px] text-muted-foreground/80"
           dateTime={message.created_at}
         >
           {formatTime(message.created_at)}
@@ -215,8 +216,8 @@ export function MessageBubble({
       </div>
 
       {isUser && (
-        <Avatar className="size-9 shadow-sm">
-          <AvatarFallback className="bg-primary/20 text-primary font-bold">
+        <Avatar className="size-9.5 shadow-sm rounded-full ring-2 ring-card">
+          <AvatarFallback className="rounded-full bg-primary/20 text-primary font-bold">
             <UserRound aria-hidden="true" className="size-4" />
           </AvatarFallback>
         </Avatar>

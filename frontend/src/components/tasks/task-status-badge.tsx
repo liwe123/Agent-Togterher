@@ -10,11 +10,11 @@ const statusLabels: Record<string, string> = {
 }
 
 const statusClasses: Record<string, string> = {
-  pending: "border-primary/30 bg-primary/10 text-primary",
-  running: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 md:text-emerald-300",
-  completed: "border-emerald-500/22 bg-emerald-500/7 text-emerald-700 md:text-emerald-300",
-  failed: "border-destructive/30 bg-destructive/12 text-destructive",
-  cancelled: "border-border bg-muted text-muted-foreground",
+  pending: "border-amber-500/30 bg-amber-500/10 text-amber-300",
+  running: "border-emerald-500/30 bg-emerald-500/15 text-emerald-300",
+  completed: "border-emerald-500/25 bg-emerald-500/10 text-emerald-300",
+  failed: "border-destructive/30 bg-destructive/15 text-destructive",
+  cancelled: "border-border bg-secondary text-muted-foreground",
 }
 
 interface TaskStatusBadgeProps {
@@ -26,7 +26,7 @@ export function TaskStatusBadge({ status, className }: TaskStatusBadgeProps) {
   return (
     <Badge
       variant="outline"
-      className={cn(statusClasses[status] ?? statusClasses.cancelled, className)}
+      className={cn("rounded-full px-2.5 py-0.5 font-medium shadow-sm", statusClasses[status] ?? statusClasses.cancelled, className)}
     >
       <span
         className="status-dot size-1.5 rounded-full"

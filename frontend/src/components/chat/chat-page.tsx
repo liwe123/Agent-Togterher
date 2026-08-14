@@ -39,14 +39,14 @@ export function ChatPage() {
 
       <ErrorBoundary>
         <main className="console-main mobile-chat-main flex min-h-0 flex-col px-0 py-0 md:px-8 md:py-7 xl:px-10">
-          <div className="mx-auto flex min-h-0 w-full max-w-[1520px] flex-1 flex-col gap-5">
+          <div className="mx-auto flex min-h-0 w-full max-w-[1520px] flex-1 flex-col gap-4">
             <header className="hidden shrink-0 items-center justify-between gap-4 md:flex">
               <div className="flex min-w-0 flex-col gap-1">
-                <h1 className="text-[1.75rem] font-semibold tracking-[-0.025em]">协作频道</h1>
+                <h1 className="text-[1.85rem] font-bold tracking-[-0.03em] text-foreground">协作频道</h1>
                 <p className="truncate text-xs text-muted-foreground sm:text-sm">
                   {workspace
-                    ? `${workspace.name} · 多 Agent 实时协作`
-                    : "多 Agent 实时协作"}
+                    ? `${workspace.name} · 多 Agent 实时群聊协同`
+                    : "多 Agent 实时群聊协同"}
                 </p>
               </div>
               <Badge
@@ -63,28 +63,28 @@ export function ChatPage() {
             </header>
 
             {error && !conversation ? (
-              <section className="flex min-h-0 flex-1 items-center justify-center rounded-xl border border-destructive/35 bg-card/80 p-6">
+              <section className="flex min-h-0 flex-1 items-center justify-center rounded-3xl border border-destructive/35 bg-card/80 p-6 shadow-sm">
                 <div className="flex max-w-md flex-col items-center gap-4 text-center">
-                  <span className="flex size-12 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                  <span className="flex size-12 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
                     <AlertCircle aria-hidden="true" className="size-5" />
                   </span>
                   <div className="space-y-1.5">
-                    <h2 className="text-base font-semibold">无法打开群聊</h2>
+                    <h2 className="text-base font-semibold text-foreground">无法打开群聊</h2>
                     <p className="text-sm leading-6 text-muted-foreground">{error}</p>
                   </div>
-                  <Button type="button" variant="outline" onClick={retry}>
+                  <Button type="button" variant="outline" className="rounded-full" onClick={retry}>
                     重新连接
                   </Button>
                 </div>
               </section>
             ) : (
-              <section className="console-panel flex min-h-0 flex-1 flex-col overflow-hidden border-border bg-card/72 md:rounded-xl md:border">
-                <div className="flex h-16 shrink-0 items-center justify-between border-b border-border bg-card px-4 md:hidden">
-                  <Link href="/" aria-label="返回控制台" className="flex size-10 items-center justify-center rounded-full text-muted-foreground hover:bg-muted">
+              <section className="console-panel flex min-h-0 flex-1 flex-col overflow-hidden border-border/70 bg-card/90 md:rounded-3xl md:border shadow-sm">
+                <div className="flex h-16 shrink-0 items-center justify-between border-b border-border/60 bg-card/90 px-4 md:hidden">
+                  <Link href="/" aria-label="返回控制台" className="flex size-10 items-center justify-center rounded-full text-muted-foreground hover:bg-secondary">
                     <ArrowLeft aria-hidden="true" className="size-5" />
                   </Link>
                   <div className="min-w-0 text-center">
-                    <h1 className="truncate text-base font-semibold">{conversation?.title ?? "默认群聊"}</h1>
+                    <h1 className="truncate text-base font-semibold text-foreground">{conversation?.title ?? "默认群聊"}</h1>
                     <p className="mt-0.5 text-[11px] text-muted-foreground">{agents.length} 位 Agent 在线协作</p>
                   </div>
                   <div className="flex items-center gap-1">
@@ -99,19 +99,19 @@ export function ChatPage() {
                   </div>
                 </div>
 
-                <div className="hidden shrink-0 items-center justify-between gap-4 border-b border-border px-5 py-4 md:flex">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <span className="section-mark flex size-9 shrink-0 items-center justify-center rounded-md">
-                      <MessagesSquare aria-hidden="true" className="size-4" />
+                <div className="hidden shrink-0 items-center justify-between gap-4 border-b border-border/60 px-6 py-4 md:flex bg-card/40">
+                  <div className="flex min-w-0 items-center gap-3.5">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-2xl bg-primary/15 text-primary">
+                      <MessagesSquare aria-hidden="true" className="size-4.5" />
                     </span>
                     <div className="min-w-0">
-                      <h2 className="truncate text-sm font-semibold sm:text-base">
+                      <h2 className="truncate text-sm font-semibold sm:text-base text-foreground">
                         {conversation?.title ?? "正在准备默认会话…"}
                       </h2>
                       <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground sm:text-xs">
-                        <Radio aria-hidden="true" className="size-3" />
+                        <Radio aria-hidden="true" className="size-3 text-primary" />
                         {agents.length > 0
-                          ? `${agents.length} 位 Agent 已加入`
+                          ? `${agents.length} 位 Agent 已就位`
                           : "正在加载 Agent"}
                       </p>
                     </div>
@@ -123,11 +123,11 @@ export function ChatPage() {
                         <Avatar
                           key={agent.id}
                           size="sm"
-                          className="agent-avatar"
+                          className="agent-avatar ring-2 ring-card"
                           data-tone={index % 6}
                           title={agent.name}
                         >
-                          <AvatarFallback>
+                          <AvatarFallback className="rounded-full">
                             {agent.avatar ?? agent.name.slice(0, 2)}
                           </AvatarFallback>
                         </Avatar>
