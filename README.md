@@ -1,18 +1,10 @@
 # Agent Console
 
-<h4 align="center">寂静飞控台 · The Quiet Flight Desk</h4>
+#### 寂静飞控台 · The Quiet Flight Desk
 
-<p align="center">
-  <strong>多智能体不再散落各处。一张深色运控台，看见全局，精准调度。</strong>
-</p>
+**多智能体不再散落各处。一张深色运控台，看见全局，精准调度。**
 
-<p align="center">
-  <img src="https://img.shields.io/badge/status-MVP-oklch(0.76%200.16%2065)?style=flat" alt="MVP">
-  <img src="https://img.shields.io/badge/python-3.11+-blue?style=flat" alt="Python">
-  <img src="https://img.shields.io/badge/next-16-black?style=flat" alt="Next.js">
-  <img src="https://img.shields.io/badge/tests-56%20%2B%2028%20passing-oklch(0.72%200.15%20155)?style=flat" alt="Tests">
-  <img src="https://img.shields.io/badge/license-TBD-lightgrey?style=flat" alt="License">
-</p>
+
 
 ---
 
@@ -77,7 +69,10 @@ flowchart TB
     ORCH -.->|触发事件广播| WS
 ```
 
+
+
 ### 架构与容错亮点
+
 1. **轻量级异步调度**：单机通过 `asyncio.create_task` 承载，抛弃 Celery 的运维包袱，后续仅需一行代码即可切到 Redis Worker。
 2. **两级上下文压缩**：内置 `execution_trace` 防 Token 膨胀，确保多 Agent 交接时历史链路、工具产物不失忆且不超长。
 3. **两阶段主备持久化**：主 Session 写库崩溃时，自动启用隔离备用 Session 将失败状态强落库，保证任务永不僵死。
@@ -89,14 +84,16 @@ flowchart TB
 
 系统初始化即拉起一个高配 6 人工作组：
 
-| Agent | 角色 | 职能定义 | 默认绑定模型位 |
-| --- | --- | --- | --- |
-| **项目总设计师** | `manager` | 复杂需求拆解 (JSON Plan)、任务分发、最终交付汇总 | `manager_model` |
-| **Agent 工程师** | `agent_engineer` | 后端业务逻辑、算法实现、API 开发与集成 | `code_model` |
-| **前端设计师** | `frontend_designer` | UI/UX 界面设计、前端组件化实现、交互还原 | `code_model` |
-| **知识库管理员** | `knowledge_manager` | 技术长文写作、资料搜集、文档标准化整理 | `writing_model` |
-| **测试专员** | `qa_engineer` | 质量把关 QA、验收核对、缺陷定位与修改建议 | `review_model` |
-| **运维** | `devops` | 环境部署指导、Docker 编排与系统稳定性巡检 | `code_model` |
+
+| Agent         | 角色                  | 职能定义                           | 默认绑定模型位         |
+| ------------- | ------------------- | ------------------------------ | --------------- |
+| **项目总设计师**    | `manager`           | 复杂需求拆解 (JSON Plan)、任务分发、最终交付汇总 | `manager_model` |
+| **Agent 工程师** | `agent_engineer`    | 后端业务逻辑、算法实现、API 开发与集成          | `code_model`    |
+| **前端设计师**     | `frontend_designer` | UI/UX 界面设计、前端组件化实现、交互还原        | `code_model`    |
+| **知识库管理员**    | `knowledge_manager` | 技术长文写作、资料搜集、文档标准化整理            | `writing_model` |
+| **测试专员**      | `qa_engineer`       | 质量把关 QA、验收核对、缺陷定位与修改建议         | `review_model`  |
+| **运维**        | `devops`            | 环境部署指导、Docker 编排与系统稳定性巡检       | `code_model`    |
+
 
 ---
 
@@ -125,17 +122,20 @@ flowchart TB
 ## 一分钟跑起来
 
 ### Windows 全自动一键启动（推荐）
+
 双击根目录 `start.bat` 或在终端运行 `start.ps1`。
 脚本将自动拷贝环境变量 `.env`，拉起 Docker 容器，并每隔 3 秒轮询健康检查，就绪后将直接呼出浏览器。
 
 ### 手动容器化启动
+
 ```powershell
 Copy-Item .env.example .env
 docker compose up --build
 ```
-- 控制台入口：http://localhost:3000
-- OpenAPI 文档：http://localhost:8000/docs
-- 接口健康检查：http://localhost:8000/api/v1/health
+
+- 控制台入口：[http://localhost:3000](http://localhost:3000)
+- OpenAPI 文档：[http://localhost:8000/docs](http://localhost:8000/docs)
+- 接口健康检查：[http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
 
 > 💡 **Tip**：服务就绪后，直接进入前端 `/settings` 页面输入所需大模型厂商的 API Key，然后在 `/chats` 输入 `@项目总设计师 帮我写个贪吃蛇` 即可自动运转全套流水线！
 
