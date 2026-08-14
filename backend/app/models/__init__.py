@@ -8,6 +8,7 @@ from app.models.message import Message
 from app.models.model_call import ModelCall
 from app.models.provider_credential import ProviderCredential
 from app.models.task import Task, TaskStep
+from app.models.task_queue import TaskQueueItem
 from app.models.workspace import Workspace
 
 __all__ = [
@@ -22,5 +23,6 @@ __all__ = [
     "Task",
     "TaskStatus",
     "TaskStep",
+    "TaskQueueItem",
     "Workspace",
 ]

@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import AppError
 from app.api.persistence import commit_or_conflict
+from app.core.config import get_settings
 from app.db.base import utc_now
 from app.db.session import AsyncSessionLocal
 from app.models import (
@@ -23,6 +24,7 @@ from app.models import (
     TaskStatus,
 )
 from app.schemas import AgentRead, MessageCreate, MessageRead, TaskRead
+from app.services.task_service import TaskService
 from app.websocket import WebSocketManager, create_event, websocket_manager
 
 logger = logging.getLogger(__name__)
@@ -192,6 +194,7 @@ class MessageHub:
         await commit_or_conflict(self._session)
         await self._session.refresh(message)
         await self._session.refresh(task)
+        await TaskService(self._session).enqueue(task)
 
         result = MessageHubResult(
             message=MessageRead.model_validate(message),
@@ -206,7 +209,8 @@ class MessageHub:
             conversation.workspace_id,
             create_event("task.status_changed", result.task),
         )
-        self._dispatcher(task.id)
+        if get_settings().task_execution_mode == "inline":
+            self._dispatcher(task.id)
         return result
 
     async def receive_message(
