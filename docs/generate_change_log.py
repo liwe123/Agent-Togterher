@@ -145,6 +145,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 建立 Phase 0 架构治理基线": {
+        "type": "Optimization",
+        "content": "完成项目 Phase 0 架构盘点，统一记录当前模块职责、任务主链路、任务状态机、Trace/Correlation 标识规范、风险清单与演进边界，为后续 PostgreSQL、TaskService、Worker 和事件总线改造提供约束基线",
+        "frontend": "-",
+        "backend": "docs/架构治理基线.md；基于 MessageHub、AgentOrchestrator、任务租约、启动恢复和 WebSocket 当前实现形成架构基线",
+        "db": "否",
+        "breaking": "否",
+        "verify": "A/B 文档覆盖对比通过（改前无 Phase 0 基线，改后覆盖 6 类交付物）；文档冒烟通过；后端 56 tests passed",
+        "notes": "任务类型为 Optimization，无需新增 PRD；独立验收通过；生成脚本与 PRD.html 已重跑对齐",
+    },
     "feat: improve frontend interaction and accessibility": {
         "details": [
             {"type": "Requirement", "content": "Software Dock 增加可操作的连接状态详情", "frontend": "software-dock.tsx：展示软件名称、接入位、在线状态；支持鼠标与键盘操作", "notes": "PRD FR1；依赖同提交"},
