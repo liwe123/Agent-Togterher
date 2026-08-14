@@ -112,7 +112,10 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-10 12:38 | C-089 | 已完成 | [a3377e6](https://github.com/liwe123/Agent-Togterher/commit/a3377e6) | LI | Optimization | 其他、文档 | 治理优化：清除变更表生成脚本内残留的 Docs 字面量（源侧与输出一致），并重跑生成脚本同步 PRD/xlsx | - | - | 否 | 否 | - | - |
 | 2026-08-10 19:53 | C-090 | 已完成 | [d41840a](https://github.com/liwe123/Agent-Togterher/commit/d41840a) | LI | Optimization | 其他、文档 | 文档：将变更追踪表全部改动内容中文化，消除英文 git 主题 fallback；重跑生成脚本同步 PRD/xlsx | - | generate_change_log.py 新增 _CONTENT_FIXES_BY_SHA（21 行 sha→中文内容） | 否 | 否 | 重跑后改动内容列零英文 | 守则① 改动内容中文化；regen 提交自身行由本 subject 登记保持中文 |
 | 2026-08-14 20:50 | C-091 | 已完成 | [d88bc6a](https://github.com/liwe123/Agent-Togterher/commit/d88bc6a) | LI | Optimization | 文档 | docs: update README to reflect latest architecture and multi-agent pipeline | - | - | 否 | 否 | - | - |
-| 2026-08-14 21:03 | C-092 | 已完成 | [c6c8041](https://github.com/liwe123/Agent-Togterher/commit/c6c8041) | LI | Optimization | 其他、文档、前端 | optimize: 前端页面整体风格全面升级为 Google Pixel (Material You / M3) 设计风格 | frontend/src/app；frontend/src/components | - | 否 | 否 | - | - |
+| 2026-08-14 21:03 | C-092 | 已完成 | [b91c5ed](https://github.com/liwe123/Agent-Togterher/commit/b91c5ed) | LI | Optimization | 其他、文档 | docs: 同步 Google Pixel 风格优化至变更追踪表与 PRD.html | - | - | 否 | 否 | - | - |
+| 2026-08-14 21:03 | C-093 | 已完成 | [c6c8041](https://github.com/liwe123/Agent-Togterher/commit/c6c8041) | LI | Optimization | 其他、文档、前端 | optimize: 前端页面整体风格全面升级为 Google Pixel (Material You / M3) 设计风格 | frontend/src/app；frontend/src/components | - | 否 | 否 | - | - |
+| 2026-08-14 23:31 | C-094 | 已完成 | [4fc3875](https://github.com/liwe123/Agent-Togterher/commit/4fc3875) | LI | Optimization | 文档 | docs: refine README formatting and links | - | - | 否 | 否 | - | - |
+| 2026-08-15 00:07 | C-095 | 已完成 | [f4ec8c8](https://github.com/liwe123/Agent-Togterher/commit/f4ec8c8) | LI | Optimization | 文档、其他 | 完成项目 Phase 0 架构盘点，统一记录当前模块职责、任务主链路、任务状态机、Trace/Correlation 标识规范、风险清单与演进边界，为后续 PostgreSQL、TaskService、Worker 和事件总线改造提供约束基线 | - | docs/架构治理基线.md；基于 MessageHub、AgentOrchestrator、任务租约、启动恢复和 WebSocket 当前实现形成架构基线 | 否 | 否 | A/B 文档覆盖对比通过（改前无 Phase 0 基线，改后覆盖 6 类交付物）；文档冒烟通过；后端 56 tests passed | 任务类型为 Optimization，无需新增 PRD；独立验收通过；生成脚本与 PRD.html 已重跑对齐 |
 <!-- CHANGELOG:END -->
 
 ---
