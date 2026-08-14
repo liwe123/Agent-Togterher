@@ -10,19 +10,18 @@
   <img src="https://img.shields.io/badge/status-MVP-oklch(0.76%200.16%2065)?style=flat" alt="MVP">
   <img src="https://img.shields.io/badge/python-3.11+-blue?style=flat" alt="Python">
   <img src="https://img.shields.io/badge/next-16-black?style=flat" alt="Next.js">
-  <img src="https://img.shields.io/badge/tests-40%20%2B%2028%20passing-oklch(0.72%200.15%20155)?style=flat" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-56%20%2B%2028%20passing-oklch(0.72%200.15%20155)?style=flat" alt="Tests">
   <img src="https://img.shields.io/badge/license-TBD-lightgrey?style=flat" alt="License">
 </p>
 
 ---
 
-## 这是什么
+## 这是什么？
 
-一个**本地优先的多 Agent 运控台** — 不是聊天玩具，不是 Demo 花架子。
+一个**本地优先（Local-First）的多智能体运控台** — 拒绝聊天玩具，拒绝黑盒执行，这套系统生来就是为了承接生产级协作的深色运控工作台。
 
-你打字，Agent 干活。Manager 拆任务，Worker 各自执行，QA 审核，最后汇总。
-全程可视：每一步执行、每一次模型调用、每一次降级切换，全在 WebSocket 实时
-推到你面前。
+在这里，你打字，Agent 干活。内置的高性能自研状态机自动为你驱动：**项目总设计师拆解任务 -> 专职 Worker 分工执行 -> 测试专员 QA 把关 -> 最终交付汇总**。
+全程透明可视：每一步流转、每一次工具调用、每一次 Token 消耗和模型降级，全在 WebSocket 实时推到你的面板上。
 
 ```
 你: "重构订单模块并更新前端页面" @项目总设计师
@@ -34,278 +33,129 @@ Manager 拆解 ──→ Worker 1: Agent工程师  ──→ Worker 2: 前端设
 QA 审核 ←──────────────────────────────────────────┘
       │
       ▼
-Manager 汇总 ──→ 最终结果回到群聊
+Manager 汇总 ──→ 最终结果实时回写到群聊气泡
 ```
 
-## 架构
+---
+
+## 全栈技术体系
+
+我们摒弃了臃肿的 LangChain 与 AutoGen 黑盒，采用高内聚、全异步、强类型的现代化技术栈：
+
+- **核心后端**：FastAPI + Python 3.11+
+- **前台基建**：Next.js 16 (App Router) + React 19 + TypeScript
+- **设计系统**：Tailwind CSS v4 (原生 OKLCH 色板) + shadcn/ui 无障碍基元
+- **数据库与 ORM**：SQLite (aiosqlite) + SQLAlchemy 2.0 Async (平滑无缝切 PG)
+- **模型接入适配**：LiteLLM (统一适配 OpenAI/Anthropic/Gemini/DeepSeek/Qwen 等)
+- **实时事件总线**：FastAPI Native WebSocket + Hooks 双向通道
+
+---
+
+## 系统整体架构
 
 ```mermaid
 flowchart TB
-    U[用户] --> FE[前端 Next.js / React / Tailwind]
+    U[用户] --> FE[前端 5 大可视化控制台]
 
-    FE -->|REST API| API[FastAPI Backend]
-    FE -->|WebSocket 实时事件| WS[WebSocket Manager]
+    FE -->|REST API| API[FastAPI Backend /api/v1]
+    FE <-->|WebSocket 实时事件通道| WS[WebSocket Manager]
 
-    API --> TASKAPI[任务 API\n/api/v1/tasks]
-    API --> CHATAPI[消息 / 会话 API]
-    API --> AGENTAPI[Agent / 模型 / 设置 API]
-    API --> ORCH[任务编排器\nAgentOrchestrator]
-    API --> PERSIST[数据持久化层]
+    API --> HUB[MessageHub 消息中心\n@Agent 意图识别]
+    HUB --> ORCH[AgentOrchestrator 任务状态机\n(带租约锁与崩溃自愈)]
+    
+    ORCH --> AGENTS[六人 Agent 编队层\nManager / Worker / Review / Final]
+    ORCH --> TRACE[ExecutionTrace\n双级上下文压缩引擎]
+    ORCH --> TOOLS[Tools Registry\nAST 安全沙箱工具箱]
+    
+    AGENTS --> LITELLM[LiteLLM 统一模型调度层]
+    LITELLM --> MODELS[模型与热配置 Key\n(DB 优先 > 环境变量 > Fallback)]
 
-    ORCH --> AGENTS[Agents 模块\nmanager / worker / review / final]
-    ORCH --> LITELLM[LiteLLM Service]
-    ORCH --> TOOLS[Tools 执行器]
-    ORCH --> DB[(SQLite / SQLAlchemy)]
-    ORCH --> WS
-
-    TASKAPI --> ORCH
-    CHATAPI --> WS
-    AGENTAPI --> DB
-
-    LITELLM --> MODELS[模型与密钥配置\nconfig/models.yaml + DB API Keys]
-    LITELLM --> PROVIDERS[OpenAI / Anthropic / Gemini / DeepSeek / Qwen]
-
-    DB --> ENTITIES[核心实体\nWorkspace / Conversation / Agent / Task / TaskStep / ModelCall / Message]
+    ORCH --> DB[(SQLAlchemy 2.0 异步持久化)]
+    LITELLM --> DB
+    
+    DB --> ENTITIES[核心实体\nWorkspaces / Tasks / Steps / ModelCalls / Credentials]
+    ORCH -.->|触发事件广播| WS
 ```
 
-### 架构说明
+### 架构与容错亮点
+1. **轻量级异步调度**：单机通过 `asyncio.create_task` 承载，抛弃 Celery 的运维包袱，后续仅需一行代码即可切到 Redis Worker。
+2. **两级上下文压缩**：内置 `execution_trace` 防 Token 膨胀，确保多 Agent 交接时历史链路、工具产物不失忆且不超长。
+3. **两阶段主备持久化**：主 Session 写库崩溃时，自动启用隔离备用 Session 将失败状态强落库，保证任务永不僵死。
+4. **AST 安全沙箱工具箱**：抛弃危险的 `eval()`，使用 Python AST 白名单计算器，并硬防大指数 DoS 攻击。
 
-- 前端负责控制台、群聊、任务流、模型设置与实时状态展示。
-- FastAPI 后端提供任务、消息、Agent、模型与设置接口。
-- `AgentOrchestrator` 负责任务领取、状态流转、步骤记录与结果回写。
-- `LiteLLM Service` 统一封装模型调用，支持自定义模型与 fallback。
-- `WebSocket Manager` 将任务、步骤、模型调用、Agent 状态变化实时推送给前端。
-- SQLite 作为当前默认存储，所有核心实体都通过 SQLAlchemy 持久化。
+---
 
-## 任务流转
+## 编队体系：六人 Agent 矩阵
 
-```mermaid
-flowchart TD
-    A[创建任务] --> B[run_task(task_id)]
-    B --> C[_claim_pending_task\n领取 PENDING 任务并加租约]
-    C --> D[启动 lease 续期线程\n_renew_task_lease]
-    D --> E{assigned_agent 是 Manager?}
+系统初始化即拉起一个高配 6 人工作组：
 
-    E -- 否 --> S1[单 Agent 流程]
-    E -- 是 --> M1[多 Agent 流程]
+| Agent | 角色 | 职能定义 | 默认绑定模型位 |
+| --- | --- | --- | --- |
+| **项目总设计师** | `manager` | 复杂需求拆解 (JSON Plan)、任务分发、最终交付汇总 | `manager_model` |
+| **Agent 工程师** | `agent_engineer` | 后端业务逻辑、算法实现、API 开发与集成 | `code_model` |
+| **前端设计师** | `frontend_designer` | UI/UX 界面设计、前端组件化实现、交互还原 | `code_model` |
+| **知识库管理员** | `knowledge_manager` | 技术长文写作、资料搜集、文档标准化整理 | `writing_model` |
+| **测试专员** | `qa_engineer` | 质量把关 QA、验收核对、缺陷定位与修改建议 | `review_model` |
+| **运维** | `devops` | 环境部署指导、Docker 编排与系统稳定性巡检 | `code_model` |
 
-    S1 --> S2[校验 agent / conversation]
-    S2 --> S3[update_agent_status(running)]
-    S3 --> S4[save_task_step(running)]
-    S4 --> S5{启用 tools?}
-    S5 -- 否 --> S6[call_agent_model]
-    S6 --> S7[save_model_call]
-    S5 -- 是 --> S8[_run_agent_with_tools]
-    S8 --> S8a[循环模型调用]
-    S8a --> S8b[保存 tool_call step]
-    S8b --> S8c[execute_tool]
-    S8c --> S8d[追加 tool 结果到 history]
-    S8d --> S8a
-    S8a --> S7
-    S7 --> S9[save_task_step(completed)]
-    S9 --> S10[update_task_status(COMPLETED)]
-    S10 --> S11[update_agent_status(idle)]
-    S11 --> S12[send_result_message]
-    S12 --> Z[结束]
+---
 
-    M1 --> M2[读取 workspace 的全部 Agent]
-    M2 --> M3[Manager: running]
-    M3 --> M4[save_task_step(manager_plan)]
-    M4 --> M5[manager_agent.generate_plan]
-    M5 --> M6[parse / serialize plan]
-    M6 --> M7[save_task_step(completed)]
-    M7 --> M8[send_result_message: 任务拆解]
-    M8 --> M9[Manager: idle]
+## 前端交互：五大核心控制台
 
-    M9 --> M10[按 plan.subtasks 顺序执行]
-    M10 --> M11[选择对应 Worker Agent]
-    M11 --> M12[Worker: running]
-    M12 --> M13[save_task_step(worker_execute_x)]
-    M13 --> M14{启用 tools?}
-    M14 -- 否 --> M15[worker_agent.execute_subtask]
-    M14 -- 是 --> M16[_run_agent_with_tools]
-    M16 --> M16a[循环模型调用 + tool 执行]
-    M16a --> M15
-    M15 --> M17[save_task_step(completed)]
-    M17 --> M18[send_result_message: Worker 结果]
-    M18 --> M19[Worker: idle]
-    M19 --> M10
+界面严格遵循 *"The Connected Cluster Lounge"* 极简结构美学，拒绝无意义光晕。
 
-    M10 --> M20[Review Agent: running]
-    M20 --> M21[save_task_step(review_results)]
-    M21 --> M22[review_agent.review_results]
-    M22 --> M23[save_task_step(completed)]
-    M23 --> M24[send_result_message: 审核结果]
-    M24 --> M25[Review Agent: idle]
+- 🎛️ **集群控制台 (`/`)**：全局监控 Agent 编队运行负载、查看外部软件 Dock (如 TRAE, Cursor) 心跳与最近活跃输出流。
+- 💬 **协同群聊 (`/chats`)**：支持 `@Agent` 智能联想、Prompt 快捷胶囊、全量 Markdown 代码渲染，提及发出的需求将自动触发后台任务流水线。
+- 📖 **通讯录 (`/contacts`)**：Agent 实名花名册，支持实时职责模糊过滤，快速发起私聊。
+- ⏱️ **任务与执行追踪 (`/tasks`)**：实时总览排队/运行/失败状态。任务详情提供 **Pipeline 拓扑图**、**执行轨迹时间线** 以及 **模型调用审计日志**（精确计算单次调用耗时 ms、Tokens 和预估美金成本）。
+- ⚙️ **设置中心 (`/settings`)**：动态录入与删除各厂商 API Key（数据库存储优先，免重启热生效），配置自定义模型及 `Fallback` 降级链，支持一键测速 Ping。
 
-    M25 --> M26[Manager 再次 running]
-    M26 --> M27[save_task_step(final_summary)]
-    M27 --> M28[final_agent.build_final_result]
-    M28 --> M29[save_task_step(completed)]
-    M29 --> M30[update_task_status(COMPLETED)]
-    M30 --> M31[update_agent_status(idle)]
-    M31 --> M32[send_result_message: 最终汇总]
-    M32 --> Z
+---
 
-    S1 -.异常.-> F[失败处理\nsave_task_step(failed) / save_model_call(failed)\nupdate_task_status(FAILED)\nupdate_agent_status(failed)]
-    M1 -.异常.-> F
-    F --> Z
-```
+## 运行时模型热管理与容灾降级
 
-### 任务流转说明
+摆脱改 YAML 重启的噩梦。系统具备完备的模型动态配置与容灾自救机制：
 
-- 所有任务先进入 `PENDING`，由 Orchestrator 领取后切到 `RUNNING`。
-- 单 Agent 任务会直接调用目标 Agent 完成任务。
-- Manager 任务会先生成计划，再按子任务顺序交给 Worker 执行，之后由 QA 审核，再由 Manager 汇总。
-- 每个阶段都会记录 `TaskStep`，每次模型调用都会记录 `ModelCall`。
-- 任务结束时会更新任务状态、Agent 状态，并通过 WebSocket 推送结果。
-- 发生异常时会进入失败分支，尽可能保留失败步骤、失败调用和错误消息。
+- **热生效凭证 (API Keys)**：在前端 `/settings` 面板写入的 API Key 直接通过数据库安全脱敏存储并立刻生效（`DB > Env`），日志打印全脱敏 (`[REDACTED]`)。
+- **动态自定义模型**：支持在界面手动登记任意 `Provider/Model` 组合（如 `anthropic/claude-3-5-sonnet`）。
+- **多级 Fallback 重试降级**：当主模型（如 DeepSeek）发生 429 限流、500 宕机或超时时，LiteLLM 层将自动无缝接管，沿降级链（如切到 `cheap_model` Qwen）重试，并在最终日志中打上醒目的 `fallback_used: true` 标记。
 
-## 六人 Agent 编队
-
-| Agent | 角色 | 绑定模型 |
-| --- | --- | --- |
-| 项目总设计师 | 拆解任务 / 最终汇总 | `manager_model` |
-| Agent 工程师 | 后端逻辑实现 | `code_model` |
-| 前端设计师 | 前端页面实现 | `code_model` |
-| 知识库管理员 | 长文写作与整理 | `writing_model` |
-| 测试专员 | QA 审核 | `review_model` |
-| 运维 | 部署与运维 | `code_model` |
-
-每个 Agent 有自己的 system prompt，模型可独立配置。`config/models.yaml` 定义
-了降级链 — 主 Provider 挂了自动切备用，切成功了会标 `fallback_used: true`。
-
-## 模型与密钥管理
-
-前端「设置」页（`/settings`）内置完整的模型管理能力，无需改配置文件：
-
-**API Key 管理** — 直接在前端填入各 Provider 的密钥，存进数据库，无需重启
-服务。密钥解析优先级：**数据库 > 环境变量**。已配置的 Key 永远不回传前端，
-只有 `configured` 布尔状态。
-
-```
-PUT    /api/provider-keys/{provider}   保存密钥
-DELETE /api/provider-keys/{provider}   删除密钥
-```
-
-**自定义模型** — 不再局限于 `models.yaml` 的 5 个预设模型。可以添加任意
-`provider/model` 组合（如 `openai/gpt-4o`、`anthropic/claude-sonnet-4`），
-支持配置 fallback 降级链，添加后立即可测试连通性、可被 Agent 绑定使用。
-
-```
-GET/POST/DELETE   /api/custom-models    自定义模型增删查
-```
-
-支持的 Provider：OpenAI、Anthropic、Gemini、DeepSeek、Qwen（DashScope）。
-
-## 设计哲学
-
-深色暖石墨底，信号琥珀只标记"现在看这里"。没有紫蓝渐变，没有霓虹描边，
-没有玻璃拟态。状态始终用颜色 + 图标 + 文字三重表达。
-
-> *"技术感来自结构，不来自装饰。"*
-
-更多细节见 [DESIGN.md](DESIGN.md)。
-
-## 事件总线
-
-一个 WebSocket 连接，六种事件，按工作区隔离：
-
-```
-ws://localhost:8000/ws/workspaces/{id}
-
-message.created       → 消息气泡实时出现
-task.status_changed   → 任务徽章变色
-task.step_changed     → 步骤时间线推进
-agent.status_changed  → Agent 状态灯切换
-model.call_finished   → 模型调用日志追加
-error                 → 错误横幅弹出
-```
-
-前端 4 个 Hook（`useChat`、`useTasks`、`useAgentConsole`、`useSettings`）
-共用同一个 `useWorkspaceSocket`，3 秒断线自动重连，事件合并逻辑全部去重到
-`lib/task-utils.ts`。
+---
 
 ## 一分钟跑起来
 
-**Windows 一键启动**（推荐）— 双击 `start.bat` 或运行 `start.ps1`，
-自动复制 `.env`、启动服务、等待就绪后打开浏览器。
+### Windows 全自动一键启动（推荐）
+双击根目录 `start.bat` 或在终端运行 `start.ps1`。
+脚本将自动拷贝环境变量 `.env`，拉起 Docker 容器，并每隔 3 秒轮询健康检查，就绪后将直接呼出浏览器。
 
-或手动：
-
+### 手动容器化启动
 ```powershell
 Copy-Item .env.example .env
 docker compose up --build
 ```
+- 控制台入口：http://localhost:3000
+- OpenAPI 文档：http://localhost:8000/docs
+- 接口健康检查：http://localhost:8000/api/v1/health
 
-- 前端 → http://localhost:3000
-- API 文档 → http://localhost:8000/docs
-- 健康检查 → http://localhost:8000/api/v1/health
+> 💡 **Tip**：服务就绪后，直接进入前端 `/settings` 页面输入所需大模型厂商的 API Key，然后在 `/chats` 输入 `@项目总设计师 帮我写个贪吃蛇` 即可自动运转全套流水线！
 
-打开浏览器，默认工作区和 6 个 Agent 已就位。输入 `@项目总设计师 帮我...` 回车。
-API Key 直接在 `/settings` 页面填入即可，无需重启。
+---
 
-## 质量基线
+## 系统演进路线图 (Roadmap)
 
-| 项 | 状态 |
-| --- | --- |
-| 后端 pytest | 40 passed |
-| 前端 Node test | 28 passed |
-| ESLint | 0 errors / 0 warnings |
-| TypeScript + Next build | 编译通过 |
-| 失败恢复 | 进程重启自动恢复未完成任务 |
-| 失败持久化 | 主 Session 坏了用 fallback Session 补刀 |
-| 并发控制 | 单工作区最多 3 个进行中任务，超了 429 |
+- [x] Windows 一键自动化启动脚本与容器编排
+- [x] `/contacts` 独立通讯录与角色展板
+- [x] Agent 内部安全沙箱工具调用闭环（Function Calling）
+- [x] 单任务双层上下文连续性与执行轨迹视图 Trace
+- [x] 用户级别 API Key 热配置与自定义模型降级管理
+- [ ] 引入 Alembic 进行数据库 Schema 版本自动迁移
+- [ ] 引入 Redis Celery / RQ 队列，实现分布式后台重型调度
+- [ ] Worker 并发执行改造（SQLite -> Postgres 后启用 `asyncio.gather`）
+- [ ] Redis Pub/Sub 多进程 WebSocket 频道广播
+- [ ] 测试专员 (QA) 驳回后触发 Worker 自动修改重试回路
 
-## 关键决策记录
-
-**为什么 `asyncio.create_task` 而不是 Celery？**
-MVP 阶段不值得引入消息队列的运维复杂度。`run_task(task_id)` 入口已经设计为
-无状态函数 — 未来加一行 `celery_app.send_task("run_task", args=[task_id])`
-即可切换。`orchestrator.py` 里也标了 `asyncio.gather` 并行化的 TODO，
-等 PostgreSQL 到位后改一行代码就开。
-
-**为什么 SQLite 而不是 PostgreSQL？**
-零配置。`Base.metadata.create_all` 一把梭。迁移到 PostgreSQL 只需改
-`DATABASE_URL`，所有 SQLAlchemy 模型都是标准定义，不依赖 SQLite 方言。
-Alembic 在 Schema 变频繁之前引入即可。
-
-**为什么进程内 WebSocket 而不是 Redis Pub/Sub？**
-单进程够用，`WebSocketManager` 就是个 `dict[int, set[WebSocket]]`。
-`broadcast_to_workspace` 接口不变，未来把实现换成 Redis 通道即可，
-所有调用方一行不动。
-
-## 最近一次打磨（本轮）
-
-- `useWorkspaceSocket` — 4 个 Hook 里一模一样的 35 行 WebSocket 逻辑，现在一处定义
-- `taskTimestamp` / `taskStatusRank` / `shouldApplyTaskStatus` — 两处各自定义，现在一个 `lib/task-utils.ts`
-- 死代码清退 — `SystemStatus`、`selectConsoleAgents`（后端已过滤又过滤一遍）；`SoftwareDock` 保留为软件端口面板
-- `ErrorBoundary` — 5 个页面各套一层，组件崩了不白屏
-- `fetchedRef` — StrictMode 下不会重复请求两次
-- `TaskStepEventPayload` — 手写 dict 换成 Pydantic Schema，和其他事件一致
-- 模型成本 — `ModelCall.cost` 以前恒为 0，现在从 LiteLLM 响应提取
-- 测试 — 前端从 2 个涨到 28 个
-
-### 下一轮（本轮）
-
-- **用户管理 API Key** — `ProviderCredential` 表 + `/api/provider-keys` 三接口，
-  前端设置页可直接填入/删除密钥，数据库优先于环境变量解析
-- **自定义模型接入** — `CustomModelConfig` 表 + `/api/custom-models` 三接口，
-  前端可添加任意 `provider/model` 组合并配置 fallback，无需改 YAML
-- **API Key 显示修复** — 修复眼睛图标切换失效的 BUG（`undefined` 与 React 批处理冲突），
-  保存后清空明文输入
-- 测试 — 后端 37 → 40（新增自定义模型 CRUD、解析、集成覆盖）
-
-## 路线图
-
-- [ ] Alembic 迁移
-- [ ] Redis 消息队列替代 `asyncio.create_task`
-- [ ] Worker 并行化（SQLite → PostgreSQL 后启用 `asyncio.gather`）
-- [ ] Redis Pub/Sub 多进程广播
-- [ ] QA 不通过 → Worker 重试循环
-- [ ] 前端 WebSocket/Hook 端到端测试
-- [x] `/contacts` 通讯录页面
+---
 
 ## License
 
-选好了再发。
+TBD
