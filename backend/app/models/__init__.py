@@ -14,6 +14,7 @@ from app.models.quota_config import QuotaConfig
 from app.models.task import Task, TaskStep
 from app.models.task_queue import TaskQueueItem
 from app.models.user import User
+from app.models.workflow import WorkflowTemplate
 from app.models.workspace import Workspace
 
 __all__ = [
@@ -33,6 +34,7 @@ __all__ = [
     "TaskStep",
     "TaskQueueItem",
     "User",
+    "WorkflowTemplate",
     "Workspace",
     "WorkspaceInvitation",
     "WorkspaceMembership",

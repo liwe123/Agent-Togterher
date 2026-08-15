@@ -57,6 +57,14 @@ from app.schemas.replay import (
     ResumeStepRequest,
     TaskReplayResponse,
 )
+from app.schemas.workflow import (
+    WorkflowNode,
+    WorkflowRunRequest,
+    WorkflowRunResponse,
+    WorkflowTemplateCreate,
+    WorkflowTemplateResponse,
+    WorkflowVariable,
+)
 from app.schemas.task import (
     ModelCallRead,
     TaskAgentRead,
@@ -134,6 +142,12 @@ __all__ = [
     "TopTaskCostItem",
     "UpdateRoleRequest",
     "UserRead",
+    "WorkflowNode",
+    "WorkflowRunRequest",
+    "WorkflowRunResponse",
+    "WorkflowTemplateCreate",
+    "WorkflowTemplateResponse",
+    "WorkflowVariable",
     "WorkspaceCreate",
     "WorkspaceCreateWithMembership",
     "WorkspacePluginResponse",

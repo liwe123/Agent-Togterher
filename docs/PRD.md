@@ -158,6 +158,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-任务执行回放与单步调试.md](prd/PRD-任务执行回放与单步调试.md) | 任务执行回放与单步调试（时序回放流、输入输出检查与断点恢复） | a4c0c1f | C-108 |
 | [PRD-工作区配额与限流治理.md](prd/PRD-工作区配额与限流治理.md) | 工作区配额与限流治理（quota_configs 表、月度硬熔断与水位大屏） | a4c0c1f | C-109 |
 | [PRD-插件注册中心.md](prd/PRD-插件注册中心.md) | 插件注册中心（plugins 表、Manifest 校验、工作区挂载与工具热插拔） | 037e968 | C-110 |
+| [PRD-工作流模板引擎.md](prd/PRD-工作流模板引擎.md) | 工作流模板引擎（workflow_templates 表、DAG/步骤节点与一键实例化） | 待提交 | C-111 |
 
 ---
 

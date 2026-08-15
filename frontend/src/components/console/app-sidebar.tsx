@@ -15,6 +15,7 @@ import {
   Sparkles,
   UserPlus,
   Users,
+  Workflow,
 } from "lucide-react"
 
 import { useWorkspaces } from "@/hooks/use-workspaces"
@@ -28,6 +29,7 @@ const navigation = [
   { id: "chats", label: "群聊", icon: MessageCircleMore, href: "/chats" },
   { id: "contacts", label: "通讯录", icon: ContactRound, href: "/contacts" },
   { id: "tasks", label: "任务", icon: ListTodo, href: "/tasks" },
+  { id: "workflows", label: "工作流", icon: Workflow, href: "/workflows" },
   { id: "settings", label: "设置", icon: Settings, href: "/settings" },
 ] as const
 

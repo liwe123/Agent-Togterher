@@ -186,6 +186,19 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "created_at",
             "updated_at",
         },
+        "workflow_templates": {
+            "id",
+            "workspace_id",
+            "name",
+            "display_name",
+            "description",
+            "icon",
+            "nodes_json",
+            "variables_json",
+            "is_system",
+            "created_at",
+            "updated_at",
+        },
     }
 
     assert set(Base.metadata.tables) == set(expected_columns)
