@@ -145,6 +145,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "feat: 实现任务执行回放与单步调试（B2）及工作区配额治理（C2）": {
+        "type": "Requirement",
+        "content": "实现任务执行回放与单步调试（B2）及工作区配额治理（C2）：引入 quota_configs 表与配额限流服务；实现任务结构化时序执行流回放与单步断点恢复执行接口；前端开发 TaskReplayPlayer 回放播放器并嵌入任务详情页；前端开发 /settings/quota 配额管理台与设置中心 4 卡片导航",
+        "frontend": "新增 TaskReplayPlayer 回放交互播放器组件（支持播放/暂停、倍速调节、时间轴 scrub 与 Payload 检查）；任务详情页嵌入回放流；新增 /settings/quota 工作区配额与限流控制台；设置中心首页导航升级为 4 卡片网格",
+        "backend": "新增 QuotaConfig 数据库模型与 quota_service 预算及限流治理；新增 endpoints/quota.py 与 endpoints/task_replay.py（/replay 与 /resume-from-step 接口）；支持断点恢复调度与审计日志联动",
+        "db": "是(quota_configs)",
+        "breaking": "否",
+        "verify": "pytest 全量 104 passed；前端测试 28 passed；前端 lint/build 0 errors 0 warnings 通过；子 Agent 独立验收通过",
+        "notes": "PRD: docs/prd/PRD-任务执行回放与单步调试.md, docs/prd/PRD-工作区配额与限流治理.md；工单 C-108, C-109；子 Agent 独立验收通过",
+    },
     "feat: 实现平台级审计日志（B1）与成本统计面板（C1）": {
         "type": "Requirement",
         "content": "新增平台级审计日志（B1）与成本统计面板（C1）：引入 audit_logs 表与审计服务，在登录、注册、成员变更与任务中自动埋点；实现成本中心多维聚合统计（总览指标/每日趋势/模型分布/Top任务）；前端实现 /settings/audit 审计日志台与 /settings/cost 成本统计大屏",

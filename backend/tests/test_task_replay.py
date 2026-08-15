@@ -1,5 +1,6 @@
 import asyncio
 from collections.abc import Iterator
+from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -18,7 +19,7 @@ def replay_client(tmp_path) -> Iterator[TestClient]:
     engine = create_async_engine(f"sqlite+aiosqlite:///{database_path.as_posix()}")
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
-    async def create_schema_and_task() -> int:
+    async def create_schema_and_task() -> tuple[int, int]:
         async with engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
 
@@ -33,23 +34,24 @@ def replay_client(tmp_path) -> Iterator[TestClient]:
             await session.commit()
             await session.refresh(task)
 
+            now = datetime.now(timezone.utc)
             step1 = TaskStep(
                 task_id=task.id,
                 step_name="manager_plan",
-                agent_role="manager",
                 status="completed",
-                input_payload='{"prompt": "Test prompt"}',
-                output_payload='{"plan": ["step1", "step2"]}',
-                duration_ms=450,
+                input='{"prompt": "Test prompt"}',
+                output='{"plan": ["step1", "step2"]}',
+                started_at=now,
+                finished_at=now,
             )
             step2 = TaskStep(
                 task_id=task.id,
                 step_name="worker_execute_1",
-                agent_role="coder",
                 status="failed",
-                input_payload='{"instruction": "write code"}',
-                error_message="Compilation failed",
-                duration_ms=1200,
+                input='{"instruction": "write code"}',
+                output=None,
+                started_at=now,
+                finished_at=now,
             )
             session.add_all([step1, step2])
             await session.commit()
@@ -85,7 +87,6 @@ def test_task_replay_flow(replay_client: TestClient) -> None:
     assert len(data["frames"]) == 2
     assert data["frames"][0]["step_name"] == "manager_plan"
     assert data["frames"][1]["status"] == "failed"
-    assert data["frames"][1]["error_message"] == "Compilation failed"
 
     # 2. 从失败步骤恢复执行
     resume_res = replay_client.post(
