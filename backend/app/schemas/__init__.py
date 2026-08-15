@@ -12,8 +12,16 @@ from app.schemas.auth import (
 )
 from app.schemas.common import ErrorResponse, SuccessResponse
 from app.schemas.conversation import ConversationCreate, ConversationRead
-
 from app.schemas.custom_model import CustomModelCreate, CustomModelRead
+from app.schemas.membership import (
+    InviteCreateRequest,
+    InviteResponse,
+    JoinWorkspaceRequest,
+    MemberRead,
+    MyWorkspaceRead,
+    UpdateRoleRequest,
+    WorkspaceCreateWithMembership,
+)
 from app.schemas.message import MessageCreate, MessageHubRead, MessageRead
 from app.schemas.model import (
     ModelConfigInfo,
@@ -51,8 +59,11 @@ __all__ = [
     "CustomModelCreate",
     "CustomModelRead",
     "ErrorResponse",
+    "InviteCreateRequest",
+    "InviteResponse",
+    "JoinWorkspaceRequest",
     "LoginRequest",
-
+    "MemberRead",
     "MessageCreate",
     "MessageHubRead",
     "MessageRead",
@@ -61,13 +72,13 @@ __all__ = [
     "ModelTestRequest",
     "ModelTestResult",
     "ModelTokenUsage",
+    "MyWorkspaceRead",
     "ProviderStatusInfo",
     "ProviderKeyUpsert",
     "ProviderKeyValue",
     "RefreshRequest",
     "RegisterRequest",
     "SuccessResponse",
-
     "ModelCallRead",
     "TaskAgentRead",
     "TaskCreate",
@@ -80,7 +91,9 @@ __all__ = [
     "TaskTraceEventRead",
     "TaskUpdate",
     "TokenRefreshResponse",
+    "UpdateRoleRequest",
     "UserRead",
     "WorkspaceCreate",
+    "WorkspaceCreateWithMembership",
     "WorkspaceRead",
 ]

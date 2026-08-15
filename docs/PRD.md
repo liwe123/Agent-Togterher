@@ -122,6 +122,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-15 00:38 | C-099 | 已完成 | [1b59316](https://github.com/liwe123/Agent-Togterher/commit/1b59316) | LI | Optimization | 其他、文档 | docs: 登记 Phase 2 文档同步提交 | - | - | 否 | 否 | - | - |
 | 2026-08-15 12:29 | C-100 | 已完成 | [38f9cbb](https://github.com/liwe123/Agent-Togterher/commit/38f9cbb) | LI | Requirement | 其他、后端、文档 | feat: Phase 3 分布式化——事件总线、连接解耦、Worker注册中心与状态快照 | - | backend/app/core；backend/app/main.py；backend/app/websocket；backend/tests/test_distributed_event_bus.py；backend/tests/test_event_relay.py；backend/tests/test_worker_registry.py | 否 | 否 | - | - |
 | 2026-08-15 22:41 | C-101 | 已完成 | [9337826](https://github.com/liwe123/Agent-Togterher/commit/9337826) | LI | Requirement | 后端、数据库、文档、其他、前端 | 新增用户认证系统（A1）：引入 User 数据模型与 PBKDF2/JWT 认证，提供注册、登录、Token 刷新、登出与当前用户信息接口；支持 API Token 与 JWT 双轨鉴权；WebSocket 握手 JWT 鉴权；前端新增登录页、注册页、客户端路由守卫与 API 客户端 401 自动续期 | 新增 /login 与 /register 登录注册页面；新增 AuthGuard 客户端路由守卫；task-api.ts 支持 Bearer Token 自动注入与 401 无感刷新；WebSocket 连接携带 JWT | 新增 User 数据库模型；新增 auth.py 模块(JWT 签发/校验与密码哈希)；新增 /api/v1/auth 路由(register/login/refresh/logout/me)；main.py 中间件双轨鉴权 | 是(users) | 否（保持与现有 API Token 向后兼容） | 前后端冒烟测试通过；后端全量 99 passed；前端测试 28 passed；前端 lint/build 均通过 | PRD: docs/prd/PRD-用户认证系统.md；工单 C-101；子 Agent 独立验收通过 |
+| 2026-08-15 22:43 | C-102 | 已完成 | [702942c](https://github.com/liwe123/Agent-Togterher/commit/702942c) | LI | Optimization | 文档、其他 | docs: 同步 A1 用户认证系统变更追踪表、PRD 索引与接力文档 | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
@@ -144,6 +145,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-Phase2持久化任务队列与独立Worker.md](prd/PRD-Phase2持久化任务队列与独立Worker.md) | Phase 2 持久化队列、任务治理与独立 Worker | 2ada67f | C-097 |
 | [PRD-Phase3分布式化.md](prd/PRD-Phase3分布式化.md) | Phase 3 分布式化（事件总线、连接解耦、Worker集群化） | - | - |
 | [PRD-用户认证系统.md](prd/PRD-用户认证系统.md) | 用户认证系统（JWT、User 模型、Auth 页面与路由守卫） | 9337826 | C-101 |
+| [PRD-角色权限与多租户隔离.md](prd/PRD-角色权限与多租户隔离.md) | 角色权限与多租户隔离（RBAC 权限矩阵、工作区切换器与成员管理） | 待提交 | C-103 |
 
 ---
 

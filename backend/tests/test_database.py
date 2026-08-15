@@ -123,6 +123,24 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "created_at",
             "last_login_at",
         },
+        "workspace_memberships": {
+            "id",
+            "user_id",
+            "workspace_id",
+            "role",
+            "joined_at",
+        },
+        "workspace_invitations": {
+            "id",
+            "workspace_id",
+            "inviter_id",
+            "invitee_email",
+            "invite_code",
+            "role",
+            "status",
+            "expires_at",
+            "created_at",
+        },
     }
 
     assert set(Base.metadata.tables) == set(expected_columns)

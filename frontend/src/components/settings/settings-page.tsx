@@ -19,9 +19,11 @@ import {
   ShieldCheck,
   ShieldX,
   Trash2,
+  Users,
   XCircle,
   Zap,
 } from "lucide-react"
+import Link from "next/link"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { ErrorBoundary } from "@/components/error-boundary"
@@ -346,6 +348,29 @@ export function SettingsPage() {
                 {models.length + customModels.length} 个模型已挂载
               </Badge>
             </header>
+
+            {/* Members Management Banner */}
+            <section aria-label="工作区成员与权限">
+              <Link
+                href="/settings/members"
+                className="group flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/10 p-4 sm:p-5 transition-all duration-200 hover:border-primary/50 hover:bg-primary/15 active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-4">
+                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/20 text-primary">
+                    <Users className="size-5" />
+                  </div>
+                  <div>
+                    <h2 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
+                      工作区成员与权限管理
+                    </h2>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      管理当前工作区成员角色（所有者 / 管理员 / 成员 / 观察者）与邀请码
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="size-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+              </Link>
+            </section>
 
             {/* Provider key status */}
             <section aria-label="Provider 密钥状态" className="flex flex-col gap-3">

@@ -55,6 +55,26 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
         display_name=body.display_name.strip(),
     )
     db.add(user)
+    await db.flush()
+
+    # Automatically assign to workspace
+    from app.models.membership import WorkspaceMembership
+    from app.models.workspace import Workspace
+    from sqlalchemy import select, func
+
+    first_workspace = await db.scalar(select(Workspace).order_by(Workspace.id.asc()).limit(1))
+    if first_workspace is None:
+        first_workspace = Workspace(name=f"{user.display_name}的工作区", description="默认个人协作空间")
+        db.add(first_workspace)
+        await db.flush()
+        db.add(WorkspaceMembership(user_id=user.id, workspace_id=first_workspace.id, role="owner"))
+    else:
+        member_count = await db.scalar(
+            select(func.count()).select_from(WorkspaceMembership).where(WorkspaceMembership.workspace_id == first_workspace.id)
+        )
+        role = "owner" if (member_count or 0) == 0 else "member"
+        db.add(WorkspaceMembership(user_id=user.id, workspace_id=first_workspace.id, role=role))
+
     await db.commit()
     await db.refresh(user)
 
