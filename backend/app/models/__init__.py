@@ -1,6 +1,7 @@
 """SQLAlchemy persistence models exported from a single registration module."""
 
 from app.models.agent import Agent
+from app.models.audit_log import AuditLog
 from app.models.conversation import Conversation
 from app.models.custom_model_config import CustomModelConfig
 from app.models.enums import MessageType, SenderType, TaskStatus
@@ -15,6 +16,7 @@ from app.models.workspace import Workspace
 
 __all__ = [
     "Agent",
+    "AuditLog",
     "Conversation",
     "CustomModelConfig",
     "Message",

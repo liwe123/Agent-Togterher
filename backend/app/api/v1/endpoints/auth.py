@@ -78,6 +78,17 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(user)
 
+    from app.services.audit_service import record_audit_log
+    await record_audit_log(
+        db,
+        workspace_id=first_workspace.id if first_workspace else None,
+        user_id=user.id,
+        action="user.register",
+        resource_type="user",
+        resource_id=str(user.id),
+        detail={"email": user.email, "display_name": user.display_name},
+    )
+
     access_token = create_access_token(user.id)
     refresh_token = create_refresh_token(user.id)
 
@@ -100,6 +111,16 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     # Update last login time
     user.last_login_at = datetime.now(timezone.utc)
     await db.commit()
+
+    from app.services.audit_service import record_audit_log
+    await record_audit_log(
+        db,
+        user_id=user.id,
+        action="user.login",
+        resource_type="user",
+        resource_id=str(user.id),
+        detail={"email": user.email},
+    )
 
     access_token = create_access_token(user.id)
     refresh_token = create_refresh_token(user.id)

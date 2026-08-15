@@ -141,6 +141,17 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "expires_at",
             "created_at",
         },
+        "audit_logs": {
+            "id",
+            "workspace_id",
+            "user_id",
+            "action",
+            "resource_type",
+            "resource_id",
+            "detail",
+            "ip_address",
+            "created_at",
+        },
     }
 
     assert set(Base.metadata.tables) == set(expected_columns)

@@ -28,8 +28,8 @@ export function formatTokens(value: number) {
   return numberFormatter.format(value)
 }
 
-export function formatCost(value: string) {
-  const cost = Number(value)
+export function formatCost(value: string | number) {
+  const cost = typeof value === "number" ? value : Number(value)
   if (!Number.isFinite(cost) || cost === 0) return "$0.000000"
   return `$${cost.toFixed(6)}`
 }

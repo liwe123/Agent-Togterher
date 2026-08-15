@@ -16,10 +16,12 @@ import {
   Plus,
   Save,
   Settings,
+  Shield,
   ShieldCheck,
   ShieldX,
   Trash2,
   Users,
+  Coins,
   XCircle,
   Zap,
 } from "lucide-react"
@@ -349,26 +351,63 @@ export function SettingsPage() {
               </Badge>
             </header>
 
-            {/* Members Management Banner */}
-            <section aria-label="工作区成员与权限">
+            {/* Quick Management Navigation Grid */}
+            <section aria-label="管理中心快捷入口" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <Link
                 href="/settings/members"
-                className="group flex items-center justify-between rounded-2xl border border-primary/30 bg-primary/10 p-4 sm:p-5 transition-all duration-200 hover:border-primary/50 hover:bg-primary/15 active:scale-[0.99]"
+                className="group flex flex-col justify-between rounded-xl border border-primary/30 bg-primary/10 p-4 transition-all duration-200 hover:border-primary/50 hover:bg-primary/15 active:scale-[0.99]"
               >
-                <div className="flex items-center gap-4">
-                  <div className="flex size-11 items-center justify-center rounded-xl bg-primary/20 text-primary">
-                    <Users className="size-5" />
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-primary/20 text-primary">
+                    <Users className="size-4" />
                   </div>
                   <div>
-                    <h2 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
-                      工作区成员与权限管理
+                    <h2 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                      成员与权限
                     </h2>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      管理当前工作区成员角色（所有者 / 管理员 / 成员 / 观察者）与邀请码
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      多租户角色升降与邀请
                     </p>
                   </div>
                 </div>
-                <ChevronRight className="size-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-0.5 transition-all" />
+              </Link>
+
+              <Link
+                href="/settings/audit"
+                className="group flex flex-col justify-between rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/40 hover:bg-secondary/40 active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-secondary text-primary">
+                    <Shield className="size-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                      操作审计日志
+                    </h2>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      安全合规与敏感操作流
+                    </p>
+                  </div>
+                </div>
+              </Link>
+
+              <Link
+                href="/settings/cost"
+                className="group flex flex-col justify-between rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/40 hover:bg-secondary/40 active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-secondary text-amber-400">
+                    <Coins className="size-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                      成本中心与 Token
+                    </h2>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      费用趋势与 Top 任务
+                    </p>
+                  </div>
+                </div>
               </Link>
             </section>
 
