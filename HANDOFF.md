@@ -1,124 +1,145 @@
-# Agent Console MVP 接力文档
+# Agent Console 项目接力文档 (HANDOFF)
 
-更新时间：2026-06-24（项目最终验收与任务自动触发机制优化完成）  
-工作目录：`E:\Agents`
-
-## 1. 项目目标
-
-构建支持多模型、多 Agent、群聊协作、`@Agent`、任务分发、状态同步、模型调用日志和 WebSocket 实时推送的协同控制台。
-
-技术栈：
-
-- 前端：Next.js + React + TypeScript + Tailwind CSS + shadcn/ui
-- 后端：FastAPI + Python
-- 数据库：SQLite + SQLAlchemy，后续可迁移 PostgreSQL
-- 缓存/队列：Redis
-- 模型调用：LiteLLM
-- 实时通信：WebSocket
-- 容器：Docker Compose
+> 更新时间：2026-08-15  
+> 工作目录：`E:\Agents`  
+> 当前阶段：**Phase 4（产品化）进行中 — 批次 1（A1 用户认证系统）已完成并通过验收**
 
 ---
 
-## 2. 当前阶段
+## 1. 架构演进与全景现状
 
-项目已顺利通过全面的验收检查，并在后端提供了**接收用户消息自动在后台触发运行**（`MessageHub` -> `orchestrator.run_task`）的体验改进，使群聊派发任务能够开箱即用自动运转。
+系统已从最初的 MVP 成功演进为具备持久化调度、独立 Worker、Redis 分布式事件总线与用户认证的协同任务平台：
 
-当前已有：
-- 项目骨架、前后端健康检查、七张 SQLAlchemy 数据库表。
-- **自动建表和 Seed 填充**：FastAPI 启动时，`lifespan` 自动初始化数据库 Schema 并调用 seed 模块填充默认工作区和六个 Agent 角色。
-- **任务自动后台启动**：`MessageHub.receive_user_message` 提交事务后使用 `asyncio.create_task` 自动异步触发 `run_task` 启动，并实时广播给前端。
-- 基础 REST API 和统一成功/错误响应包装。
-- 按工作区隔离的 WebSocket 通信、六类实时事件广播。
-- 统一 LiteLLM 调用层、多级 Fallback 容灾降级机制。
-- MessageHub 消息与任务分发（支持中英文 `@Agent` 解析）。
-- 同步 Agent Orchestrator 链路（项目总设计师 → Worker 顺序执行 → 测试专员审核 → 总设计师最终汇总）。
-- Next.js 深色控制台、`/chats` 群聊页、`/tasks` 任务列表与详情页、`/settings` 模型设置与密钥连通性测试页。
-- **基础测试套件**：涵盖 API 启动、数据库表创建、Seed 幂等性执行、模型测试接口连通性、WebSocket 连通性。
-- **CORS 多端口放行**：完美支持 `localhost` 与 `127.0.0.1` 跨域。
-- **全面完善的文档与忽略规则**：提供了完整的 README 说明、配置列表、FAQ 手册与标准 `.gitignore` 规则。
-
-尚未实现：
-- Alembic 数据库版本迁移。
-- Redis 并发队列任务派发、并发锁与任务重试/幂等。
-- Redis Pub/Sub 多进程 WebSocket 分发。
-- 异步/并行多 Agent 执行。
-- 阻断性问题的修改/复审回路。
-- `/contacts` 通讯录独立页面。
-
----
-
-## 3. 实现与优化改动
-
-核心改动：
-
-- **任务异步自动触发**：
-  - 修改 `backend/app/core/message_hub.py`，在 `receive_user_message` 中新增了 `asyncio.create_task(run_task(task.id))`。使用户在群聊中提及 `@Agent` 时不仅能生成 pending 任务，还会在后台直接触发该任务的执行链，并将所有的执行进度（`running` -> `model.call_finished` -> `failed/completed`）实时推送到群聊气泡和控制台，完成 MVP 端到端自动化流转。
-- **数据库与 Seed 自动化**：
-  - 修改 `backend/app/main.py` 的 `lifespan`，在应用启动时自动调用 `seed_defaults` 保证项目无需单独运行 seed 命令即可开箱即用。
-- **CORS 兼容性提升**：
-  - 修改 `backend/app/core/config.py` 中的 `cors_origins` 默认配置，同时支持 `http://localhost:3000` 和 `http://127.0.0.1:3000`。
-  - 同步修改 `.env.example` 和 `docker-compose.yml` 中的 CORS_ORIGINS 默认环境变量。
-- **前端网络异常保护与重构**：
-  - 修改 `frontend/src/lib/task-api.ts` 的 `apiBaseUrl`，当环境变量 `NEXT_PUBLIC_API_BASE_URL` 为空字符串 `""` 时，正确回退到 `http://localhost:8000`，避免对同端口发出错误请求。
-  - 重构 `frontend/src/hooks/use-agent-console.ts` 和 `frontend/src/hooks/use-chat.ts`，彻底移除本地重复定义的 `apiBaseUrl`、`websocketBaseUrl` 和 `requestData`，全部通过 `@/lib/task-api` 引入。
-- **容器环境微调**：
-  - 修改 `docker-compose.yml` 里的 backend 健康检查 URL，将 `localhost` 改为 `127.0.0.1` 规避 IPv6 优先解析导致的健康检查假死。
-- **基础测试扩展**：
-  - 新置 `backend/tests/test_basic_startup.py`，设计了 5 个核心测试用例验证系统最小集（API/数据库/Seed/模型测试/WebSocket）。
-- **版本库忽略规则**：
-  - 修改根目录 `.gitignore`，规范并补齐了 `.env`、`__pycache__`、`node_modules`、`.next`、`dist`、`*.db`、`*.sqlite` 的忽略规则。
-- **文档体系建设**：
-  - 重写 `README.md`，添加了功能列表、环境变量说明、详细启动方式、测试方式和包含 CORS、Docker 权限等场景的常见问题 (FAQ) 目录。
-
----
-
-## 4. 验证结果
-
-- **后端测试**：
-  - 在 `E:\Agents\backend` 运行 `python -m pytest`，全量 **31Passed** (26个原有测试 + 5个新增基础测试)，无 Error/Warning。
-- **前端构建**：
-  - 在 `E:\Agents\frontend` 运行 `npm run lint`，**无 Warning，无 Error** 完美通过。
-  - 在 `E:\Agents\frontend` 运行 `npm run build`，生产构建顺利完成。
-
----
-
-## 5. 精确运行命令
-
-### 一键容器启动：
-```powershell
-Set-Location E:\Agents
-Copy-Item .env.example .env
-docker compose up --build
 ```
-*启动后浏览器访问 `http://localhost:3000` 即可直接使用系统所有功能。*
+┌─────────────────────────────────────────────────────────────┐
+│                    Next.js 16 前端控制台                     │
+│  - / (集群总览)           - /chats (多智能体群聊协作)        │
+│  - /tasks (任务队列)      - /tasks/[id] (执行轨迹深度回溯)    │
+│  - /contacts (通讯录)     - /settings (模型/密钥配置中心)     │
+│  - /login (登录)          - /register (注册)                │
+│  - AuthGuard 路由守卫     - Bearer Token 401 自动无感续期     │
+└───────────────┬─────────────────────────────┬───────────────┘
+                │ REST API (Bearer JWT)       │ WebSocket (?token=JWT)
+                ▼                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    FastAPI 核心服务集群                     │
+│  - app/api/v1/endpoints (auth, tasks, messages, models...)  │
+│  - app/core/auth.py (PBKDF2-SHA256 密码哈希 / PyJWT 签发)    │
+│  - app/core/security.py (API Token 与 JWT 双轨鉴权)         │
+│  - app/core/message_hub.py (@Agent 提及解析与任务生成)       │
+│  - app/core/orchestrator.py (多阶段 Agent 编排流水线)        │
+│  - app/services/task_service.py (任务状态机与租约管理)       │
+│  - app/services/tools.py (Function Calling 安全工具集)       │
+│  - app/websocket/distributed.py (Redis Pub/Sub 跨进程总线)   │
+└───────────────┬─────────────────────────────┬───────────────┘
+                │ AsyncSession                │ 队列轮询 / 原子 Claim
+                ▼                             ▼
+┌───────────────────────────────┐ ┌───────────────────────────┐
+│     SQLAlchemy 数据持久层     │ │    独立 Worker 消费进程   │
+│  - 11 张领域数据表            │ │  - app/worker.py          │
+│  - SQLite (生产可切 PostgreSQL)│ │  - worker_concurrency 控制 │
+│  - 默认工作区与 6 个预设 Agent │ │  - 租约心跳与死信重试      │
+└───────────────────────────────┘ └───────────────────────────┘
+```
 
-### 本地开发运行：
+---
+
+## 2. 数据库表清单 (共 11 张)
+
+| 表名 | 模块 | 核心作用 |
+|---|---|---|
+| `users` (✨ 新增) | 认证 | 用户账号 (`email`, `password_hash`, `display_name`, `avatar`, `is_active`, `last_login_at`) |
+| `workspaces` | 租户 | 工作区与租户隔离 |
+| `agents` | 智能体 | 预设与自定义 Agent (`role`, `model_name`, `system_prompt`, `status`) |
+| `conversations` | 聊天 | 会话容器 |
+| `messages` | 消息 | 聊天消息事实记录 |
+| `tasks` | 任务 | 业务任务事实源 (`status`, `result`, `execution_token`, `execution_token_expires_at`) |
+| `task_steps` | 步骤 | 任务各执行阶段输入、输出与耗时 |
+| `task_queue_items` | 队列 | 任务持久化调度队列 (`status`: queued/leased/completed/dead, `attempt_count`) |
+| `model_calls` | 审计 | LLM 调用统计 (`prompt_tokens`, `completion_tokens`, `cost`, `latency_ms`) |
+| `provider_credentials` | 密钥 | 模型厂商 API Key 存储（掩码管理） |
+| `custom_model_configs` | 模型 | 自定义模型与 Fallback 容灾映射 |
+
+---
+
+## 3. Phase 4 进展与后续任务路线
+
+### 已完成 (批次 1)
+- [x] **A1 用户认证系统 (C-101)**
+  - 后端：`User` 模型、`auth.py` (PBKDF2/JWT)、`/api/v1/auth` 路由、双轨认证中间件、WebSocket 握手 JWT 鉴权。
+  - 前端：`/login` 与 `/register` 页面、`AuthGuard` 路由守卫、`task-api.ts` 自动注入 Bearer Token 与 401 自动续期。
+  - 测试：后端新增 `test_auth.py`，全量 **99 tests passed**；前端 **28 tests passed**，`lint` / `build` 全量通过。
+  - 文档：产出 `docs/prd/PRD-用户认证系统.md` 并同步至 `PRD.md` 和 `PRD.html`。
+
+### 下一步待实施任务
+- [ ] **批次 2：角色权限与多租户 (A2 + A3)**
+  - A2 角色与权限模型 (RBAC): `workspace_memberships` 表，owner/admin/member/viewer 权限矩阵与 API/UI 门禁。
+  - A3 多租户 Workspace 隔离: 侧边栏工作区切换器、成员邀请码与 `/settings/members` 管理页。
+- [ ] **批次 3：审计与成本中心 (B1 + C1)**
+  - B1 平台级审计日志: `audit_logs` 表，记录核心变更操作与 `/settings/audit` 查看页。
+  - C1 成本统计面板: 聚合 `model_calls` 产生可视化趋势图、模型消耗占比与 Top 消耗任务排行。
+- [ ] **批次 4：回放与配额 (B2 + C2)**
+  - B2 任务执行回放: 在 `/tasks/[id]` 提供步进回放、上下文 Diff 与失败节点恢复重试。
+  - C2 配额与限流升级: `quota_configs` 表，按工作区月度 Token/Cost 额度限制与 Redis 速率控制。
+- [ ] **批次 5：插件生态 (D1)**
+  - D1 插件注册中心: `plugins` 表与 Manifest 机制，支持工作区按需挂载工具扩展。
+- [ ] **批次 6：工作流模板引擎 (D2)**
+  - D2 工作流模板引擎: 自定义流水线编排、条件分支与人工审批节点。
+
+---
+
+## 4. 常用运行与测试命令
+
+### 后端运行与测试
 ```powershell
-# 后端
+# 进入后端目录并激活环境
 Set-Location E:\Agents\backend
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements-dev.txt
+
+# 运行全量单元与集成测试 (当前 99 Passed)
+python -c "import pytest, sys; sys.exit(pytest.main(['tests', '-p', 'no:warnings', '-q']))"
+
+# 启动后端 API 服务
 uvicorn app.main:app --reload --port 8000
 
-# 前端 (新窗口)
+# 启动独立 Worker 进程 (可选 worker 模式)
+python -m app.worker
+```
+
+### 前端运行与测试
+```powershell
+# 进入前端目录
 Set-Location E:\Agents\frontend
 npm install
+
+# 运行前端测试 (当前 28 Passed)
+npm test
+
+# 检查代码规范 (0 Error, 0 Warning)
+npm run lint
+
+# 生产环境构建编译
+npm run build
+
+# 启动开发服务器 (http://localhost:3000)
 npm run dev
 ```
 
-### 全量测试运行：
+### 文档同步脚本
 ```powershell
-Set-Location E:\Agents\backend
-python -m pytest
+# 每次 git commit 后重跑以下两命令，对齐改动表与单页阅读器：
+python docs/generate_change_log.py
+python docs/build_prd_html.py
 ```
 
 ---
 
-## 6. 下一阶段建议
+## 5. 守则执行要点（针对接力 Agent）
 
-1. **Alembic 数据库迁移**：引入 Alembic 迁移脚本，开始版本化追踪后续的表结构变更（如为任务表添加 error_message 或为 Agent 表添加更多个性化字段）。
-2. **异步任务队列**：将当前在 `POST /api/tasks/{task_id}/run` 请求中同步堵塞运行的 Orchestrator 改为使用 Redis Celery / RQ 队列，实现异步后台执行，支持任务分发、并行 Worker 执行以及超时恢复。
-3. **WebSocket 广播升级**：由于当前的 `websocket_manager` 是单进程内存管理，建议为多 worker / 容器多副本部署准备 Redis Pub/Sub，实现跨进程的实时事件广播。
-4. **测试专员审核重试机制**：为 Worker 与 Reviewer (测试专员) 增加 1~3 次的阻断修改重试回路，允许 Worker 根据 Reviewer 的建议自我更新并再次提交审核。
-5. **联系人页面开发**：构建前端 `/contacts` 通讯录页面，支持对工作区中 Agent 实体的添加、编辑和状态查看。
+1. **改动必上《改动表》**：通过 `feat:` / `fix:` / `docs:` 规范提交后运行 `generate_change_log.py`。
+2. **Requirement 必写 PRD**：存入 `docs/prd/PRD-<功能名>.md`，并在 `docs/PRD.md` 索引表中登记。
+3. **严格测试流程**：改动前后必须运行后端 `pytest` 与前端 `npm test` + `npm run lint` + `npm run build`。
+4. **子 Agent 独立验收**：每次提交前派出独立验收子 Agent 确认无误。
+5. **严禁 `git add -A`**：只添加真实修改文件，排除临时文件与缓存。

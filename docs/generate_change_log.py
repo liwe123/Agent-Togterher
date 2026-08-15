@@ -145,6 +145,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "feat: 实现用户认证系统（A1），引入 JWT、User 模型与前后端路由鉴权": {
+        "type": "Requirement",
+        "content": "新增用户认证系统（A1）：引入 User 数据模型与 PBKDF2/JWT 认证，提供注册、登录、Token 刷新、登出与当前用户信息接口；支持 API Token 与 JWT 双轨鉴权；WebSocket 握手 JWT 鉴权；前端新增登录页、注册页、客户端路由守卫与 API 客户端 401 自动续期",
+        "frontend": "新增 /login 与 /register 登录注册页面；新增 AuthGuard 客户端路由守卫；task-api.ts 支持 Bearer Token 自动注入与 401 无感刷新；WebSocket 连接携带 JWT",
+        "backend": "新增 User 数据库模型；新增 auth.py 模块(JWT 签发/校验与密码哈希)；新增 /api/v1/auth 路由(register/login/refresh/logout/me)；main.py 中间件双轨鉴权",
+        "db": "是(users)",
+        "breaking": "否（保持与现有 API Token 向后兼容）",
+        "verify": "前后端冒烟测试通过；后端全量 99 passed；前端测试 28 passed；前端 lint/build 均通过",
+        "notes": "PRD: docs/prd/PRD-用户认证系统.md；工单 C-101；子 Agent 独立验收通过",
+    },
     "feat: 增加持久化任务队列与独立 Worker": {
         "type": "Requirement",
         "content": "新增持久化任务队列与独立 Worker，将消息接入和任务执行解耦，并提供优先级、执行租约、失败重试、超时回收、死信和并发控制能力",
