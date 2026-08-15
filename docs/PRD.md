@@ -123,6 +123,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-15 12:29 | C-100 | 已完成 | [38f9cbb](https://github.com/liwe123/Agent-Togterher/commit/38f9cbb) | LI | Requirement | 其他、后端、文档 | feat: Phase 3 分布式化——事件总线、连接解耦、Worker注册中心与状态快照 | - | backend/app/core；backend/app/main.py；backend/app/websocket；backend/tests/test_distributed_event_bus.py；backend/tests/test_event_relay.py；backend/tests/test_worker_registry.py | 否 | 否 | - | - |
 | 2026-08-15 22:41 | C-101 | 已完成 | [9337826](https://github.com/liwe123/Agent-Togterher/commit/9337826) | LI | Requirement | 后端、数据库、文档、其他、前端 | 新增用户认证系统（A1）：引入 User 数据模型与 PBKDF2/JWT 认证，提供注册、登录、Token 刷新、登出与当前用户信息接口；支持 API Token 与 JWT 双轨鉴权；WebSocket 握手 JWT 鉴权；前端新增登录页、注册页、客户端路由守卫与 API 客户端 401 自动续期 | 新增 /login 与 /register 登录注册页面；新增 AuthGuard 客户端路由守卫；task-api.ts 支持 Bearer Token 自动注入与 401 无感刷新；WebSocket 连接携带 JWT | 新增 User 数据库模型；新增 auth.py 模块(JWT 签发/校验与密码哈希)；新增 /api/v1/auth 路由(register/login/refresh/logout/me)；main.py 中间件双轨鉴权 | 是(users) | 否（保持与现有 API Token 向后兼容） | 前后端冒烟测试通过；后端全量 99 passed；前端测试 28 passed；前端 lint/build 均通过 | PRD: docs/prd/PRD-用户认证系统.md；工单 C-101；子 Agent 独立验收通过 |
 | 2026-08-15 22:43 | C-102 | 已完成 | [702942c](https://github.com/liwe123/Agent-Togterher/commit/702942c) | LI | Optimization | 文档、其他 | docs: 同步 A1 用户认证系统变更追踪表、PRD 索引与接力文档 | - | - | 否 | 否 | - | - |
+| 2026-08-15 22:53 | C-103 | 已完成 | [ad18c19](https://github.com/liwe123/Agent-Togterher/commit/ad18c19) | LI | Requirement | 后端、数据库、文档、其他、前端 | 新增 RBAC 角色权限模型与多租户 Workspace 隔离（A2+A3）：引入 workspace_memberships 与 workspace_invitations 表；实现四级角色（owner/admin/member/viewer）与权限矩阵；提供工作区创建、我的工作区、成员列表、邀请码生成与加入等 API；前端实现侧边栏工作区切换器、成员管理台（/settings/members）与用户退出登录 | 新增 useWorkspaces 与 usePermissions hooks；AppSidebar 新增工作区切换器浮层、创建/加入弹窗与退出登录；新增 /settings/members 成员管理台；设置中心增加成员管理入口 | 新增 WorkspaceMembership 与 WorkspaceInvitation 模型；新增 core/permissions.py 权限矩阵与拦截依赖；新增 endpoints/workspace_members.py；注册自动建立工作区关系 | 是(workspace_memberships, workspace_invitations) | 否 | pytest 全量 100 passed；前端测试 28 passed；前端 lint/build 均通过；子 Agent 独立验收通过 | PRD: docs/prd/PRD-角色权限与多租户隔离.md；工单 C-103；子 Agent 独立验收通过 |
 <!-- CHANGELOG:END -->
 
 ---
@@ -145,7 +146,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-Phase2持久化任务队列与独立Worker.md](prd/PRD-Phase2持久化任务队列与独立Worker.md) | Phase 2 持久化队列、任务治理与独立 Worker | 2ada67f | C-097 |
 | [PRD-Phase3分布式化.md](prd/PRD-Phase3分布式化.md) | Phase 3 分布式化（事件总线、连接解耦、Worker集群化） | - | - |
 | [PRD-用户认证系统.md](prd/PRD-用户认证系统.md) | 用户认证系统（JWT、User 模型、Auth 页面与路由守卫） | 9337826 | C-101 |
-| [PRD-角色权限与多租户隔离.md](prd/PRD-角色权限与多租户隔离.md) | 角色权限与多租户隔离（RBAC 权限矩阵、工作区切换器与成员管理） | 待提交 | C-103 |
+| [PRD-角色权限与多租户隔离.md](prd/PRD-角色权限与多租户隔离.md) | 角色权限与多租户隔离（RBAC 权限矩阵、工作区切换器与成员管理） | ad18c19 | C-103 |
 
 ---
 
