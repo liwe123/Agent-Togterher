@@ -33,7 +33,8 @@ from app.schemas import AgentStatusRead, MessageRead, TaskRead, TaskStepEventPay
 from app.services import litellm_service
 from app.services.litellm_service import ChatCompletionResult
 from app.services.tools import execute_tool, get_tools_spec
-from app.websocket import WebSocketManager, create_event, websocket_manager
+from app.websocket.events import create_event
+from app.websocket.manager import WebSocketManager, websocket_manager
 
 logger = logging.getLogger(__name__)
 

@@ -9,6 +9,7 @@ EventType = Literal[
     "task.step_changed",
     "model.call_finished",
     "error",
+    "workspace.snapshot",
 ]
 
 

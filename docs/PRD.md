@@ -119,6 +119,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-15 00:08 | C-096 | 已完成 | [d3f256f](https://github.com/liwe123/Agent-Togterher/commit/d3f256f) | LI | Optimization | 其他、文档 | docs: 同步 Phase 0 变更追踪与 PRD 阅读器 | - | - | 否 | 否 | - | - |
 | 2026-08-15 00:35 | C-097 | 已完成 | [2ada67f](https://github.com/liwe123/Agent-Togterher/commit/2ada67f) | LI | Requirement | 其他、后端、数据库 | 新增持久化任务队列与独立 Worker，将消息接入和任务执行解耦，并提供优先级、执行租约、失败重试、超时回收、死信和并发控制能力 | - | 新增 TaskQueueItem、TaskService 与独立 Worker；MessageHub 统一入队；支持 inline/worker 两种执行模式 | 是(task_queue_items) | 否（默认保持 inline 模式兼容） | A/B 执行模式对比通过；后端 59 tests passed；启动模式与队列复验 8 passed；git diff --check 通过 | PRD: docs/prd/PRD-Phase2持久化任务队列与独立Worker.md；独立只读验收通过；生成脚本与 PRD.html 已重跑对齐 |
 | 2026-08-15 00:38 | C-098 | 已完成 | [051860e](https://github.com/liwe123/Agent-Togterher/commit/051860e) | LI | Optimization | 其他、文档 | docs: 同步 Phase 2 变更追踪与 PRD 阅读器 | - | - | 否 | 否 | - | - |
+| 2026-08-15 00:38 | C-099 | 已完成 | [1b59316](https://github.com/liwe123/Agent-Togterher/commit/1b59316) | LI | Optimization | 其他、文档 | docs: 登记 Phase 2 文档同步提交 | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
@@ -139,6 +140,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-Windows一键启动脚本.md](prd/PRD-Windows一键启动脚本.md) | Windows 一键启动脚本 | fb94fb2 | C-007 |
 | [PRD-单任务上下文连续性与执行过程可视化.md](prd/PRD-单任务上下文连续性与执行过程可视化.md) | 单任务上下文连续性与执行过程可视化（结构化上下文回灌 / 工具调用链路 / 执行轨迹视图） | 70e53ee、8e22c25 | C-075、C-076 |
 | [PRD-Phase2持久化任务队列与独立Worker.md](prd/PRD-Phase2持久化任务队列与独立Worker.md) | Phase 2 持久化队列、任务治理与独立 Worker | 2ada67f | C-097 |
+| [PRD-Phase3分布式化.md](prd/PRD-Phase3分布式化.md) | Phase 3 分布式化（事件总线、连接解耦、Worker集群化） | - | - |
 
 ---
 

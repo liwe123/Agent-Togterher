@@ -11,9 +11,11 @@ from app.api.v1.router import api_router
 from app.core.config import get_settings
 from app.core.security import request_token, token_is_valid, token_required
 from app.db.session import close_db, init_db
+from app.websocket import build_event_relay, websocket_manager
 from app.websocket.router import router as websocket_router
 
 settings = get_settings()
+_event_relay = build_event_relay(websocket_manager, settings.worker_instance_id, settings.event_bus_enabled)
 
 
 @asynccontextmanager
@@ -22,11 +24,14 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     from app.db.seed import seed_defaults
     from app.db.session import AsyncSessionLocal
     from app.core.message_hub import recover_unfinished_tasks
+
+    await _event_relay.start()
     async with AsyncSessionLocal() as session:
         await seed_defaults(session)
         if settings.task_execution_mode == "inline":
             await recover_unfinished_tasks(session)
     yield
+    await _event_relay.stop()
     await close_db()
 
 
