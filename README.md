@@ -34,12 +34,13 @@ Manager 汇总 ──→ 最终结果实时回写到群聊气泡
 
 我们摒弃了臃肿的 LangChain 与 AutoGen 黑盒，采用高内聚、全异步、强类型的现代化技术栈：
 
-- **核心后端**：FastAPI + Python 3.11+
+- **核心后端**：FastAPI + Python 3.11+ + SQLAlchemy 2.0 Async
 - **前台基建**：Next.js 16 (App Router) + React 19 + TypeScript
-- **设计系统**：Tailwind CSS v4 (原生 OKLCH 色板) + shadcn/ui 无障碍基元
-- **数据库与 ORM**：SQLite (aiosqlite) + SQLAlchemy 2.0 Async (平滑无缝切 PG)
-- **模型接入适配**：LiteLLM (统一适配 OpenAI/Anthropic/Gemini/DeepSeek/Qwen 等)
-- **实时事件总线**：FastAPI Native WebSocket + Hooks 双向通道
+- **设计系统**：Tailwind CSS v4 (原生 OKLCH 色板) + shadcn/ui + Lucide Icons
+- **数据库与 ORM**：18 张企业级领域数据表（支持 SQLite 与 PostgreSQL 自动切换）
+- **模型接入适配**：LiteLLM (统一适配 OpenAI/Anthropic/Gemini/DeepSeek/Qwen 等) + 动态 Fallback 降级
+- **实时事件总线**：FastAPI Native WebSocket + Redis Pub/Sub 跨进程分布式总线
+- **安全与身份**：PBKDF2-SHA256 密码哈希 + PyJWT 无感刷新 + 4 级 RBAC 权限矩阵
 
 ---
 
@@ -47,36 +48,42 @@ Manager 汇总 ──→ 最终结果实时回写到群聊气泡
 
 ```mermaid
 flowchart TB
-    U[用户] --> FE[前端 5 大可视化控制台]
+    U[用户 / 团队成员] --> FE[前端 Next.js 16 运控中心]
 
-    FE -->|REST API| API[FastAPI Backend /api/v1]
-    FE <-->|WebSocket 实时事件通道| WS[WebSocket Manager]
+    subgraph 前端控制台矩阵
+        FE --> C1[集群总览 /]
+        FE --> C2[协同群聊 /chats]
+        FE --> C3[智能体通讯录 /contacts]
+        FE --> C4[任务队列与时序回放 /tasks]
+        FE --> C5[工作流模板引擎 /workflows]
+        FE --> C6[设置中心 /settings (成员/审计/成本/配额/插件)]
+        FE --> C7[用户认证 /login /register]
+    end
 
-    API --> HUB[MessageHub 消息中心\n@Agent 意图识别]
-    HUB --> ORCH[AgentOrchestrator 任务状态机\n(带租约锁与崩溃自愈)]
-    
-    ORCH --> AGENTS[六人 Agent 编队层\nManager / Worker / Review / Final]
-    ORCH --> TRACE[ExecutionTrace\n双级上下文压缩引擎]
-    ORCH --> TOOLS[Tools Registry\nAST 安全沙箱工具箱]
-    
-    AGENTS --> LITELLM[LiteLLM 统一模型调度层]
-    LITELLM --> MODELS[模型与热配置 Key\n(DB 优先 > 环境变量 > Fallback)]
+    FE -->|REST API (Bearer JWT)| API[FastAPI Backend /api/v1]
+    FE <-->|WebSocket 实时通道| WS[WebSocket Manager / Redis 总线]
 
-    ORCH --> DB[(SQLAlchemy 2.0 异步持久化)]
-    LITELLM --> DB
+    API --> AUTH[用户认证与 RBAC 权限拦截]
+    API --> AUDIT[平台异步审计日志拦截器]
+    API --> QUOTA[工作区预算与配额限流熔断]
     
-    DB --> ENTITIES[核心实体\nWorkspaces / Tasks / Steps / ModelCalls / Credentials]
-    ORCH -.->|触发事件广播| WS
+    API --> HUB[MessageHub 消息中心 / @Agent 意图解析]
+    HUB --> TASK_SVC[TaskService 任务状态机与队列管理]
+    TASK_SVC --> QUEUE[(task_queue_items 持久化队列)]
+    
+    QUEUE --> WORKER[独立 Worker 消费进程]
+    WORKER --> ORCH[AgentOrchestrator 编排流水线]
+    
+    ORCH --> AGENTS[六人 Agent 编队层 (Manager/Worker/Reviewer/QA)]
+    ORCH --> TRACE[ExecutionTrace 上下文追踪]
+    ORCH --> TOOLS[Tools Registry / 插件注册中心热挂载]
+    
+    AGENTS --> LITELLM[LiteLLM 统一模型调度与容灾降级]
+    LITELLM --> MODELS[模型与热配置 Key (DB 优先 > 环境变量 > Fallback)]
+
+    API --> DB[(SQLAlchemy 2.0 持久化 - 18 张数据表)]
+    WORKER --> DB
 ```
-
-
-
-### 架构与容错亮点
-
-1. **轻量级异步调度**：单机通过 `asyncio.create_task` 承载，抛弃 Celery 的运维包袱，后续仅需一行代码即可切到 Redis Worker。
-2. **两级上下文压缩**：内置 `execution_trace` 防 Token 膨胀，确保多 Agent 交接时历史链路、工具产物不失忆且不超长。
-3. **两阶段主备持久化**：主 Session 写库崩溃时，自动启用隔离备用 Session 将失败状态强落库，保证任务永不僵死。
-4. **AST 安全沙箱工具箱**：抛弃危险的 `eval()`，使用 Python AST 白名单计算器，并硬防大指数 DoS 攻击。
 
 ---
 
@@ -84,38 +91,40 @@ flowchart TB
 
 系统初始化即拉起一个高配 6 人工作组：
 
-
-| Agent         | 角色                  | 职能定义                           | 默认绑定模型位         |
-| ------------- | ------------------- | ------------------------------ | --------------- |
-| **项目总设计师**    | `manager`           | 复杂需求拆解 (JSON Plan)、任务分发、最终交付汇总 | `manager_model` |
-| **Agent 工程师** | `agent_engineer`    | 后端业务逻辑、算法实现、API 开发与集成          | `code_model`    |
-| **前端设计师**     | `frontend_designer` | UI/UX 界面设计、前端组件化实现、交互还原        | `code_model`    |
-| **知识库管理员**    | `knowledge_manager` | 技术长文写作、资料搜集、文档标准化整理            | `writing_model` |
-| **测试专员**      | `qa_engineer`       | 质量把关 QA、验收核对、缺陷定位与修改建议         | `review_model`  |
-| **运维**        | `devops`            | 环境部署指导、Docker 编排与系统稳定性巡检       | `code_model`    |
-
+| Agent | 角色 | 职能定义 | 默认绑定模型位 |
+| --- | --- | --- | --- |
+| **项目总设计师** | `manager` | 复杂需求拆解 (JSON Plan)、任务分发、最终交付汇总 | `manager_model` |
+| **Agent 工程师** | `agent_engineer` | 后端业务逻辑、算法实现、API 开发与集成 | `code_model` |
+| **前端设计师** | `frontend_designer` | UI/UX 界面设计、前端组件化实现、交互还原 | `code_model` |
+| **知识库管理员** | `knowledge_manager` | 技术长文写作、资料搜集、文档标准化整理 | `writing_model` |
+| **测试专员** | `qa_engineer` | 质量把关 QA、验收核对、缺陷定位与修改建议 | `review_model` |
+| **运维** | `devops` | 环境部署指导、Docker 编排与系统稳定性巡检 | `code_model` |
 
 ---
 
-## 前端交互：五大核心控制台
+## 前端交互：全功能控制台矩阵
 
 界面严格遵循 *"The Connected Cluster Lounge"* 极简结构美学，拒绝无意义光晕。
 
-- 🎛️ **集群控制台 (`/`)**：全局监控 Agent 编队运行负载、查看外部软件 Dock (如 TRAE, Cursor) 心跳与最近活跃输出流。
-- 💬 **协同群聊 (`/chats`)**：支持 `@Agent` 智能联想、Prompt 快捷胶囊、全量 Markdown 代码渲染，提及发出的需求将自动触发后台任务流水线。
-- 📖 **通讯录 (`/contacts`)**：Agent 实名花名册，支持实时职责模糊过滤，快速发起私聊。
-- ⏱️ **任务与执行追踪 (`/tasks`)**：实时总览排队/运行/失败状态。任务详情提供 **Pipeline 拓扑图**、**执行轨迹时间线** 以及 **模型调用审计日志**（精确计算单次调用耗时 ms、Tokens 和预估美金成本）。
-- ⚙️ **设置中心 (`/settings`)**：动态录入与删除各厂商 API Key（数据库存储优先，免重启热生效），配置自定义模型及 `Fallback` 降级链，支持一键测速 Ping。
+- 🎛️ **集群控制台 (`/`)**：全局监控 Agent 编队运行负载、查看外部软件 Dock 心跳与活跃流。
+- 💬 **协同群聊 (`/chats`)**：支持 `@Agent` 智能联想、Prompt 快捷胶囊、Markdown 渲染，自动触发后台流水线。
+- 📖 **通讯录 (`/contacts`)**：Agent 实名花名册，支持实时职责模糊过滤，快速发起协作。
+- ⏱️ **任务与时序回放 (`/tasks`, `/tasks/[id]`)**：内嵌 `TaskReplayPlayer`，支持时间轴拖拽、1x~5x 倍速播放、Payload 检查及从失败步骤一键断点恢复执行。
+- 🌿 **工作流模板引擎 (`/workflows`)**：预设与自定义多 Agent 编排流水线，支持动态参数表单填写与一键实例化调度。
+- ⚙️ **设置中心 (`/settings`)**：
+  - 👥 **成员与权限 (`/settings/members`)**：4 级 RBAC 角色升降、专属邀请码生成与核销。
+  - 📋 **操作审计日志 (`/settings/audit`)**：全平台关键操作事实流水与明细抽屉。
+  - 📊 **成本统计大屏 (`/settings/cost`)**：多维成本与 Token 聚合趋势、模型消耗占比与 Top 任务榜。
+  - 🛡️ **配额与限流治理 (`/settings/quota`)**：月度预算 USD、Token 与并发水位大屏及硬限额熔断。
+  - 🧩 **插件注册中心 (`/settings/plugins`)**：JSON Manifest 校验、工作区挂载与工具热插拔。
 
 ---
 
 ## 运行时模型热管理与容灾降级
 
-摆脱改 YAML 重启的噩梦。系统具备完备的模型动态配置与容灾自救机制：
-
 - **热生效凭证 (API Keys)**：在前端 `/settings` 面板写入的 API Key 直接通过数据库安全脱敏存储并立刻生效（`DB > Env`），日志打印全脱敏 (`[REDACTED]`)。
 - **动态自定义模型**：支持在界面手动登记任意 `Provider/Model` 组合（如 `anthropic/claude-3-5-sonnet`）。
-- **多级 Fallback 重试降级**：当主模型（如 DeepSeek）发生 429 限流、500 宕机或超时时，LiteLLM 层将自动无缝接管，沿降级链（如切到 `cheap_model` Qwen）重试，并在最终日志中打上醒目的 `fallback_used: true` 标记。
+- **多级 Fallback 重试降级**：当主模型发生 429 限流、500 宕机或超时时，LiteLLM 层将自动无缝接管，沿降级链重试，并在最终日志中打上醒目的 `fallback_used: true` 标记。
 
 ---
 
@@ -126,36 +135,41 @@ flowchart TB
 双击根目录 `start.bat` 或在终端运行 `start.ps1`。
 脚本将自动拷贝环境变量 `.env`，拉起 Docker 容器，并每隔 3 秒轮询健康检查，就绪后将直接呼出浏览器。
 
-### 手动容器化启动
+### 本地直接开发启动
 
 ```powershell
-Copy-Item .env.example .env
-docker compose up --build
+# 1. 启动后端 (Port 8000)
+cd backend
+python -m uvicorn app.main:app --reload --port 8000
+
+# 2. 启动前端控制台 (Port 3000)
+cd frontend
+npm run dev
 ```
 
 - 控制台入口：[http://localhost:3000](http://localhost:3000)
 - OpenAPI 文档：[http://localhost:8000/docs](http://localhost:8000/docs)
 - 接口健康检查：[http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
 
-> 💡 **Tip**：服务就绪后，直接进入前端 `/settings` 页面输入所需大模型厂商的 API Key，然后在 `/chats` 输入 `@项目总设计师 帮我写个贪吃蛇` 即可自动运转全套流水线！
-
 ---
 
 ## 系统演进路线图 (Roadmap)
 
-- [x] Windows 一键自动化启动脚本与容器编排
-- [x] `/contacts` 独立通讯录与角色展板
-- [x] Agent 内部安全沙箱工具调用闭环（Function Calling）
-- [x] 单任务双层上下文连续性与执行轨迹视图 Trace
-- [x] 用户级别 API Key 热配置与自定义模型降级管理
-- [ ] 引入 Alembic 进行数据库 Schema 版本自动迁移
-- [ ] 引入 Redis Celery / RQ 队列，实现分布式后台重型调度
-- [ ] Worker 并发执行改造（SQLite -> Postgres 后启用 `asyncio.gather`）
-- [ ] Redis Pub/Sub 多进程 WebSocket 频道广播
-- [ ] 测试专员 (QA) 驳回后触发 Worker 自动修改重试回路
+- [x] **Phase 1: 稳定化**（PostgreSQL 兼容、统一任务状态机、任务执行解耦、AST 安全工具沙箱）
+- [x] **Phase 2: 平台化**（持久化任务队列 `task_queue_items`、独立 Worker 消费进程、任务超时与死信管理）
+- [x] **Phase 3: 分布式化**（Redis Pub/Sub 跨进程总线、WebSocket 连接解耦、Worker 集群租约）
+- [x] **Phase 4: 产品化**
+  - [x] **A1: 用户认证系统**（JWT 签发与刷新、User 模型、AuthGuard 路由守卫）
+  - [x] **A2 & A3: RBAC 角色权限与多租户工作区隔离**（4 级角色矩阵、工作区切换器、邀请码）
+  - [x] **B1: 平台级操作审计日志**（`audit_logs` 表、全局异步埋点与审计控制台）
+  - [x] **C1: 成本统计面板**（多维聚合、每日趋势、模型分布与 Top 任务看板）
+  - [x] **B2: 任务时序回放与断点单步调试**（`TaskReplayPlayer`、时序流与断点恢复）
+  - [x] **C2: 工作区配额与限流治理**（`quota_configs` 表、月度硬熔断与水位大屏）
+  - [x] **D1: 插件注册中心**（`plugins` 表、Manifest 校验与工具热插拔）
+  - [x] **D2: 工作流模板引擎**（`workflow_templates` 表、DAG 编排与一键实例化）
 
 ---
 
 ## License
 
-TBD
+MIT License
