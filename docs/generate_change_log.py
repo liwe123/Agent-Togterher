@@ -145,6 +145,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "feat: 实现插件注册中心（D1），支持 Manifest 校验与工作区工具挂载": {
+        "type": "Requirement",
+        "content": "实现插件注册中心（D1）：引入 plugins 与 workspace_plugins 两张数据表；支持通过 JSON Manifest 注册外部工具、校验 Tool Schemas、按工作区挂载与动态开启/停用；前端开发 /settings/plugins 插件市场管理控制台、Manifest 预览抽屉与注册对话框；设置中心导航升级为 5 卡片网格",
+        "frontend": "新增 /settings/plugins 插件管理控制台页面（支持搜索、Manifest 检查抽屉、启用/停用 Switch 与注册新插件 Modal）；设置中心首页导航升级为 5 卡片网格",
+        "backend": "新增 Plugin 与 WorkspacePlugin 数据库模型；新增 endpoints/plugins.py 端点（/plugins, /toggle, /active-tools）；RBAC 权限拦截与 audit_service 自动记录 plugin.toggle 审计日志",
+        "db": "是(plugins, workspace_plugins)",
+        "breaking": "否",
+        "verify": "pytest 全量 105 passed；前端测试 28 passed；前端 lint/build 0 errors 0 warnings 通过；子 Agent 独立验收通过",
+        "notes": "PRD: docs/prd/PRD-插件注册中心.md；工单 C-110；子 Agent 独立验收通过",
+    },
     "feat: 实现任务执行回放与单步调试（B2）及工作区配额治理（C2）": {
         "type": "Requirement",
         "content": "实现任务执行回放与单步调试（B2）及工作区配额治理（C2）：引入 quota_configs 表与配额限流服务；实现任务结构化时序执行流回放与单步断点恢复执行接口；前端开发 TaskReplayPlayer 回放播放器并嵌入任务详情页；前端开发 /settings/quota 配额管理台与设置中心 4 卡片导航",
