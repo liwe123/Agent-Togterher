@@ -52,18 +52,33 @@ app.add_middleware(
 
 @app.middleware("http")
 async def authenticate_api_request(request: Request, call_next):
-    public_paths = {"/", f"{settings.api_v1_prefix}/health", "/docs", "/openapi.json"}
+    public_paths = {
+        "/", 
+        f"{settings.api_v1_prefix}/health", 
+        "/docs", 
+        "/openapi.json",
+        f"{settings.api_v1_prefix}/auth/register",
+        f"{settings.api_v1_prefix}/auth/login",
+        f"{settings.api_v1_prefix}/auth/refresh"
+    }
     if (
         token_required()
         and request.url.path not in public_paths
         and not request.url.path.startswith("/docs/")
-        and not token_is_valid(request_token(request))
     ):
-        return JSONResponse(
-            status_code=401,
-            content={"success": False, "error": "Authentication required"},
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        from app.core.auth import get_user_id_from_token as jwt_user_id
+        req_token = request_token(request)
+        is_valid = token_is_valid(req_token)  # API token check
+        if not is_valid and req_token:
+            # Try JWT validation
+            is_valid = jwt_user_id(req_token) is not None
+            
+        if not is_valid:
+            return JSONResponse(
+                status_code=401,
+                content={"success": False, "error": "Authentication required"},
+                headers={"WWW-Authenticate": "Bearer"},
+            )
     return await call_next(request)
 
 

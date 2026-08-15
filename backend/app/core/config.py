@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     worker_lease_timeout: int = Field(default=90, ge=1)
     distributed_lock_enabled: bool = False
     app_api_token: SecretStr | None = None
+    jwt_secret_key: SecretStr | None = None
 
     litellm_default_model: str = ""
     models_config_path: str = ""

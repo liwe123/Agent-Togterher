@@ -1,4 +1,5 @@
 import type { ChatApiResponse } from "@/types/chat"
+import { getAccessToken, refreshAccessToken } from "./auth"
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null
@@ -39,14 +40,48 @@ export async function requestData<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
+  const token = getAccessToken()
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...init?.headers as Record<string, string>,
+  }
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`
+  }
+
   const response = await fetch(`${apiBaseUrl}${path}`, {
     cache: "no-store",
     ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
+    headers,
   })
+
+  // Handle 401 Unauthorized
+  if (response.status === 401) {
+    const newToken = await refreshAccessToken()
+    if (newToken) {
+      // Retry the request with new token
+      const retryResponse = await fetch(`${apiBaseUrl}${path}`, {
+        cache: "no-store",
+        ...init,
+        headers: {
+          ...headers,
+          "Authorization": `Bearer ${newToken}`,
+        },
+      })
+      return processResponse<T>(retryResponse)
+    } else {
+      // Redirect to login
+      if (typeof window !== "undefined") {
+        window.location.href = "/login"
+      }
+      throw new Error("登录已过期，请重新登录")
+    }
+  }
+
+  return processResponse<T>(response)
+}
+
+async function processResponse<T>(response: Response): Promise<T> {
   let result: unknown = null
   try {
     result = await response.json()

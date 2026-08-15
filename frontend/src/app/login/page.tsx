@@ -1,0 +1,124 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import Link from "next/link"
+import { Mail, Lock, Sparkles, Loader2 } from "lucide-react"
+import { apiBaseUrl } from "@/lib/task-api"
+import { setTokens } from "@/lib/auth"
+
+export default function LoginPage() {
+  const router = useRouter()
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError("")
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/v1/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || data.detail || "登录失败，请检查账号密码")
+      }
+
+      setTokens(data.data.access_token, data.data.refresh_token)
+      router.push("/")
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "登录过程中发生错误")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 sm:p-8">
+      <div className="w-full max-w-md space-y-8 rounded-xl border border-border bg-card p-8 shadow-lg">
+        <div className="flex flex-col items-center justify-center space-y-2 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/20 text-primary">
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">欢迎回来</h1>
+          <p className="text-sm text-muted-foreground">登录您的 Agent Console 账户</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {error && (
+            <div className="rounded-md bg-destructive/15 p-3 text-sm text-destructive">
+              {error}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground" htmlFor="email">
+                邮箱
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <input
+                  id="email"
+                  type="email"
+                  required
+                  placeholder="name@example.com"
+                  className="w-full rounded-md border border-border bg-input py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-foreground" htmlFor="password">
+                  密码
+                </label>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <input
+                  id="password"
+                  type="password"
+                  required
+                  className="w-full rounded-md border border-border bg-input py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="flex w-full items-center justify-center rounded-md bg-primary py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            {loading ? "登录中..." : "登录"}
+          </button>
+        </form>
+
+        <div className="text-center text-sm text-muted-foreground">
+          还没有账户？{" "}
+          <Link href="/register" className="font-medium text-primary hover:underline">
+            立即注册
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}

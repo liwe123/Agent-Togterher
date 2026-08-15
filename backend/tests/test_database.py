@@ -113,6 +113,16 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "created_at",
             "updated_at",
         },
+        "users": {
+            "id",
+            "email",
+            "password_hash",
+            "display_name",
+            "avatar",
+            "is_active",
+            "created_at",
+            "last_login_at",
+        },
     }
 
     assert set(Base.metadata.tables) == set(expected_columns)

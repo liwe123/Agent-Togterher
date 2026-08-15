@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react"
 import type { ConnectionStatus } from "@/types/agent"
 import { websocketBaseUrl } from "@/lib/task-api"
 import { RECONNECT_DELAY_MS } from "@/lib/constants"
+import { getAccessToken } from "@/lib/auth"
 
 type EventHandler = (event: unknown) => void
 
@@ -34,9 +35,11 @@ export function useWorkspaceSocket({
 
     function connect() {
       onStatusChangeRef.current("connecting")
-      socket = new WebSocket(
-        `${websocketBaseUrl}/ws/workspaces/${workspaceId}`,
-      )
+      const token = getAccessToken()
+      const wsUrl = token 
+        ? `${websocketBaseUrl}/ws/workspaces/${workspaceId}?token=${encodeURIComponent(token)}`
+        : `${websocketBaseUrl}/ws/workspaces/${workspaceId}`
+      socket = new WebSocket(wsUrl)
       socket.onopen = () => onStatusChangeRef.current("online")
       socket.onerror = () => onStatusChangeRef.current("offline")
       socket.onclose = () => {

@@ -141,6 +141,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-单任务上下文连续性与执行过程可视化.md](prd/PRD-单任务上下文连续性与执行过程可视化.md) | 单任务上下文连续性与执行过程可视化（结构化上下文回灌 / 工具调用链路 / 执行轨迹视图） | 70e53ee、8e22c25 | C-075、C-076 |
 | [PRD-Phase2持久化任务队列与独立Worker.md](prd/PRD-Phase2持久化任务队列与独立Worker.md) | Phase 2 持久化队列、任务治理与独立 Worker | 2ada67f | C-097 |
 | [PRD-Phase3分布式化.md](prd/PRD-Phase3分布式化.md) | Phase 3 分布式化（事件总线、连接解耦、Worker集群化） | - | - |
+| [PRD-用户认证系统.md](prd/PRD-用户认证系统.md) | 用户认证系统（JWT、User 模型、Auth 页面与路由守卫） | 待提交 | C-100 |
 
 ---
 
