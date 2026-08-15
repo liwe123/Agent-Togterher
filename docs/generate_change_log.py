@@ -145,6 +145,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "feat: 实现平台级审计日志（B1）与成本统计面板（C1）": {
+        "type": "Requirement",
+        "content": "新增平台级审计日志（B1）与成本统计面板（C1）：引入 audit_logs 表与审计服务，在登录、注册、成员变更与任务中自动埋点；实现成本中心多维聚合统计（总览指标/每日趋势/模型分布/Top任务）；前端实现 /settings/audit 审计日志台与 /settings/cost 成本统计大屏",
+        "frontend": "新增 /settings/audit 审计操作日志控制台与 /settings/cost 成本中心与 Token 分析大屏；设置中心首页增加审计与成本快捷导航卡片",
+        "backend": "新增 AuditLog 模型；新增 audit_service.py 异步记录器；新增 endpoints/audit_logs.py 与 endpoints/cost_stats.py 并挂载路由与 RBAC 权限拦截；auth/members/tasks 自动埋点",
+        "db": "是(audit_logs)",
+        "breaking": "否",
+        "verify": "pytest 全量 102 passed；前端测试 28 passed；前端 lint/build 0 errors 0 warnings 通过；子 Agent 独立验收通过",
+        "notes": "PRD: docs/prd/PRD-平台级审计日志.md, docs/prd/PRD-成本统计面板.md；工单 C-105, C-106；子 Agent 独立验收通过",
+    },
     "feat: 实现 RBAC 角色权限模型与多租户 Workspace 隔离（A2+A3）": {
         "type": "Requirement",
         "content": "新增 RBAC 角色权限模型与多租户 Workspace 隔离（A2+A3）：引入 workspace_memberships 与 workspace_invitations 表；实现四级角色（owner/admin/member/viewer）与权限矩阵；提供工作区创建、我的工作区、成员列表、邀请码生成与加入等 API；前端实现侧边栏工作区切换器、成员管理台（/settings/members）与用户退出登录",
