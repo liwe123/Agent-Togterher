@@ -130,6 +130,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-15 23:12 | C-107 | 已完成 | [a4c0c1f](https://github.com/liwe123/Agent-Togterher/commit/a4c0c1f) | LI | Requirement | 后端、数据库、文档、其他、前端 | 实现任务执行回放与单步调试（B2）及工作区配额治理（C2）：引入 quota_configs 表与配额限流服务；实现任务结构化时序执行流回放与单步断点恢复执行接口；前端开发 TaskReplayPlayer 回放播放器并嵌入任务详情页；前端开发 /settings/quota 配额管理台与设置中心 4 卡片导航 | 新增 TaskReplayPlayer 回放交互播放器组件（支持播放/暂停、倍速调节、时间轴 scrub 与 Payload 检查）；任务详情页嵌入回放流；新增 /settings/quota 工作区配额与限流控制台；设置中心首页导航升级为 4 卡片网格 | 新增 QuotaConfig 数据库模型与 quota_service 预算及限流治理；新增 endpoints/quota.py 与 endpoints/task_replay.py（/replay 与 /resume-from-step 接口）；支持断点恢复调度与审计日志联动 | 是(quota_configs) | 否 | pytest 全量 104 passed；前端测试 28 passed；前端 lint/build 0 errors 0 warnings 通过；子 Agent 独立验收通过 | PRD: docs/prd/PRD-任务执行回放与单步调试.md, docs/prd/PRD-工作区配额与限流治理.md；工单 C-108, C-109；子 Agent 独立验收通过 |
 | 2026-08-15 23:13 | C-108 | 已完成 | [31ed948](https://github.com/liwe123/Agent-Togterher/commit/31ed948) | LI | Optimization | 其他、后端、文档 | docs: 更新变更追踪表、PRD 索引及回放断点恢复细节 (Batch 4) | - | backend/app/api；backend/tests/test_task_replay.py | 否 | 否 | - | - |
 | 2026-08-15 23:17 | C-109 | 已完成 | [037e968](https://github.com/liwe123/Agent-Togterher/commit/037e968) | LI | Requirement | 后端、数据库、文档、其他、前端 | 实现插件注册中心（D1）：引入 plugins 与 workspace_plugins 两张数据表；支持通过 JSON Manifest 注册外部工具、校验 Tool Schemas、按工作区挂载与动态开启/停用；前端开发 /settings/plugins 插件市场管理控制台、Manifest 预览抽屉与注册对话框；设置中心导航升级为 5 卡片网格 | 新增 /settings/plugins 插件管理控制台页面（支持搜索、Manifest 检查抽屉、启用/停用 Switch 与注册新插件 Modal）；设置中心首页导航升级为 5 卡片网格 | 新增 Plugin 与 WorkspacePlugin 数据库模型；新增 endpoints/plugins.py 端点（/plugins, /toggle, /active-tools）；RBAC 权限拦截与 audit_service 自动记录 plugin.toggle 审计日志 | 是(plugins, workspace_plugins) | 否 | pytest 全量 105 passed；前端测试 28 passed；前端 lint/build 0 errors 0 warnings 通过；子 Agent 独立验收通过 | PRD: docs/prd/PRD-插件注册中心.md；工单 C-110；子 Agent 独立验收通过 |
+| 2026-08-15 23:17 | C-110 | 已完成 | [9dbc783](https://github.com/liwe123/Agent-Togterher/commit/9dbc783) | LI | Optimization | 其他、文档 | docs: 更新变更追踪表、PRD 索引与 Excel 记录 (Batch 5) | - | - | 否 | 否 | - | - |
+| 2026-08-15 23:22 | C-111 | 已完成 | [19d4bdc](https://github.com/liwe123/Agent-Togterher/commit/19d4bdc) | LI | Requirement | 后端、数据库、文档、其他、前端 | 实现工作流模板引擎（D2）：引入 workflow_templates 数据表与系统预设编排模板；支持多 Agent 协作流水线步骤节点（Node）定义与动态参数占位符（{{var}}）渲染；实现一键实例化生成 Task 任务并自动推入队列；前端开发 /workflows 工作流模板中心，支持模板卡片流、参数表单运行弹窗、节点查看抽屉与侧边栏导航集成 | 新增 /workflows 工作流模板中心（支持系统预设/自定义分类、节点链路查看抽屉、动态入参表单一键运行 Task 并在成功后自动跳转任务详情页、创建自定义工作流 Modal）；AppSidebar 侧边栏新增「工作流」主导航入口 | 新增 WorkflowTemplate 数据库模型；新增 endpoints/workflows.py 端点（/workflows, /workflows/{id}/run, /workflows/{id} DELETE）；支持变量替换、Task 实例化调度、系统预设保护与 audit_service 自动审计埋点 | 是(workflow_templates) | 否 | pytest 全量 106 passed；前端测试 28 passed；前端 lint/build 0 errors 0 warnings 通过；子 Agent 独立验收通过 | PRD: docs/prd/PRD-工作流模板引擎.md；工单 C-111；子 Agent 独立验收通过 |
 <!-- CHANGELOG:END -->
 
 ---
@@ -158,7 +160,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-任务执行回放与单步调试.md](prd/PRD-任务执行回放与单步调试.md) | 任务执行回放与单步调试（时序回放流、输入输出检查与断点恢复） | a4c0c1f | C-108 |
 | [PRD-工作区配额与限流治理.md](prd/PRD-工作区配额与限流治理.md) | 工作区配额与限流治理（quota_configs 表、月度硬熔断与水位大屏） | a4c0c1f | C-109 |
 | [PRD-插件注册中心.md](prd/PRD-插件注册中心.md) | 插件注册中心（plugins 表、Manifest 校验、工作区挂载与工具热插拔） | 037e968 | C-110 |
-| [PRD-工作流模板引擎.md](prd/PRD-工作流模板引擎.md) | 工作流模板引擎（workflow_templates 表、DAG/步骤节点与一键实例化） | 待提交 | C-111 |
+| [PRD-工作流模板引擎.md](prd/PRD-工作流模板引擎.md) | 工作流模板引擎（workflow_templates 表、DAG/步骤节点与一键实例化） | 19d4bdc | C-111 |
 
 ---
 

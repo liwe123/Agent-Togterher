@@ -145,6 +145,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "feat: 实现工作流模板引擎（D2），支持多 Agent 编排流水线与一键实例化调度": {
+        "type": "Requirement",
+        "content": "实现工作流模板引擎（D2）：引入 workflow_templates 数据表与系统预设编排模板；支持多 Agent 协作流水线步骤节点（Node）定义与动态参数占位符（{{var}}）渲染；实现一键实例化生成 Task 任务并自动推入队列；前端开发 /workflows 工作流模板中心，支持模板卡片流、参数表单运行弹窗、节点查看抽屉与侧边栏导航集成",
+        "frontend": "新增 /workflows 工作流模板中心（支持系统预设/自定义分类、节点链路查看抽屉、动态入参表单一键运行 Task 并在成功后自动跳转任务详情页、创建自定义工作流 Modal）；AppSidebar 侧边栏新增「工作流」主导航入口",
+        "backend": "新增 WorkflowTemplate 数据库模型；新增 endpoints/workflows.py 端点（/workflows, /workflows/{id}/run, /workflows/{id} DELETE）；支持变量替换、Task 实例化调度、系统预设保护与 audit_service 自动审计埋点",
+        "db": "是(workflow_templates)",
+        "breaking": "否",
+        "verify": "pytest 全量 106 passed；前端测试 28 passed；前端 lint/build 0 errors 0 warnings 通过；子 Agent 独立验收通过",
+        "notes": "PRD: docs/prd/PRD-工作流模板引擎.md；工单 C-111；子 Agent 独立验收通过",
+    },
     "feat: 实现插件注册中心（D1），支持 Manifest 校验与工作区工具挂载": {
         "type": "Requirement",
         "content": "实现插件注册中心（D1）：引入 plugins 与 workspace_plugins 两张数据表；支持通过 JSON Manifest 注册外部工具、校验 Tool Schemas、按工作区挂载与动态开启/停用；前端开发 /settings/plugins 插件市场管理控制台、Manifest 预览抽屉与注册对话框；设置中心导航升级为 5 卡片网格",
