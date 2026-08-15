@@ -152,6 +152,17 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "ip_address",
             "created_at",
         },
+        "quota_configs": {
+            "id",
+            "workspace_id",
+            "monthly_budget_usd",
+            "max_monthly_tokens",
+            "max_concurrent_tasks",
+            "rate_limit_per_minute",
+            "is_hard_limit",
+            "created_at",
+            "updated_at",
+        },
     }
 
     assert set(Base.metadata.tables) == set(expected_columns)

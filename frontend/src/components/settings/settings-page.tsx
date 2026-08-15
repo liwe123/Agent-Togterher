@@ -22,6 +22,7 @@ import {
   Trash2,
   Users,
   Coins,
+  Gauge,
   XCircle,
   Zap,
 } from "lucide-react"
@@ -352,7 +353,7 @@ export function SettingsPage() {
             </header>
 
             {/* Quick Management Navigation Grid */}
-            <section aria-label="管理中心快捷入口" className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <section aria-label="管理中心快捷入口" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Link
                 href="/settings/members"
                 className="group flex flex-col justify-between rounded-xl border border-primary/30 bg-primary/10 p-4 transition-all duration-200 hover:border-primary/50 hover:bg-primary/15 active:scale-[0.99]"
@@ -366,7 +367,7 @@ export function SettingsPage() {
                       成员与权限
                     </h2>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      多租户角色升降与邀请
+                      多租户角色与邀请
                     </p>
                   </div>
                 </div>
@@ -385,7 +386,7 @@ export function SettingsPage() {
                       操作审计日志
                     </h2>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      安全合规与敏感操作流
+                      安全合规操作流
                     </p>
                   </div>
                 </div>
@@ -401,10 +402,29 @@ export function SettingsPage() {
                   </div>
                   <div>
                     <h2 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-                      成本中心与 Token
+                      成本中心统计
                     </h2>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       费用趋势与 Top 任务
+                    </p>
+                  </div>
+                </div>
+              </Link>
+
+              <Link
+                href="/settings/quota"
+                className="group flex flex-col justify-between rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/40 hover:bg-secondary/40 active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-secondary text-emerald-400">
+                    <Gauge className="size-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                      配额与限流
+                    </h2>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      预算水位与熔断规则
                     </p>
                   </div>
                 </div>

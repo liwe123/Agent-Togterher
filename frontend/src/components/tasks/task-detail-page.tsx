@@ -20,6 +20,7 @@ import Link from "next/link"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { ErrorBoundary } from "@/components/error-boundary"
+import { TaskReplayPlayer } from "@/components/tasks/task-replay-player"
 import { TaskStatusBadge } from "@/components/tasks/task-status-badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -105,6 +106,7 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
                 {error ? <RealtimeError error={error} onRetry={retry} /> : null}
                 <TaskOverview task={task} />
                 <TaskMetrics task={task} />
+                <TaskReplayPlayer taskId={task.id} onTaskResumed={retry} />
                 <ExecutionTracePanel task={task} />
                 <OriginalInput task={task} />
                 <TaskSteps steps={task.task_steps} />

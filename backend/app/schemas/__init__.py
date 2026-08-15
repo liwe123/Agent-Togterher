@@ -39,6 +39,16 @@ from app.schemas.model import (
     ProviderStatusInfo,
 )
 from app.schemas.provider_credential import ProviderKeyUpsert, ProviderKeyValue
+from app.schemas.quota import (
+    QuotaConfigRead,
+    QuotaConfigUpdate,
+    QuotaUsageRead,
+)
+from app.schemas.replay import (
+    ReplayFrame,
+    ResumeStepRequest,
+    TaskReplayResponse,
+)
 from app.schemas.task import (
     ModelCallRead,
     TaskAgentRead,
@@ -88,8 +98,13 @@ __all__ = [
     "ProviderStatusInfo",
     "ProviderKeyUpsert",
     "ProviderKeyValue",
+    "QuotaConfigRead",
+    "QuotaConfigUpdate",
+    "QuotaUsageRead",
     "RefreshRequest",
     "RegisterRequest",
+    "ReplayFrame",
+    "ResumeStepRequest",
     "SuccessResponse",
     "ModelCallRead",
     "TaskAgentRead",
@@ -97,6 +112,7 @@ __all__ = [
     "TaskDetailRead",
     "TaskListItemRead",
     "TaskRead",
+    "TaskReplayResponse",
     "TaskStepEventPayload",
     "TaskStepRead",
     "TaskTokenUsageRead",

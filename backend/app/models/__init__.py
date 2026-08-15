@@ -9,6 +9,7 @@ from app.models.membership import WorkspaceInvitation, WorkspaceMembership
 from app.models.message import Message
 from app.models.model_call import ModelCall
 from app.models.provider_credential import ProviderCredential
+from app.models.quota_config import QuotaConfig
 from app.models.task import Task, TaskStep
 from app.models.task_queue import TaskQueueItem
 from app.models.user import User
@@ -23,6 +24,7 @@ __all__ = [
     "MessageType",
     "ModelCall",
     "ProviderCredential",
+    "QuotaConfig",
     "SenderType",
     "Task",
     "TaskStatus",
