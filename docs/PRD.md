@@ -135,6 +135,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-15 23:22 | C-112 | 已完成 | [370021e](https://github.com/liwe123/Agent-Togterher/commit/370021e) | LI | Optimization | 其他、文档 | docs: 更新变更追踪表、PRD 索引与 Excel 记录 (Batch 6) | - | - | 否 | 否 | - | - |
 | 2026-08-15 23:23 | C-113 | 已完成 | [b4b25ff](https://github.com/liwe123/Agent-Togterher/commit/b4b25ff) | LI | Optimization | 文档 | docs: 更新 Phase 4 全量圆满达成项目接力文档 (HANDOFF) | - | - | 否 | 否 | - | - |
 | 2026-08-15 23:26 | C-114 | 已完成 | [b19cc89](https://github.com/liwe123/Agent-Togterher/commit/b19cc89) | LI | Optimization | 其他、文档 | docs: 统一更新全部 19 份 PRD 文档头部状态为已完成并刷新 HTML 与 Excel 追踪表 | - | - | 否 | 否 | - | - |
+| 2026-08-15 23:30 | C-115 | 已完成 | [ec1f346](https://github.com/liwe123/Agent-Togterher/commit/ec1f346) | LI | Optimization | 其他、文档 | docs: 全面同步更新 README、PRODUCT、项目计划里程碑与变更报表 | - | - | 否 | 否 | - | - |
+| 2026-08-15 23:41 | C-116 | 已完成 | [d61ac17](https://github.com/liwe123/Agent-Togterher/commit/d61ac17) | LI | BUG | 后端 | 修复后端容器启动失败缺陷：优化 app/core/__init__.py 的导出内容，解除与 app/db/session.py 的部分循环初始化依赖，确保 Docker 镜像启动与 Uvicorn 服务平滑拉起 | 无变动 | 优化 backend/app/core/__init__.py 顶级导出，移除导致循环依赖的急切导入 | 否 | 否 | pytest 全量 106 passed；python -c 'from app.main import app' 成功导入；Docker backend 正常启动 | 修复 Docker Compose backend 容器退出报错 |
 <!-- CHANGELOG:END -->
 
 ---

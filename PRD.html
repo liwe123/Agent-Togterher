@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>19</b> 份</span>
-        <span>变更记录 <b>114</b> 条</span>
-        <span>生成于 2026-08-15 23:29</span>
+        <span>变更记录 <b>116</b> 条</span>
+        <span>生成于 2026-08-15 23:42</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -2111,6 +2111,38 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否</td>
 <td>-</td>
 <td>-</td>
+</tr>
+<tr>
+<td>2026-08-15 23:30</td>
+<td>C-115</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/ec1f346">ec1f346</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 全面同步更新 README、PRODUCT、项目计划里程碑与变更报表</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-15 23:41</td>
+<td>C-116</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/d61ac17">d61ac17</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端</td>
+<td>修复后端容器启动失败缺陷：优化 app/core/<strong>init</strong>.py 的导出内容，解除与 app/db/session.py 的部分循环初始化依赖，确保 Docker 镜像启动与 Uvicorn 服务平滑拉起</td>
+<td>无变动</td>
+<td>优化 backend/app/core/<strong>init</strong>.py 顶级导出，移除导致循环依赖的急切导入</td>
+<td>否</td>
+<td>否</td>
+<td>pytest 全量 106 passed；python -c 'from app.main import app' 成功导入；Docker backend 正常启动</td>
+<td>修复 Docker Compose backend 容器退出报错</td>
 </tr>
 </tbody>
 </table></div>

@@ -145,6 +145,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "fix: 解决 app/core/__init__.py 与 app/db/session.py 的循环导入问题": {
+        "type": "BUG",
+        "content": "修复后端容器启动失败缺陷：优化 app/core/__init__.py 的导出内容，解除与 app/db/session.py 的部分循环初始化依赖，确保 Docker 镜像启动与 Uvicorn 服务平滑拉起",
+        "frontend": "无变动",
+        "backend": "优化 backend/app/core/__init__.py 顶级导出，移除导致循环依赖的急切导入",
+        "db": "否",
+        "breaking": "否",
+        "verify": "pytest 全量 106 passed；python -c 'from app.main import app' 成功导入；Docker backend 正常启动",
+        "notes": "修复 Docker Compose backend 容器退出报错",
+    },
     "feat: 实现工作流模板引擎（D2），支持多 Agent 编排流水线与一键实例化调度": {
         "type": "Requirement",
         "content": "实现工作流模板引擎（D2）：引入 workflow_templates 数据表与系统预设编排模板；支持多 Agent 协作流水线步骤节点（Node）定义与动态参数占位符（{{var}}）渲染；实现一键实例化生成 Task 任务并自动推入队列；前端开发 /workflows 工作流模板中心，支持模板卡片流、参数表单运行弹窗、节点查看抽屉与侧边栏导航集成",
