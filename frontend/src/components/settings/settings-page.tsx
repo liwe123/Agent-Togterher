@@ -23,6 +23,7 @@ import {
   Users,
   Coins,
   Gauge,
+  Blocks,
   XCircle,
   Zap,
 } from "lucide-react"
@@ -353,7 +354,7 @@ export function SettingsPage() {
             </header>
 
             {/* Quick Management Navigation Grid */}
-            <section aria-label="管理中心快捷入口" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <section aria-label="管理中心快捷入口" className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
               <Link
                 href="/settings/members"
                 className="group flex flex-col justify-between rounded-xl border border-primary/30 bg-primary/10 p-4 transition-all duration-200 hover:border-primary/50 hover:bg-primary/15 active:scale-[0.99]"
@@ -425,6 +426,25 @@ export function SettingsPage() {
                     </h2>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       预算水位与熔断规则
+                    </p>
+                  </div>
+                </div>
+              </Link>
+
+              <Link
+                href="/settings/plugins"
+                className="group flex flex-col justify-between rounded-xl border border-border bg-card p-4 transition-all duration-200 hover:border-primary/40 hover:bg-secondary/40 active:scale-[0.99]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-lg bg-secondary text-purple-400">
+                    <Blocks className="size-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                      插件注册中心
+                    </h2>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      工具生态与热插拔
                     </p>
                   </div>
                 </div>

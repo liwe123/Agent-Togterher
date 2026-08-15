@@ -8,6 +8,7 @@ from app.models.enums import MessageType, SenderType, TaskStatus
 from app.models.membership import WorkspaceInvitation, WorkspaceMembership
 from app.models.message import Message
 from app.models.model_call import ModelCall
+from app.models.plugin import Plugin, WorkspacePlugin
 from app.models.provider_credential import ProviderCredential
 from app.models.quota_config import QuotaConfig
 from app.models.task import Task, TaskStep
@@ -23,6 +24,7 @@ __all__ = [
     "Message",
     "MessageType",
     "ModelCall",
+    "Plugin",
     "ProviderCredential",
     "QuotaConfig",
     "SenderType",
@@ -34,4 +36,5 @@ __all__ = [
     "Workspace",
     "WorkspaceInvitation",
     "WorkspaceMembership",
+    "WorkspacePlugin",
 ]

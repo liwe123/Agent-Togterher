@@ -163,6 +163,29 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "created_at",
             "updated_at",
         },
+        "plugins": {
+            "id",
+            "name",
+            "display_name",
+            "description",
+            "version",
+            "icon",
+            "author",
+            "manifest_json",
+            "is_public",
+            "created_by_user_id",
+            "created_at",
+            "updated_at",
+        },
+        "workspace_plugins": {
+            "id",
+            "workspace_id",
+            "plugin_id",
+            "is_enabled",
+            "config_json",
+            "created_at",
+            "updated_at",
+        },
     }
 
     assert set(Base.metadata.tables) == set(expected_columns)

@@ -38,6 +38,14 @@ from app.schemas.model import (
     ModelTokenUsage,
     ProviderStatusInfo,
 )
+from app.schemas.plugin import (
+    PluginCreate,
+    PluginManifest,
+    PluginResponse,
+    PluginToolDefinition,
+    WorkspacePluginResponse,
+    WorkspacePluginToggle,
+)
 from app.schemas.provider_credential import ProviderKeyUpsert, ProviderKeyValue
 from app.schemas.quota import (
     QuotaConfigRead,
@@ -95,6 +103,10 @@ __all__ = [
     "ModelTestResult",
     "ModelTokenUsage",
     "MyWorkspaceRead",
+    "PluginCreate",
+    "PluginManifest",
+    "PluginResponse",
+    "PluginToolDefinition",
     "ProviderStatusInfo",
     "ProviderKeyUpsert",
     "ProviderKeyValue",
@@ -124,5 +136,7 @@ __all__ = [
     "UserRead",
     "WorkspaceCreate",
     "WorkspaceCreateWithMembership",
+    "WorkspacePluginResponse",
+    "WorkspacePluginToggle",
     "WorkspaceRead",
 ]
