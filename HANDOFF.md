@@ -2,24 +2,28 @@
 
 > 更新时间：2026-08-15  
 > 工作目录：`E:\Agents`  
-> 当前阶段：**Phase 4（产品化）进行中 — 批次 1 (A1 用户认证)、批次 2 (A2 RBAC + A3 多租户隔离)、批次 3 (B1 审计日志 + C1 成本统计) 均已完成并通过验收**
+> 当前阶段：**Phase 4（产品化）已全部圆满完成并全量推送到远程仓库！**
 
 ---
 
 ## 1. 架构演进与全景现状
 
-系统已从最初的 MVP 成功演进为具备多租户隔离、RBAC 角色权限、平台审计跟踪、多维成本与 Token 治理、持久化调度、独立 Worker、Redis 分布式事件总线的企业级协同任务平台：
+系统已从最初的单体 MVP 成功演进为具备企业级多租户隔离、RBAC 细粒度权限、平台级操作审计、多维成本与 Token 治理、工作区配额与限流硬熔断、任务时序回放与断点单步调试、插件注册中心与工具热插拔、工作流模板引擎与 DAG 编排、持久化任务队列、独立 Worker 进程与分布式事件总线的全功能多智能体协同任务平台：
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Next.js 16 前端控制台                     │
 │  - / (集群总览)           - /chats (多智能体群聊协作)        │
-│  - /tasks (任务队列)      - /tasks/[id] (执行轨迹深度回溯)    │
-│  - /contacts (通讯录)     - /settings (模型/密钥配置中心)     │
+│  - /tasks (任务队列)      - /tasks/[id] (时序回放与断点调试)  │
+│  - /workflows (工作流引擎) - /contacts (智能体通讯录)        │
+│  - /settings (设置中心 - 5 大管理卡片响应式网格导航)         │
 │  - /settings/members (成员与权限管理台 - 角色升降/邀请/移除) │
 │  - /settings/audit (平台操作审计日志台 - 多维过滤/明细抽屉) │
 │  - /settings/cost (成本中心与 Token 大屏 - 趋势/模型/Top榜)  │
+│  - /settings/quota (工作区配额与限流大屏 - 水位指示/硬熔断)  │
+│  - /settings/plugins (插件注册中心 - Manifest 检查/热插拔)   │
 │  - /login (登录)          - /register (注册)                │
+│  - TaskReplayPlayer (时间轴拖拽 / 1x-5x 倍速 / 断点恢复执行) │
 │  - AppSidebar 工作区切换器 (多租户无缝切换 / 创建 / 邀请加入)│
 │  - AuthGuard 路由守卫     - Bearer Token 401 自动无感续期     │
 └───────────────┬─────────────────────────────┬───────────────┘
@@ -27,7 +31,9 @@
                 ▼                             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    FastAPI 核心服务集群                     │
-│  - app/api/v1/endpoints (auth, audit, cost, workspaces...)  │
+│  - app/api/v1/endpoints (auth, members, audit, cost, quota, │
+│                         replay, plugins, workflows...)      │
+│  - app/services/quota_service.py (配额计算与超额熔断服务)    │
 │  - app/services/audit_service.py (全局异步审计埋点服务)      │
 │  - app/core/permissions.py (RBAC 角色权限矩阵与拦截依赖)     │
 │  - app/core/auth.py (PBKDF2-SHA256 密码哈希 / PyJWT 签发)    │
@@ -42,7 +48,7 @@
                 ▼                             ▼
 ┌───────────────────────────────┐ ┌───────────────────────────┐
 │     SQLAlchemy 数据持久层     │ │    独立 Worker 消费进程   │
-│  - 14 张领域数据表            │ │  - app/worker.py          │
+│  - 18 张领域数据表            │ │  - app/worker.py          │
 │  - SQLite (生产可切 PostgreSQL)│ │  - worker_concurrency 控制 │
 │  - 默认工作区与 6 个预设 Agent │ │  - 租约心跳与死信重试      │
 └───────────────────────────────┘ └───────────────────────────┘
@@ -50,7 +56,7 @@
 
 ---
 
-## 2. 数据库表清单 (共 14 张)
+## 2. 数据库表清单 (共 18 张)
 
 | 表名 | 模块 | 核心作用 |
 |---|---|---|
@@ -58,7 +64,11 @@
 | `workspaces` | 租户 | 工作区与租户容器 |
 | `workspace_memberships` | 权限 | 用户与工作区成员映射及角色 (`owner`, `admin`, `member`, `viewer`) |
 | `workspace_invitations` | 邀请 | 工作区专属邀请码与核销状态 (`invite_code`, `role`, `expires_at`, `status`) |
-| `audit_logs` (✨ 新增) | 审计 | 平台操作审计事实流水 (`action`, `resource_type`, `resource_id`, `detail`, `ip_address`) |
+| `audit_logs` | 审计 | 平台操作审计流水 (`action`, `resource_type`, `resource_id`, `detail`, `ip_address`) |
+| `quota_configs` | 配额 | 工作区配额与限流规则 (`monthly_budget_usd`, `max_monthly_tokens`, `max_concurrent_tasks`, `is_hard_limit`) |
+| `plugins` | 插件 | 插件元数据与 Manifest 定义 (`name`, `manifest_json`, `is_public`, `version`) |
+| `workspace_plugins` | 插件 | 工作区挂载与凭证配置 (`workspace_id`, `plugin_id`, `is_enabled`, `config_json`) |
+| `workflow_templates` (✨ 新增) | 工作流 | 工作流模板与 DAG 节点 (`workspace_id`, `name`, `nodes_json`, `variables_json`, `is_system`) |
 | `agents` | 智能体 | 预设与自定义 Agent (`role`, `model_name`, `system_prompt`, `status`) |
 | `conversations` | 聊天 | 会话容器 |
 | `messages` | 消息 | 聊天消息事实记录 |
@@ -71,69 +81,43 @@
 
 ---
 
-## 3. Phase 4 进展与后续任务路线
+## 3. Phase 4 全批次达成记录
 
-### 已完成
-- [x] **批次 1：A1 用户认证系统 (C-101)**
-  - 后端：`User` 模型、`auth.py` (PBKDF2/JWT)、`/api/v1/auth` 路由、双轨认证中间件、WebSocket 握手 JWT 鉴权。
-  - 前端：`/login` 与 `/register` 页面、`AuthGuard` 路由守卫、`task-api.ts` 自动注入 Bearer Token 与 401 自动续期。
-- [x] **批次 2：A2 角色权限模型 (RBAC) 与 A3 多租户 Workspace 隔离 (C-103)**
-  - 后端：`WorkspaceMembership` 与 `WorkspaceInvitation` 模型、`permissions.py` (4级角色权限矩阵与拦截依赖)、`workspace_members.py` 路由。
-  - 前端：`useWorkspaces` 与 `usePermissions` hooks、侧边栏工作区切换器浮层、`/settings/members` 成员与权限管理控制台。
-- [x] **批次 3：B1 平台级审计日志 + C1 成本统计面板 (C-105 & C-106)**
-  - 后端：`AuditLog` 模型、`audit_service.py`（登录/注册/成员/密钥/任务埋点）、`audit_logs.py` 路由、`cost_stats.py` 多维聚合统计引擎（汇总指标/每日趋势/模型分布/Top任务）。
-  - 前端：`/settings/audit` 审计日志控制台（分类过滤/时间筛选/明细抽屉）、`/settings/cost` 成本中心与 Token 分析大屏（指标卡/SVG趋势图/模型进度条/Top任务榜）、设置中心 3 卡片导航网格。
-  - 测试：后端全量 **102 tests passed**；前端 **28 tests passed**，`lint` (0 error, 0 warning) 与生产构建全量通过。
-  - 验收：子 Agent 独立验收 APPROVED，PRD 文档与改动表对齐。
-
-### 下一步待实施任务
-- [ ] **批次 4：回放与配额 (B2 + C2)**
-  - B2 任务执行回放: 在 `/tasks/[id]` 提供步进回放、上下文 Diff 与失败节点恢复重试。
-  - C2 配额与限流升级: `quota_configs` 表，按工作区月度 Token/Cost 额度限制与 Redis 速率控制。
-- [ ] **批次 5：插件生态 (D1)**
-  - D1 插件注册中心: `plugins` 表与 Manifest 机制，支持工作区按需挂载工具扩展。
-- [ ] **批次 6：工作流模板引擎 (D2)**
-  - D2 工作流模板引擎: 自定义流水线编排、条件分支与人工审批节点。
+| 批次 | 任务项 | 对应 PRD | 工单 ID | Commit SHA | QA 验收 |
+|---|---|---|---|---|---|
+| **Batch 1** | A1: 用户认证系统 (JWT / User 表 / Auth 页面) | `docs/prd/PRD-用户认证系统.md` | C-101 | `9337826` / `702942c` | ✅ APPROVED |
+| **Batch 2** | A2: RBAC 角色权限 + A3: 多租户隔离 | `docs/prd/PRD-角色权限与多租户隔离.md` | C-103 | `ad18c19` / `22208c7` | ✅ APPROVED |
+| **Batch 3** | B1: 平台级审计日志 + C1: 成本统计面板 | `docs/prd/PRD-平台级审计日志.md`<br>`docs/prd/PRD-成本统计面板.md` | C-105<br>C-106 | `1ca7aec` / `6019883` | ✅ APPROVED |
+| **Batch 4** | B2: 任务回放与断点调试 + C2: 配额与限流治理 | `docs/prd/PRD-任务执行回放与单步调试.md`<br>`docs/prd/PRD-工作区配额与限流治理.md` | C-108<br>C-109 | `a4c0c1f` / `31ed948` | ✅ APPROVED |
+| **Batch 5** | D1: 插件注册中心 (Manifest / 热插拔) | `docs/prd/PRD-插件注册中心.md` | C-110 | `037e968` / `9dbc783` | ✅ APPROVED |
+| **Batch 6** | D2: 工作流模板引擎 (DAG 节点 / 一键实例化) | `docs/prd/PRD-工作流模板引擎.md` | C-111 | `19d4bdc` / `370021e` | ✅ APPROVED |
 
 ---
 
-## 4. 常用运行与测试命令
+## 4. 质量与验证基准
 
-### 后端运行与测试
+- **后端自动化测试**：23 个测试模块，共计 **106 tests passed**（100% 通过）。
+- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 28 passed，`next build` 12 个页面全部编译成功。
+- **文档自动化体系**：14 列变更记录全量无空值，`PRD.md`、`Agent_Console_变更追踪.xlsx` 与 `PRD.html` 自动化生成并与 Git 历史完全同步。
+
+---
+
+## 5. 常用运行命令
+
+### 启动后端
 ```powershell
-Set-Location E:\Agents\backend
-python -m venv .venv
-.venv\Scripts\Activate.ps1
-pip install -r requirements-dev.txt
-
-# 运行全量单元与集成测试 (当前 102 Passed)
-python -c "import pytest, sys; sys.exit(pytest.main(['tests', '-p', 'no:warnings', '-q']))"
-
-# 启动后端 API 服务
+cd E:\Agents\backend
 uvicorn app.main:app --reload --port 8000
 ```
 
-### 前端运行与测试
+### 启动 Worker 进程
 ```powershell
-Set-Location E:\Agents\frontend
-npm install
-
-# 运行前端测试 (当前 28 Passed)
-npm test
-
-# 检查代码规范 (0 Error, 0 Warning)
-npm run lint
-
-# 生产环境构建编译
-npm run build
-
-# 启动开发服务器 (http://localhost:3000)
-npm run dev
+cd E:\Agents\backend
+python app/worker.py
 ```
 
-### 文档同步脚本
+### 启动前端控制台
 ```powershell
-# 每次 git commit 后重跑以下两命令，对齐改动表与单页阅读器：
-python docs/generate_change_log.py
-python docs/build_prd_html.py
+cd E:\Agents\frontend
+npm run dev
 ```
