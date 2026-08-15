@@ -1,6 +1,6 @@
 # PRD：插件注册中心 (Plugin Registry)
 
-> 类型：Requirement ｜ 状态：进行中 ｜ 工单 ID：C-110
+> 类型：Requirement ｜ 状态：已完成 ｜ 工单 ID：C-110
 
 ---
 

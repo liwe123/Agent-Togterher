@@ -1,6 +1,6 @@
 # PRD：任务执行回放与单步调试
 
-> 类型：Requirement ｜ 状态：进行中 ｜ 工单 ID：C-108
+> 类型：Requirement ｜ 状态：已完成 ｜ 工单 ID：C-108
 
 ---
 

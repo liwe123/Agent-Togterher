@@ -1,6 +1,6 @@
 # PRD：用户认证系统
 
-> 类型：Requirement ｜ 状态：进行中 ｜ ID：C-100
+> 类型：Requirement ｜ 状态：已完成 ｜ 工单 ID：C-101
 
 ## 1. 背景与问题
 

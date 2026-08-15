@@ -1,6 +1,6 @@
 # PRD：Phase 2 持久化任务队列与独立 Worker
 
-> 类型：新需求（Requirement）｜状态：进行中｜对应《项目计划》Phase 2 平台化。
+> 类型：新需求（Requirement）｜状态：已完成｜对应《项目计划》Phase 2 平台化。
 
 ## 1. 目标
 

@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>19</b> 份</span>
-        <span>变更记录 <b>111</b> 条</span>
-        <span>生成于 2026-08-15 23:22</span>
+        <span>变更记录 <b>113</b> 条</span>
+        <span>生成于 2026-08-15 23:26</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -2064,6 +2064,38 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>pytest 全量 106 passed；前端测试 28 passed；前端 lint/build 0 errors 0 warnings 通过；子 Agent 独立验收通过</td>
 <td>PRD: docs/prd/PRD-工作流模板引擎.md；工单 C-111；子 Agent 独立验收通过</td>
 </tr>
+<tr>
+<td>2026-08-15 23:22</td>
+<td>C-112</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/370021e">370021e</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 更新变更追踪表、PRD 索引与 Excel 记录 (Batch 6)</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-15 23:23</td>
+<td>C-113</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/b4b25ff">b4b25ff</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>文档</td>
+<td>docs: 更新 Phase 4 全量圆满达成项目接力文档 (HANDOFF)</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
 </tbody>
 </table></div>
 <!-- CHANGELOG:END -->
@@ -2617,7 +2649,7 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <p><strong>配套修复</strong>：眼睛图标切换失效（c374465，点击时拉取真实 Key 再显隐）、输入框黑底黑字（a138831/c8d1f72）。</p>
 <h2 id="prd-phase2持久化任务队列与独立worker">PRD：Phase 2 持久化任务队列与独立 Worker</h2>
 <blockquote>
-<p>类型：新需求（Requirement）｜状态：进行中｜对应《项目计划》Phase 2 平台化。</p>
+<p>类型：新需求（Requirement）｜状态：已完成｜对应《项目计划》Phase 2 平台化。</p>
 </blockquote>
 <h3 id="prd-phase2持久化任务队列与独立worker-1-目标">1. 目标</h3>
 <p>将任务执行从 API 进程内协程升级为数据库持久化队列与独立 Worker 消费模式，使任务可排队、可重试、可超时回收、可进入死信状态，并保留兼容的内联执行模式用于本地开发。</p>
@@ -2710,7 +2742,7 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <p>本需求承接 Phase 0 的架构治理边界：API 只受理命令，<code>TaskService</code> 管理调度状态，Worker 调用执行入口，<code>AgentOrchestrator</code> 暂继续承载模型与工具执行。后续将继续拆分编排器并接入可观测性与事件总线。</p>
 <h2 id="prd-phase3分布式化">PRD：Phase 3 分布式化</h2>
 <blockquote>
-<p>类型：新需求（Requirement）｜状态：进行中｜对应《项目计划》Phase 3 分布式化。</p>
+<p>类型：新需求（Requirement）｜状态：已完成｜对应《项目计划》Phase 3 分布式化。</p>
 </blockquote>
 <hr />
 <h3 id="prd-phase3分布式化-1-目标">1. 目标</h3>
@@ -3503,7 +3535,7 @@ docker compose up --build
 <p><strong>验证结果</strong>：Docker Compose 封装，<code>copy .env</code> + 健康轮询 + 自动开浏览器；4396cad 将脚本消息改纯 ASCII 修复中文乱码。</p>
 <h2 id="prd-任务执行回放与单步调试">PRD：任务执行回放与单步调试</h2>
 <blockquote>
-<p>类型：Requirement ｜ 状态：进行中 ｜ 工单 ID：C-108</p>
+<p>类型：Requirement ｜ 状态：已完成 ｜ 工单 ID：C-108</p>
 </blockquote>
 <hr />
 <h3 id="prd-任务执行回放与单步调试-1-目标与背景">1. 目标与背景</h3>
@@ -4343,7 +4375,7 @@ docker compose up --build
 <p>那么模型在同一条任务里就能持续「看见自己正在做什么」，上下文就不会轻易断掉。</p>
 <h2 id="prd-后端访问控制与工作区隔离">PRD：后端访问控制与工作区隔离</h2>
 <blockquote>
-<p>类型：新需求（Requirement）｜状态：实施中</p>
+<p>类型：新需求（Requirement）｜状态：已完成</p>
 </blockquote>
 <h3 id="prd-后端访问控制与工作区隔离-1-背景">1. 背景</h3>
 <p>Agent Console 当前按本地单用户工具设计，REST API 与 WebSocket 默认无需认证。服务一旦监听非本机地址，工作区数据、模型配置与管理接口会缺少最基本的访问边界。同时，Agent 工具执行必须继承当前任务的工作区上下文，不能由模型自行指定数据范围。</p>
@@ -4415,7 +4447,7 @@ docker compose up --build
 </ul>
 <h2 id="prd-工作区配额与限流治理">PRD：工作区配额与限流治理</h2>
 <blockquote>
-<p>类型：Requirement ｜ 状态：进行中 ｜ 工单 ID：C-109</p>
+<p>类型：Requirement ｜ 状态：已完成 ｜ 工单 ID：C-109</p>
 </blockquote>
 <hr />
 <h3 id="prd-工作区配额与限流治理-1-目标与背景">1. 目标与背景</h3>
@@ -4545,7 +4577,7 @@ CREATE UNIQUE INDEX ix_quota_configs_workspace_id ON quota_configs(workspace_id)
 </ul>
 <h2 id="prd-工作流模板引擎">PRD：工作流模板引擎 (Workflow Template Engine)</h2>
 <blockquote>
-<p>类型：Requirement ｜ 状态：进行中 ｜ 工单 ID：C-111</p>
+<p>类型：Requirement ｜ 状态：已完成 ｜ 工单 ID：C-111</p>
 </blockquote>
 <hr />
 <h3 id="prd-工作流模板引擎-1-目标与背景">1. 目标与背景</h3>
@@ -4895,7 +4927,7 @@ CREATE INDEX ix_wf_ws_id ON workflow_templates(workspace_id);
 </table></div>
 <h2 id="prd-平台级审计日志">PRD：平台级审计日志</h2>
 <blockquote>
-<p>类型：Requirement ｜ 状态：进行中 ｜ 工单 ID：C-105</p>
+<p>类型：Requirement ｜ 状态：已完成 ｜ 工单 ID：C-105</p>
 </blockquote>
 <hr />
 <h3 id="prd-平台级审计日志-1-目标与背景">1. 目标与背景</h3>
@@ -5118,7 +5150,7 @@ CREATE INDEX ix_audit_logs_created_at ON audit_logs(created_at);
 </ul>
 <h2 id="prd-成本统计面板">PRD：成本统计面板</h2>
 <blockquote>
-<p>类型：Requirement ｜ 状态：进行中 ｜ 工单 ID：C-106</p>
+<p>类型：Requirement ｜ 状态：已完成 ｜ 工单 ID：C-106</p>
 </blockquote>
 <hr />
 <h3 id="prd-成本统计面板-1-目标与背景">1. 目标与背景</h3>
@@ -5248,7 +5280,7 @@ CREATE INDEX ix_audit_logs_created_at ON audit_logs(created_at);
 </ul>
 <h2 id="prd-插件注册中心">PRD：插件注册中心 (Plugin Registry)</h2>
 <blockquote>
-<p>类型：Requirement ｜ 状态：进行中 ｜ 工单 ID：C-110</p>
+<p>类型：Requirement ｜ 状态：已完成 ｜ 工单 ID：C-110</p>
 </blockquote>
 <hr />
 <h3 id="prd-插件注册中心-1-目标与背景">1. 目标与背景</h3>
@@ -5405,7 +5437,7 @@ CREATE UNIQUE INDEX ix_ws_plugin_unique ON workspace_plugins(workspace_id, plugi
 </ul>
 <h2 id="prd-用户认证系统">PRD：用户认证系统</h2>
 <blockquote>
-<p>类型：Requirement ｜ 状态：进行中 ｜ ID：C-100</p>
+<p>类型：Requirement ｜ 状态：已完成 ｜ 工单 ID：C-101</p>
 </blockquote>
 <h3 id="prd-用户认证系统-1-背景与问题">1. 背景与问题</h3>
 <p>当前系统使用 <code>APP_API_TOKEN</code> 环境变量做静态 Token 鉴权（<code>security.py</code>），前端将用户硬编码为 <code>"你"</code>（<code>sender_type: "user"</code>, <code>sender_id: null</code>）。这种方式无法区分不同用户的身份，无法支持多人协作，也无法进行操作审计。</p>

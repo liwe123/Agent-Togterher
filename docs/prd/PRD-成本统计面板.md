@@ -1,6 +1,6 @@
 # PRD：成本统计面板
 
-> 类型：Requirement ｜ 状态：进行中 ｜ 工单 ID：C-106
+> 类型：Requirement ｜ 状态：已完成 ｜ 工单 ID：C-106
 
 ---
 

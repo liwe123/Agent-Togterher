@@ -1,6 +1,6 @@
 # PRD：工作区配额与限流治理
 
-> 类型：Requirement ｜ 状态：进行中 ｜ 工单 ID：C-109
+> 类型：Requirement ｜ 状态：已完成 ｜ 工单 ID：C-109
 
 ---
 

@@ -1,6 +1,6 @@
 # PRD：Phase 3 分布式化
 
-> 类型：新需求（Requirement）｜状态：进行中｜对应《项目计划》Phase 3 分布式化。
+> 类型：新需求（Requirement）｜状态：已完成｜对应《项目计划》Phase 3 分布式化。
 
 ---
 
