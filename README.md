@@ -26,103 +26,85 @@
 
 ```mermaid
 flowchart TB
-    U[用户浏览器] --> FE
+    U((用户))
 
-    subgraph Frontend["Next.js 16 前端 (:3000)"]
-        FE[App Router 页面]
-        FE --> P1["集群总览 /"]
-        FE --> P2["协同群聊 /chats"]
-        FE --> P3["任务与回放 /tasks"]
-        FE --> P4["工作流 /workflows"]
-        FE --> P5["设置中心 /settings"]
-        FE --> P6["认证 /login /register"]
-        WS_C[WebSocket 客户端]
-        REST_C[REST 客户端 + JWT 自动续期]
+    subgraph FE["Frontend · Next.js 16 · :3000"]
+        direction LR
+        UI["App Router<br/>/ &nbsp; /chats &nbsp; /tasks &nbsp; /workflows &nbsp; /settings"]
     end
 
-    FE -.->|"REST (Bearer JWT)"| API
-    FE <-->|"WebSocket 实时通道"| WSM
-
-    subgraph Backend["FastAPI 后端 (:8000)"]
+    subgraph BE["Backend · FastAPI · :8000"]
         direction TB
+        GW["Auth · RBAC · Audit · Quota"]
 
-        AUTH[认证中间件<br/>JWT + API Token 双轨]
-        RBAC[RBAC 权限拦截<br/>owner / admin / member / viewer]
-        AUDIT[审计日志拦截器<br/>全局异步埋点]
-        QUOTA[配额限流<br/>月度预算 / Token / 并发 / 硬熔断]
+        subgraph API["REST /api/v1"]
+            direction LR
+            A1["auth · agents · tasks"]
+            A2["models · plugins · workflows"]
+            A3["integrations · cost · quota"]
+        end
 
-        API["REST 路由层 /api/v1"]
-        API --> R1["/auth 注册登录刷新"]
-        API --> R2["/workspaces 工作区+邀请码"]
-        API --> R3["/agents Agent CRUD"]
-        API --> R4["/tasks 任务+回放+断点恢复"]
-        API --> R5["/models 模型+Provider状态"]
-        API --> R6["/provider-keys Key管理"]
-        API --> R7["/plugins 插件注册+挂载"]
-        API --> R8["/workflows 模板+实例化"]
-        API --> R9["/integrations 外部节点+心跳+派发"]
-        API --> R10["/audit /cost /quota"]
+        HUB{"MessageHub<br/>@Agent 解析"}
+        TSVC["TaskService<br/>状态机 + 队列"]
+        ORCH["AgentOrchestrator<br/>Manager → Worker → QA → Final"]
+        TRACE["ExecutionTrace<br/>上下文回灌 + 裁剪"]
+        TOOLS["Tools · 插件热注入"]
+        LLM["LiteLLM<br/>fallback 降级"]
 
-        WSM[WebSocket Manager]
-        WSM --> WSM1["工作区级广播<br/>agent / task / integration 事件"]
-        WSM --> WSM2["Redis Pub/Sub 跨进程总线"]
+        subgraph BRG["Bridge 接入层"]
+            direction LR
+            CB["CursorBridge"]
+            XB["CodexBridge"]
+            NB[("integration_nodes")]
+        end
 
-        HUB["MessageHub 消息中心<br/>@Agent 解析 → 任务入队"]
-
-        TSVC["TaskService 任务状态机<br/>enqueue / claim / complete / fail / recover"]
-
-        ORCH["AgentOrchestrator 编排流水线"]
-        ORCH --> O1["Manager 拆解 → Worker 分工 → QA 审核 → Final 汇总"]
-        ORCH --> O2["ExecutionTrace 上下文回灌"]
-        ORCH --> O3["Tools Registry + 插件热注入"]
-        ORCH --> O4["LiteLLM 调用 + fallback 降级"]
-
-        BRIDGE["Bridge 接入层"]
-        BRIDGE --> B1["integration_nodes 节点注册表"]
-        BRIDGE --> B2["CursorBridge 文件系统"]
-        BRIDGE --> B3["CodexBridge codex exec CLI"]
-
-        DB[("SQLAlchemy 2.0 Async<br/>19 张领域表<br/>SQLite / PostgreSQL")]
+        WSM["WebSocket Manager<br/>+ Redis Pub/Sub"]
+        DB[("19 张领域表<br/>SQLite / PostgreSQL")]
     end
 
-    AUTH --> RBAC --> AUDIT --> QUOTA --> API
-    API --> HUB --> TSVC --> ORCH
-    ORCH --> BRIDGE
-    API --> WSM
-    HUB --> DB
-    TSVC --> DB
-    ORCH --> DB
-    BRIDGE --> DB
+    QUEUE[("task_queue_items<br/>持久化队列")]
 
-    TSVC --> QUEUE[("task_queue_items<br/>持久化队列")]
-
-    subgraph Worker["独立 Worker 进程（可选）"]
-        WK["Worker 消费进程<br/>轮询队列 → run_task → 回写"]
+    subgraph WK["Worker 进程 · 可选"]
+        direction LR
+        WP["轮询 → run_task → 回写"]
     end
-
-    WK -->|"领取任务"| QUEUE
-    WK -->|"调用编排"| ORCH
-    WK -->|"事件推送"| WSM
 
     REDIS[("Redis")]
-    WSM2 -.->|"Pub/Sub"| REDIS
-    REDIS -.->|"跨进程广播"| WSM
 
-    subgraph External["外部 Agent 软件"]
-        CURSOR["Cursor"]
-        CODEX["Codex CLI"]
-        TRAE["Trae"]
-        ANTIG["Antigravity"]
+    subgraph EXT["外部 Agent 软件"]
+        direction LR
+        CUR["Cursor"]
+        COD["Codex CLI"]
+        TRA["Trae"]
+        ANT["Antigravity"]
     end
 
-    BRIDGE -.-> CURSOR
-    BRIDGE -.-> CODEX
-    BRIDGE -.-> TRAE
-    BRIDGE -.-> ANTIG
+    MDL["OpenAI · Anthropic · Gemini · DeepSeek · Qwen"]
 
-    LITELLM["LiteLLM 统一模型调度"]
-    O4 --> LITELLM
-    LITELLM --> MDL["OpenAI / Anthropic / Gemini / DeepSeek / Qwen"]
+    U -->|HTTP| UI
+    UI <-->|WebSocket| WSM
+    UI -->|REST Bearer JWT| GW
+    GW --> API
+    API --> HUB --> TSVC --> ORCH
+    ORCH --> TRACE
+    ORCH --> TOOLS --> LLM --> MDL
+    ORCH --> BRG
+    HUB --> DB
+    TSVC --> QUEUE
+    ORCH --> DB
+    BRG --> DB
+
+    WP -.->|领取| QUEUE
+    WP -.->|调用| ORCH
+    WP -.->|事件| WSM
+
+    WSM -.-> REDIS
+    REDIS -.->|跨进程广播| WSM
+
+    BRG -.-> CUR
+    BRG -.-> COD
+    BRG -.-> TRA
+    BRG -.-> ANT
 ```
 
 ---
