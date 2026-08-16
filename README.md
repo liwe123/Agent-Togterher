@@ -1,233 +1,279 @@
 # Agent Console
 
-#### 寂静飞控台 · The Quiet Flight Desk
+一个本地优先的多智能体协同运行台。你在群聊里 @某个 Agent 派活，后端自动拆解、分发、执行、审核、汇总，全程 WebSocket 实时推送到前端面板。
 
-**多智能体不再散落各处。一张深色运控台，看见全局，精准调度。**
-
-
+不做聊天玩具，不做黑盒。每一步流转、每次工具调用、每个 Token 消耗，都看得见。
 
 ---
 
-## 这是什么？
+## 技术栈
 
-一个**本地优先（Local-First）的多智能体运控台** — 拒绝聊天玩具，拒绝黑盒执行，这套系统生来就是为了承接生产级协作的深色运控工作台。
+| 层 | 选型 |
+|---|---|
+| 后端 | FastAPI · Python 3.11+ · SQLAlchemy 2.0 Async |
+| 前端 | Next.js 16 (App Router) · React 19 · TypeScript |
+| 样式 | Tailwind CSS v4 (OKLCH) · shadcn/ui · Lucide |
+| 数据库 | SQLite（开发）/ PostgreSQL（生产），19 张领域表 |
+| 模型层 | LiteLLM 统一适配 OpenAI / Anthropic / Gemini / DeepSeek / Qwen |
+| 实时 | FastAPI WebSocket + Redis Pub/Sub |
+| 认证 | PBKDF2 + JWT + 4 级 RBAC |
 
-在这里，你打字，Agent 干活。内置的高性能自研状态机自动为你驱动：**项目总设计师拆解任务 -> 专职 Worker 分工执行 -> 测试专员 QA 把关 -> 最终交付汇总**。
-全程透明可视：每一步流转、每一次工具调用、每一次 Token 消耗和模型降级，全在 WebSocket 实时推到你的面板上。
-
-```
-你: "重构订单模块并更新前端页面" @项目总设计师
-      │
-      ▼
-Manager 拆解 ──→ Worker 1: Agent工程师  ──→ Worker 2: 前端设计师
-      │                    │                        │
-      ▼                    ▼                        ▼
-QA 审核 ←──────────────────────────────────────────┘
-      │
-      ▼
-Manager 汇总 ──→ 最终结果实时回写到群聊气泡
-```
+不依赖 LangChain 或 AutoGen。编排逻辑自己写，工具调用自己控，上下文自己管。
 
 ---
 
-## 全栈技术体系
+## 怎么跑
 
-我们摒弃了臃肿的 LangChain 与 AutoGen 黑盒，采用高内聚、全异步、强类型的现代化技术栈：
+### Windows 一键启动
 
-- **核心后端**：FastAPI + Python 3.11+ + SQLAlchemy 2.0 Async
-- **前台基建**：Next.js 16 (App Router) + React 19 + TypeScript
-- **设计系统**：Tailwind CSS v4 (原生 OKLCH 色板) + shadcn/ui + Lucide Icons
-- **数据库与 ORM**：19 张企业级领域数据表（支持 SQLite 与 PostgreSQL 自动切换）
-- **模型接入适配**：LiteLLM (统一适配 OpenAI/Anthropic/Gemini/DeepSeek/Qwen 等) + 动态 Fallback 降级
-- **实时事件总线**：FastAPI Native WebSocket + Redis Pub/Sub 跨进程分布式总线
-- **安全与身份**：PBKDF2-SHA256 密码哈希 + PyJWT 无感刷新 + 4 级 RBAC 权限矩阵
+双击 `start.bat`。脚本会拷贝 `.env`、拉起 Docker、轮询健康检查、打开浏览器。
 
----
-
-## 系统整体架构
-
-```mermaid
-flowchart TB
-    U[用户 / 团队成员] --> FE[前端 Next.js 16 运控中心]
-
-    subgraph 前端控制台矩阵
-        FE --> C1[集群总览 /]
-        FE --> C2[协同群聊 /chats]
-        FE --> C3[智能体通讯录 /contacts]
-        FE --> C4[任务队列与时序回放 /tasks]
-        FE --> C5[工作流模板引擎 /workflows]
-        FE --> C6[设置中心 /settings (成员/审计/成本/配额/插件)]
-        FE --> C7[用户认证 /login /register]
-    end
-
-    FE -->|REST API (Bearer JWT)| API[FastAPI Backend /api/v1]
-    FE <-->|WebSocket 实时通道| WS[WebSocket Manager / Redis 总线]
-
-    API --> AUTH[用户认证与 RBAC 权限拦截]
-    API --> AUDIT[平台异步审计日志拦截器]
-    API --> QUOTA[工作区预算与配额限流熔断]
-    
-    API --> HUB[MessageHub 消息中心 / @Agent 意图解析]
-    HUB --> TASK_SVC[TaskService 任务状态机与队列管理]
-    TASK_SVC --> QUEUE[(task_queue_items 持久化队列)]
-    
-    QUEUE --> WORKER[独立 Worker 消费进程]
-    WORKER --> ORCH[AgentOrchestrator 编排流水线]
-    
-    ORCH --> AGENTS[六人 Agent 编队层 (Manager/Worker/Reviewer/QA)]
-    ORCH --> TRACE[ExecutionTrace 上下文追踪]
-    ORCH --> TOOLS[Tools Registry / 插件注册中心热挂载]
-    
-    AGENTS --> LITELLM[LiteLLM 统一模型调度与容灾降级]
-    LITELLM --> MODELS[模型与热配置 Key (DB 优先 > 环境变量 > Fallback)]
-
-    API --> BRIDGE[外部 Agent 软件接入层 / Bridge 适配器]
-    BRIDGE --> NODES[(integration_nodes 节点注册表)]
-    BRIDGE --> CURSOR[Cursor Bridge]
-    BRIDGE --> CODEX[Codex CLI Bridge]
-    NODES -.->|WebSocket 心跳与状态推送| FE
-
-    API --> DB[(SQLAlchemy 2.0 持久化 - 19 张数据表)]
-    WORKER --> DB
-```
-
----
-
-## 编队体系：六人 Agent 矩阵
-
-系统初始化即拉起一个高配 6 人工作组：
-
-| Agent | 角色 | 职能定义 | 默认绑定模型位 |
-| --- | --- | --- | --- |
-| **项目总设计师** | `manager` | 复杂需求拆解 (JSON Plan)、任务分发、最终交付汇总 | `manager_model` |
-| **Agent 工程师** | `agent_engineer` | 后端业务逻辑、算法实现、API 开发与集成 | `code_model` |
-| **前端设计师** | `frontend_designer` | UI/UX 界面设计、前端组件化实现、交互还原 | `code_model` |
-| **知识库管理员** | `knowledge_manager` | 技术长文写作、资料搜集、文档标准化整理 | `writing_model` |
-| **测试专员** | `qa_engineer` | 质量把关 QA、验收核对、缺陷定位与修改建议 | `review_model` |
-| **运维** | `devops` | 环境部署指导、Docker 编排与系统稳定性巡检 | `code_model` |
-
----
-
-## 前端交互：全功能控制台矩阵
-
-界面严格遵循 *"The Connected Cluster Lounge"* 极简结构美学，拒绝无意义光晕。
-
-- 🎛️ **集群控制台 (`/`)**：全局监控 Agent 编队运行负载、外部 Agent 软件节点（Cursor / Codex / Trae / Antigravity）实时心跳与在线状态。
-- 💬 **协同群聊 (`/chats`)**：支持 `@Agent` 智能联想、Prompt 快捷胶囊、Markdown 渲染，自动触发后台流水线。
-- 📖 **通讯录 (`/contacts`)**：Agent 实名花名册，支持实时职责模糊过滤，快速发起协作。
-- ⏱️ **任务与时序回放 (`/tasks`, `/tasks/[id]`)**：内嵌 `TaskReplayPlayer`，支持时间轴拖拽、1x~5x 倍速播放、Payload 检查及从失败步骤一键断点恢复执行。
-- 🌿 **工作流模板引擎 (`/workflows`)**：预设与自定义多 Agent 编排流水线，支持动态参数表单填写与一键实例化调度。
-- ⚙️ **设置中心 (`/settings`)**：
-  - 👥 **成员与权限 (`/settings/members`)**：4 级 RBAC 角色升降、专属邀请码生成与核销。
-  - 📋 **操作审计日志 (`/settings/audit`)**：全平台关键操作事实流水与明细抽屉。
-  - 📊 **成本统计大屏 (`/settings/cost`)**：多维成本与 Token 聚合趋势、模型消耗占比与 Top 任务榜。
-  - 🛡️ **配额与限流治理 (`/settings/quota`)**：月度预算 USD、Token 与并发水位大屏及硬限额熔断。
-  - 🧩 **插件注册中心 (`/settings/plugins`)**：JSON Manifest 校验、工作区挂载与工具热插拔。
-  - 🔌 **外部 Agent 软件接入**：通过 Bridge 适配器框架接入 Cursor / Codex CLI / Trae / Antigravity 等外部 Agent 软件，支持节点注册、心跳上报、任务派发与结果回传。
-
----
-
-## 外部 Agent 软件接入与调度
-
-系统支持将 `Cursor`、`Codex CLI`、`Trae`、`Antigravity` 等外部 Agent 软件作为执行节点纳入统一调度平面。
-
-### 架构
-
-```text
-前端 Software Dock（动态数据驱动）
-        ↓ REST API + WebSocket
-FastAPI 后端
-        ↓
-Integration 接入层
-   ├─ integration_nodes 节点注册表（状态 / 心跳 / 能力 / 并发）
-   ├─ BaseBridge 适配器抽象基类
-   ├─ CursorBridge（文件系统 Bridge）
-   └─ CodexBridge（codex exec CLI 子进程）
-        ↓
-本地进程 / CLI / API / 桌面自动化
-```
-
-### 已实现能力
-
-| 能力 | 说明 |
-|------|------|
-| 节点注册 | `POST /api/v1/integrations/nodes` |
-| 节点列表 | `GET /api/v1/integrations/nodes?workspace_id=X` |
-| 心跳上报 | `POST /api/v1/integrations/nodes/{id}/heartbeat` |
-| 任务派发 | `POST /api/v1/integrations/dispatch`（手动指定或自动选择节点） |
-| WebSocket 实时推送 | `integration.status_changed` / `integration.heartbeat` 事件 |
-| 前端动态 Dock | 从后端 API 动态加载节点状态、能力、心跳与在线/离线标识 |
-
-### Codex CLI 接入
+### 手动启动
 
 ```bash
-# 1. 安装 Codex CLI
+# 后端
+cd backend
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --port 8000
+
+# 前端
+cd frontend
+npm install
+npm run dev
+```
+
+打开 [http://localhost:3000](http://localhost:3000)。
+
+---
+
+## 数据库表
+
+19 张表，覆盖用户、工作区、权限、任务、消息、模型、审计、配额、插件、工作流、外部节点：
+
+```
+workspaces              workspace_memberships    workspace_invitations
+users                   agents                  conversations
+messages                tasks                   task_steps
+task_queue_items        model_calls             provider_credentials
+custom_model_configs    quota_configs           audit_logs
+plugins                 workspace_plugins        workflow_templates
+integration_nodes
+```
+
+SQLite 启动时自动建表。切 PostgreSQL 只需改 `DATABASE_URL`。
+
+---
+
+## 编队
+
+系统初始化拉起 6 个 Agent：
+
+| Agent | 干什么 |
+|---|---|
+| 项目总设计师 | 拆需求、分任务、汇总交付 |
+| Agent 工程师 | 后端逻辑、算法、API |
+| 前端设计师 | 界面、组件、交互 |
+| 知识库管理员 | 文档、资料、检索 |
+| 测试专员 | QA、验收、缺陷定位 |
+| 运维 | 部署、Docker、稳定性 |
+
+每个 Agent 绑定一个模型位（`manager_model` / `code_model` / `writing_model` / `review_model`），在 `config/models.yaml` 里配到具体 Provider。
+
+---
+
+## 页面
+
+| 路由 | 干什么 |
+|---|---|
+| `/` | 集群总览：Agent 负载、外部节点心跳、Software Dock |
+| `/chats` | 群聊：@Agent 派活，Markdown 渲染，自动触发流水线 |
+| `/contacts` | Agent 花名册 |
+| `/tasks` | 任务列表 |
+| `/tasks/[id]` | 任务详情：执行轨迹、工具调用链、时序回放、断点恢复 |
+| `/workflows` | 工作流模板：DAG 编排，填参数一键实例化 |
+| `/settings` | 设置中心（成员 / 审计 / 成本 / 配额 / 插件） |
+| `/login` `/register` | 认证 |
+
+---
+
+## 编排流程
+
+```
+用户 @项目总设计师 "重构订单模块"
+    │
+    ▼
+Manager 拆解 → Worker 1: Agent工程师
+             → Worker 2: 前端设计师
+    │
+    ▼
+QA 审核 ← Worker 结果回传
+    │
+    ▼
+Manager 汇总 → 写回群聊
+```
+
+关键点：
+
+- 任务进 `task_queue_items` 持久化队列，独立 Worker 消费
+- 每轮模型调用前，`ExecutionTrace` 从数据库拼装结构化上下文回灌（任务摘要 + 当前阶段 + 已完成步骤 + 工具结果 + 失败原因）
+- 工具调用形成显式闭环：模型请求 → 执行 → 结果回灌下一轮
+- 超长上下文自动摘要裁剪，关键状态不丢
+- 失败后重试，模型能读到失败前上下文接着跑
+
+---
+
+## 工具调用
+
+Agent 支持 Function Calling。内置 4 个工具：
+
+| 工具 | 用途 |
+|---|---|
+| `calculate` | AST 白名单安全算术 |
+| `query_tasks` | 查任务历史 |
+| `get_agents` | 查当前工作区 Agent 列表 |
+| `get_system_status` | 查 Provider 配置状态 |
+
+工具循环最多 5 轮，每轮结果持久化为 `TaskStep`。
+
+插件注册中心支持上传 JSON Manifest 注册外部工具，按工作区挂载与启用，Agent 执行时自动注入。
+
+---
+
+## 模型管理
+
+- API Key 在前端 `/settings` 填入，存数据库，`DB > 环境变量` 优先级
+- Key 永不在列表回传，日志全脱敏
+- 支持任意 Provider/Model 组合（如 `anthropic/claude-3-5-sonnet`）
+- 主模型 429/500/超时时，沿降级链自动重试，日志标 `fallback_used: true`
+
+---
+
+## 外部 Agent 软件接入
+
+Software Dock 不再是静态展示。`Cursor`、`Codex CLI`、`Trae`、`Antigravity` 等外部 Agent 软件可以注册为执行节点，纳入统一调度。
+
+```
+前端 Software Dock
+    ↓ REST + WebSocket
+后端 Integration 接入层
+    ├─ integration_nodes（状态 / 心跳 / 能力 / 并发）
+    ├─ BaseBridge 适配器基类
+    ├─ CursorBridge（文件系统 Bridge）
+    └─ CodexBridge（codex exec CLI 子进程）
+```
+
+### API
+
+| 接口 | 用途 |
+|---|---|
+| `POST /api/v1/integrations/nodes` | 注册节点 |
+| `GET /api/v1/integrations/nodes` | 节点列表 |
+| `POST /api/v1/integrations/nodes/{id}/heartbeat` | 心跳上报 |
+| `POST /api/v1/integrations/dispatch` | 派发任务到节点 |
+
+WebSocket 推送 `integration.status_changed` / `integration.heartbeat` 事件，前端实时更新。
+
+### Codex CLI 接入示例
+
+```bash
 npm install -g @openai/codex
+codex  # 首次登录
 
-# 2. 首次运行登录
-codex
-
-# 3. 通过 API 派发任务到 Codex 节点
+# 派发任务
 curl -X POST http://localhost:8000/api/v1/integrations/dispatch \
   -H "Content-Type: application/json" \
   -d '{"task_id": 42, "node_id": 2}'
 ```
 
-Codex Bridge 会自动调用 `codex exec --json --sandbox workspace-write -o output.md "任务描述"`，将最终结果保存到 `data/bridges/workspace-{id}/Codex/task-{id}/` 目录。
+Bridge 会调用 `codex exec --json --sandbox workspace-write -o output.md "任务描述"`，结果保存到 `data/bridges/workspace-{id}/Codex/task-{id}/`。
 
 ---
 
-## 运行时模型热管理与容灾降级
+## 权限
 
-- **热生效凭证 (API Keys)**：在前端 `/settings` 面板写入的 API Key 直接通过数据库安全脱敏存储并立刻生效（`DB > Env`），日志打印全脱敏 (`[REDACTED]`)。
-- **动态自定义模型**：支持在界面手动登记任意 `Provider/Model` 组合（如 `anthropic/claude-3-5-sonnet`）。
-- **多级 Fallback 重试降级**：当主模型发生 429 限流、500 宕机或超时时，LiteLLM 层将自动无缝接管，沿降级链重试，并在最终日志中打上醒目的 `fallback_used: true` 标记。
+4 级 RBAC：
+
+| 角色 | 能做什么 |
+|---|---|
+| owner | 一切 |
+| admin | 管成员、配额、插件、工作流 |
+| member | 派任务、看任务 |
+| viewer | 只读 |
+
+工作区隔离：不同工作区看不到彼此的 Agent、任务、消息、节点。
+
+所有关键操作自动写 `audit_logs`：登录、成员变更、插件启停、任务执行。
 
 ---
 
-## 一分钟跑起来
+## 测试
 
-### Windows 全自动一键启动（推荐）
-
-双击根目录 `start.bat` 或在终端运行 `start.ps1`。
-脚本将自动拷贝环境变量 `.env`，拉起 Docker 容器，并每隔 3 秒轮询健康检查，就绪后将直接呼出浏览器。
-
-### 本地直接开发启动
-
-```powershell
-# 1. 启动后端 (Port 8000)
+```bash
+# 后端
 cd backend
-python -m uvicorn app.main:app --reload --port 8000
+python -m pytest tests/ -q
 
-# 2. 启动前端控制台 (Port 3000)
+# 前端
 cd frontend
-npm run dev
+npm test
+npm run lint
+npm run build
 ```
 
-- 控制台入口：[http://localhost:3000](http://localhost:3000)
-- OpenAPI 文档：[http://localhost:8000/docs](http://localhost:8000/docs)
-- 接口健康检查：[http://localhost:8000/api/v1/health](http://localhost:8000/api/v1/health)
+当前：后端 106 tests passed，前端 28 tests / lint 0 errors / build pass。
 
 ---
 
-## 系统演进路线图 (Roadmap)
+## 配置
 
-- [x] **Phase 1: 稳定化**（PostgreSQL 兼容、统一任务状态机、任务执行解耦、AST 安全工具沙箱）
-- [x] **Phase 2: 平台化**（持久化任务队列 `task_queue_items`、独立 Worker 消费进程、任务超时与死信管理）
-- [x] **Phase 3: 分布式化**（Redis Pub/Sub 跨进程总线、WebSocket 连接解耦、Worker 集群租约）
-- [x] **Phase 4: 产品化**
-  - [x] **A1: 用户认证系统**（JWT 签发与刷新、User 模型、AuthGuard 路由守卫）
-  - [x] **A2 & A3: RBAC 角色权限与多租户工作区隔离**（4 级角色矩阵、工作区切换器、邀请码）
-  - [x] **B1: 平台级操作审计日志**（`audit_logs` 表、全局异步埋点与审计控制台）
-  - [x] **C1: 成本统计面板**（多维聚合、每日趋势、模型分布与 Top 任务看板）
-  - [x] **B2: 任务时序回放与断点单步调试**（`TaskReplayPlayer`、时序流与断点恢复）
-  - [x] **C2: 工作区配额与限流治理**（`quota_configs` 表、月度硬熔断与水位大屏）
-  - [x] **D1: 插件注册中心**（`plugins` 表、Manifest 校验与工具热插拔）
-  - [x] **D2: 工作流模板引擎**（`workflow_templates` 表、DAG 编排与一键实例化）
-  - [x] **E1: 外部 Agent 软件接入**（`integration_nodes` 表、Bridge 适配器框架、Cursor Bridge、Codex CLI Bridge、动态 Software Dock）
+复制 `.env.example` 为 `.env`，按需填写：
+
+```bash
+# 模型 Key（任填一个即可启动）
+DEEPSEEK_API_KEY=sk-xxx
+OPENAI_API_KEY=sk-xxx
+
+# 可选
+APP_API_TOKEN=         # 设了就开启 Bearer 鉴权
+TASK_EXECUTION_MODE=inline  # 改 worker 则 API 只入队
+WORKER_CONCURRENCY=2
+```
+
+---
+
+## 项目结构
+
+```
+├── backend/
+│   ├── app/
+│   │   ├── api/v1/endpoints/    # REST 路由（agents / tasks / plugins / integrations ...）
+│   │   ├── core/                # orchestrator / config / auth / permissions
+│   │   ├── models/              # 19 张 SQLAlchemy 模型
+│   │   ├── schemas/             # Pydantic 请求与响应
+│   │   ├── services/            # litellm / tools / bridge / cursor_bridge / codex_bridge
+│   │   ├── websocket/           # WebSocket manager / events / distributed
+│   │   └── worker.py             # 独立 Worker 入口
+│   ├── tests/                    # 106 个测试
+│   └── requirements.txt
+├── frontend/
+│   ├── src/
+│   │   ├── components/          # UI 组件（software-dock / agent-gallery / status-panel ...）
+│   │   ├── hooks/               # use-integrations / use-workspace-socket / use-tasks ...
+│   │   ├── types/               # TypeScript 类型定义
+│   │   └── app/                 # Next.js App Router 页面
+│   └── package.json
+├── docs/
+│   ├── prd/                     # 20 份 PRD 文档
+│   ├── PRD.md                   # 变更追踪表（120 行）
+│   ├── generate_change_log.py   # 从 git history 自动生成变更表
+│   └── build_prd_html.py        # 生成单页 PRD.html 阅读器
+├── docker-compose.yml
+├── start.bat / start.ps1
+└── .env.example
+```
 
 ---
 
 ## License
 
-MIT License
+MIT
