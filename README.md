@@ -37,7 +37,7 @@ Manager 汇总 ──→ 最终结果实时回写到群聊气泡
 - **核心后端**：FastAPI + Python 3.11+ + SQLAlchemy 2.0 Async
 - **前台基建**：Next.js 16 (App Router) + React 19 + TypeScript
 - **设计系统**：Tailwind CSS v4 (原生 OKLCH 色板) + shadcn/ui + Lucide Icons
-- **数据库与 ORM**：18 张企业级领域数据表（支持 SQLite 与 PostgreSQL 自动切换）
+- **数据库与 ORM**：19 张企业级领域数据表（支持 SQLite 与 PostgreSQL 自动切换）
 - **模型接入适配**：LiteLLM (统一适配 OpenAI/Anthropic/Gemini/DeepSeek/Qwen 等) + 动态 Fallback 降级
 - **实时事件总线**：FastAPI Native WebSocket + Redis Pub/Sub 跨进程分布式总线
 - **安全与身份**：PBKDF2-SHA256 密码哈希 + PyJWT 无感刷新 + 4 级 RBAC 权限矩阵
@@ -81,7 +81,13 @@ flowchart TB
     AGENTS --> LITELLM[LiteLLM 统一模型调度与容灾降级]
     LITELLM --> MODELS[模型与热配置 Key (DB 优先 > 环境变量 > Fallback)]
 
-    API --> DB[(SQLAlchemy 2.0 持久化 - 18 张数据表)]
+    API --> BRIDGE[外部 Agent 软件接入层 / Bridge 适配器]
+    BRIDGE --> NODES[(integration_nodes 节点注册表)]
+    BRIDGE --> CURSOR[Cursor Bridge]
+    BRIDGE --> CODEX[Codex CLI Bridge]
+    NODES -.->|WebSocket 心跳与状态推送| FE
+
+    API --> DB[(SQLAlchemy 2.0 持久化 - 19 张数据表)]
     WORKER --> DB
 ```
 
@@ -106,7 +112,7 @@ flowchart TB
 
 界面严格遵循 *"The Connected Cluster Lounge"* 极简结构美学，拒绝无意义光晕。
 
-- 🎛️ **集群控制台 (`/`)**：全局监控 Agent 编队运行负载、查看外部软件 Dock 心跳与活跃流。
+- 🎛️ **集群控制台 (`/`)**：全局监控 Agent 编队运行负载、外部 Agent 软件节点（Cursor / Codex / Trae / Antigravity）实时心跳与在线状态。
 - 💬 **协同群聊 (`/chats`)**：支持 `@Agent` 智能联想、Prompt 快捷胶囊、Markdown 渲染，自动触发后台流水线。
 - 📖 **通讯录 (`/contacts`)**：Agent 实名花名册，支持实时职责模糊过滤，快速发起协作。
 - ⏱️ **任务与时序回放 (`/tasks`, `/tasks/[id]`)**：内嵌 `TaskReplayPlayer`，支持时间轴拖拽、1x~5x 倍速播放、Payload 检查及从失败步骤一键断点恢复执行。
@@ -117,6 +123,57 @@ flowchart TB
   - 📊 **成本统计大屏 (`/settings/cost`)**：多维成本与 Token 聚合趋势、模型消耗占比与 Top 任务榜。
   - 🛡️ **配额与限流治理 (`/settings/quota`)**：月度预算 USD、Token 与并发水位大屏及硬限额熔断。
   - 🧩 **插件注册中心 (`/settings/plugins`)**：JSON Manifest 校验、工作区挂载与工具热插拔。
+  - 🔌 **外部 Agent 软件接入**：通过 Bridge 适配器框架接入 Cursor / Codex CLI / Trae / Antigravity 等外部 Agent 软件，支持节点注册、心跳上报、任务派发与结果回传。
+
+---
+
+## 外部 Agent 软件接入与调度
+
+系统支持将 `Cursor`、`Codex CLI`、`Trae`、`Antigravity` 等外部 Agent 软件作为执行节点纳入统一调度平面。
+
+### 架构
+
+```text
+前端 Software Dock（动态数据驱动）
+        ↓ REST API + WebSocket
+FastAPI 后端
+        ↓
+Integration 接入层
+   ├─ integration_nodes 节点注册表（状态 / 心跳 / 能力 / 并发）
+   ├─ BaseBridge 适配器抽象基类
+   ├─ CursorBridge（文件系统 Bridge）
+   └─ CodexBridge（codex exec CLI 子进程）
+        ↓
+本地进程 / CLI / API / 桌面自动化
+```
+
+### 已实现能力
+
+| 能力 | 说明 |
+|------|------|
+| 节点注册 | `POST /api/v1/integrations/nodes` |
+| 节点列表 | `GET /api/v1/integrations/nodes?workspace_id=X` |
+| 心跳上报 | `POST /api/v1/integrations/nodes/{id}/heartbeat` |
+| 任务派发 | `POST /api/v1/integrations/dispatch`（手动指定或自动选择节点） |
+| WebSocket 实时推送 | `integration.status_changed` / `integration.heartbeat` 事件 |
+| 前端动态 Dock | 从后端 API 动态加载节点状态、能力、心跳与在线/离线标识 |
+
+### Codex CLI 接入
+
+```bash
+# 1. 安装 Codex CLI
+npm install -g @openai/codex
+
+# 2. 首次运行登录
+codex
+
+# 3. 通过 API 派发任务到 Codex 节点
+curl -X POST http://localhost:8000/api/v1/integrations/dispatch \
+  -H "Content-Type: application/json" \
+  -d '{"task_id": 42, "node_id": 2}'
+```
+
+Codex Bridge 会自动调用 `codex exec --json --sandbox workspace-write -o output.md "任务描述"`，将最终结果保存到 `data/bridges/workspace-{id}/Codex/task-{id}/` 目录。
 
 ---
 
@@ -167,6 +224,7 @@ npm run dev
   - [x] **C2: 工作区配额与限流治理**（`quota_configs` 表、月度硬熔断与水位大屏）
   - [x] **D1: 插件注册中心**（`plugins` 表、Manifest 校验与工具热插拔）
   - [x] **D2: 工作流模板引擎**（`workflow_templates` 表、DAG 编排与一键实例化）
+  - [x] **E1: 外部 Agent 软件接入**（`integration_nodes` 表、Bridge 适配器框架、Cursor Bridge、Codex CLI Bridge、动态 Software Dock）
 
 ---
 
