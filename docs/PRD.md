@@ -138,6 +138,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-15 23:30 | C-115 | 已完成 | [ec1f346](https://github.com/liwe123/Agent-Togterher/commit/ec1f346) | LI | Optimization | 其他、文档 | docs: 全面同步更新 README、PRODUCT、项目计划里程碑与变更报表 | - | - | 否 | 否 | - | - |
 | 2026-08-15 23:41 | C-116 | 已完成 | [d61ac17](https://github.com/liwe123/Agent-Togterher/commit/d61ac17) | LI | BUG | 后端 | 修复后端容器启动失败缺陷：优化 app/core/__init__.py 的导出内容，解除与 app/db/session.py 的部分循环初始化依赖，确保 Docker 镜像启动与 Uvicorn 服务平滑拉起 | 无变动 | 优化 backend/app/core/__init__.py 顶级导出，移除导致循环依赖的急切导入 | 否 | 否 | pytest 全量 106 passed；python -c 'from app.main import app' 成功导入；Docker backend 正常启动 | 修复 Docker Compose backend 容器退出报错 |
 | 2026-08-15 23:42 | C-117 | 已完成 | [ed960d5](https://github.com/liwe123/Agent-Togterher/commit/ed960d5) | LI | Optimization | 其他、文档 | docs: 更新变更追踪表与 Excel (C-113 BUG Fix) | - | - | 否 | 否 | - | - |
+| 2026-08-16 13:14 | C-118 | 已完成 | [f03830f](https://github.com/liwe123/Agent-Togterher/commit/f03830f) | LI | Requirement | 其他、后端、数据库、文档、前端 | feat: 实现外部 Agent 软件接入与调度（integration_nodes 表、Bridge 适配器框架、Cursor Bridge、Codex CLI Bridge、动态 Software Dock） | frontend/src/components；frontend/src/hooks；frontend/src/types | backend/app/api；backend/app/core；backend/app/db；backend/app/models；backend/app/schemas；backend/app/services；backend/app/websocket；backend/tests/test_database.py | 是(integration_node) | 是 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
