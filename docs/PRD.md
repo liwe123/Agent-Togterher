@@ -141,6 +141,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-16 13:14 | C-118 | 已完成 | [f03830f](https://github.com/liwe123/Agent-Togterher/commit/f03830f) | LI | Requirement | 其他、后端、数据库、文档、前端 | feat: 实现外部 Agent 软件接入与调度（integration_nodes 表、Bridge 适配器框架、Cursor Bridge、Codex CLI Bridge、动态 Software Dock） | frontend/src/components；frontend/src/hooks；frontend/src/types | backend/app/api；backend/app/core；backend/app/db；backend/app/models；backend/app/schemas；backend/app/services；backend/app/websocket；backend/tests/test_database.py | 是(integration_node) | 是 | - | - |
 | 2026-08-16 13:16 | C-119 | 已完成 | [0c9673a](https://github.com/liwe123/Agent-Togterher/commit/0c9673a) | LI | Optimization | 其他、文档 | docs: 重跑生成脚本同步变更追踪表与 PRD.html（118 行） | - | - | 否 | 否 | - | - |
 | 2026-08-16 13:21 | C-120 | 已完成 | [39d8f21](https://github.com/liwe123/Agent-Togterher/commit/39d8f21) | LI | Optimization | 文档 | docs: README 新增外部 Agent 软件接入章节、架构图更新、Roadmap E1 | - | - | 否 | 否 | - | - |
+| 2026-08-16 13:22 | C-121 | 已完成 | [591e05d](https://github.com/liwe123/Agent-Togterher/commit/591e05d) | LI | Optimization | 其他、文档 | docs: 重跑生成脚本同步变更追踪表与 PRD.html（120 行） | - | - | 否 | 否 | - | - |
+| 2026-08-16 13:29 | C-122 | 已完成 | [a0c5489](https://github.com/liwe123/Agent-Togterher/commit/a0c5489) | LI | Optimization | 文档 | docs: README 彻底重写，去除 AI 腔，回归工程文档风格 | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
