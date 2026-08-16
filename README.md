@@ -24,78 +24,105 @@
 
 ## 架构
 
-```
-用户浏览器
-  │
-  ├─ Next.js 前端 (3000)
-  │   ├─ App Router 页面（/ /chats /tasks /workflows /settings）
-  │   ├─ WebSocket 客户端（实时事件订阅）
-  │   └─ REST API 客户端（Bearer JWT 自动续期）
-  │
-  │  REST ──────────────────────┐
-  │  WebSocket ───────────┐     │
-  │                       │     │
-  ▼                       ▼     ▼
-FastAPI 后端 (8000)
-  │
-  ├─ 认证中间件（JWT + API Token 双轨）
-  ├─ RBAC 权限拦截（owner / admin / member / viewer）
-  ├─ 审计日志拦截器（全局异步埋点）
-  ├─ 配额限流（月度预算 / Token / 并发 / 硬熔断）
-  │
-  ├─ REST 路由层 /api/v1
-  │   ├─ /auth          注册 / 登录 / 刷新 / 登出
-  │   ├─ /workspaces    工作区 CRUD + 邀请码加入
-  │   ├─ /agents        Agent CRUD + 状态广播
-  │   ├─ /conversations 会话与消息
-  │   ├─ /tasks         任务 CRUD + 详情 + 回放
-  │   ├─ /models        模型列表 / 测试 / Provider 状态
-  │   ├─ /provider-keys API Key 管理（DB 优先 / 脱敏）
-  │   ├─ /custom-models 自定义模型注册
-  │   ├─ /plugins       插件注册 / 工作区挂载
-  │   ├─ /workflows     工作流模板 / 一键实例化
-  │   ├─ /integrations  外部 Agent 节点注册 / 心跳 / 派发
-  │   ├─ /audit         审计日志查询
-  │   ├─ /cost          成本统计聚合
-  │   ├─ /quota         配额配置与水位
-  │   └─ /health        健康检查
-  │
-  ├─ WebSocket Manager
-  │   ├─ 工作区级广播（agent.status_changed / task.step_changed / integration.heartbeat ...）
-  │   └─ Redis Pub/Sub 跨进程事件总线（Worker → API → 前端）
-  │
-  ├─ MessageHub（消息中心）
-  │   ├─ @Agent 意图解析
-  │   ├─ 消息持久化
-  │   └─ 任务入队（task_queue_items）
-  │
-  ├─ TaskService（任务状态机）
-  │   ├─ enqueue / claim_next / complete / fail / recover
-  │   └─ 死信与超时租约管理
-  │
-  ├─ AgentOrchestrator（编排流水线）
-  │   ├─ Manager 拆解 → Worker 分工 → QA 审核 → Final 汇总
-  │   ├─ ExecutionTrace 上下文构建器（每轮回灌结构化上下文）
-  │   ├─ Tools Registry（calculate / query_tasks / get_agents / get_system_status）
-  │   ├─ 插件工具热注入（从 workspace_plugins 加载）
-  │   └─ LiteLLM 调用（tools / tool_calls / fallback 降级）
-  │
-  ├─ Bridge 接入层（外部 Agent 软件调度）
-  │   ├─ integration_nodes 节点注册表
-  │   ├─ BaseBridge 适配器基类
-  │   ├─ CursorBridge（文件系统 Bridge）
-  │   └─ CodexBridge（codex exec CLI 子进程）
-  │
-  └─ SQLAlchemy 2.0 Async → SQLite / PostgreSQL（19 张表）
+```mermaid
+flowchart TB
+    U[用户浏览器] --> FE
 
-独立 Worker 进程（可选，TASK_EXECUTION_MODE=worker 时启用）
-  ├─ 轮询 task_queue_items 领取任务
-  ├─ 调用 AgentOrchestrator.run_task()
-  └─ 完成回写或失败重试
+    subgraph Frontend["Next.js 16 前端 (:3000)"]
+        FE[App Router 页面]
+        FE --> P1["集群总览 /"]
+        FE --> P2["协同群聊 /chats"]
+        FE --> P3["任务与回放 /tasks"]
+        FE --> P4["工作流 /workflows"]
+        FE --> P5["设置中心 /settings"]
+        FE --> P6["认证 /login /register"]
+        WS_C[WebSocket 客户端]
+        REST_C[REST 客户端 + JWT 自动续期]
+    end
 
-Redis
-  ├─ Pub/Sub 跨进程事件总线
-  └─ WebSocket 连接解耦（多实例广播）
+    FE -.->|"REST (Bearer JWT)"| API
+    FE <-->|"WebSocket 实时通道"| WSM
+
+    subgraph Backend["FastAPI 后端 (:8000)"]
+        direction TB
+
+        AUTH[认证中间件<br/>JWT + API Token 双轨]
+        RBAC[RBAC 权限拦截<br/>owner / admin / member / viewer]
+        AUDIT[审计日志拦截器<br/>全局异步埋点]
+        QUOTA[配额限流<br/>月度预算 / Token / 并发 / 硬熔断]
+
+        API["REST 路由层 /api/v1"]
+        API --> R1["/auth 注册登录刷新"]
+        API --> R2["/workspaces 工作区+邀请码"]
+        API --> R3["/agents Agent CRUD"]
+        API --> R4["/tasks 任务+回放+断点恢复"]
+        API --> R5["/models 模型+Provider状态"]
+        API --> R6["/provider-keys Key管理"]
+        API --> R7["/plugins 插件注册+挂载"]
+        API --> R8["/workflows 模板+实例化"]
+        API --> R9["/integrations 外部节点+心跳+派发"]
+        API --> R10["/audit /cost /quota"]
+
+        WSM[WebSocket Manager]
+        WSM --> WSM1["工作区级广播<br/>agent / task / integration 事件"]
+        WSM --> WSM2["Redis Pub/Sub 跨进程总线"]
+
+        HUB["MessageHub 消息中心<br/>@Agent 解析 → 任务入队"]
+
+        TSVC["TaskService 任务状态机<br/>enqueue / claim / complete / fail / recover"]
+
+        ORCH["AgentOrchestrator 编排流水线"]
+        ORCH --> O1["Manager 拆解 → Worker 分工 → QA 审核 → Final 汇总"]
+        ORCH --> O2["ExecutionTrace 上下文回灌"]
+        ORCH --> O3["Tools Registry + 插件热注入"]
+        ORCH --> O4["LiteLLM 调用 + fallback 降级"]
+
+        BRIDGE["Bridge 接入层"]
+        BRIDGE --> B1["integration_nodes 节点注册表"]
+        BRIDGE --> B2["CursorBridge 文件系统"]
+        BRIDGE --> B3["CodexBridge codex exec CLI"]
+
+        DB[("SQLAlchemy 2.0 Async<br/>19 张领域表<br/>SQLite / PostgreSQL")]
+    end
+
+    AUTH --> RBAC --> AUDIT --> QUOTA --> API
+    API --> HUB --> TSVC --> ORCH
+    ORCH --> BRIDGE
+    API --> WSM
+    HUB --> DB
+    TSVC --> DB
+    ORCH --> DB
+    BRIDGE --> DB
+
+    TSVC --> QUEUE[("task_queue_items<br/>持久化队列")]
+
+    subgraph Worker["独立 Worker 进程（可选）"]
+        WK["Worker 消费进程<br/>轮询队列 → run_task → 回写"]
+    end
+
+    WK -->|"领取任务"| QUEUE
+    WK -->|"调用编排"| ORCH
+    WK -->|"事件推送"| WSM
+
+    REDIS[("Redis")]
+    WSM2 -.->|"Pub/Sub"| REDIS
+    REDIS -.->|"跨进程广播"| WSM
+
+    subgraph External["外部 Agent 软件"]
+        CURSOR["Cursor"]
+        CODEX["Codex CLI"]
+        TRAE["Trae"]
+        ANTIG["Antigravity"]
+    end
+
+    BRIDGE -.-> CURSOR
+    BRIDGE -.-> CODEX
+    BRIDGE -.-> TRAE
+    BRIDGE -.-> ANTIG
+
+    LITELLM["LiteLLM 统一模型调度"]
+    O4 --> LITELLM
+    LITELLM --> MDL["OpenAI / Anthropic / Gemini / DeepSeek / Qwen"]
 ```
 
 ---
