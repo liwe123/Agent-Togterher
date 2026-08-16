@@ -8,6 +8,7 @@ from app.models.enums import MessageType, SenderType, TaskStatus
 from app.models.membership import WorkspaceInvitation, WorkspaceMembership
 from app.models.message import Message
 from app.models.model_call import ModelCall
+from app.models.integration_node import IntegrationNode
 from app.models.plugin import Plugin, WorkspacePlugin
 from app.models.provider_credential import ProviderCredential
 from app.models.quota_config import QuotaConfig
@@ -22,6 +23,7 @@ __all__ = [
     "AuditLog",
     "Conversation",
     "CustomModelConfig",
+    "IntegrationNode",
     "Message",
     "MessageType",
     "ModelCall",

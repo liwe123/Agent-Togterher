@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import AsyncSessionLocal, close_db, init_db
-from app.models import Agent, Workspace
+from app.models import Agent, IntegrationNode, Workspace
 
 DEFAULT_WORKSPACE_NAME = "默认工作区"
 
@@ -129,6 +129,73 @@ async def seed_defaults(session: AsyncSession) -> tuple[bool, int]:
             )
         )
         created_agents += 1
+
+    existing_nodes = set(
+        await session.scalars(
+            select(IntegrationNode.name).where(IntegrationNode.workspace_id == workspace.id)
+        )
+    )
+    sample_nodes = (
+        {
+            "name": "Cursor",
+            "provider": "cursor",
+            "mode": "bridge",
+            "status": "offline",
+            "version": "unknown",
+            "capabilities": ["code_edit", "review"],
+            "endpoint": "http://127.0.0.1:8787",
+            "max_concurrency": 1,
+        },
+        {
+            "name": "Codex",
+            "provider": "codex",
+            "mode": "cli",
+            "status": "offline",
+            "version": "unknown",
+            "capabilities": ["code_edit", "terminal_run"],
+            "endpoint": "codex",
+            "max_concurrency": 1,
+        },
+        {
+            "name": "Trae",
+            "provider": "trae",
+            "mode": "bridge",
+            "status": "offline",
+            "version": "unknown",
+            "capabilities": ["code_edit", "browser_automation"],
+            "endpoint": "http://127.0.0.1:8788",
+            "max_concurrency": 1,
+        },
+        {
+            "name": "Antigravity",
+            "provider": "antigravity",
+            "mode": "api",
+            "status": "offline",
+            "version": "unknown",
+            "capabilities": ["code_edit", "doc_write"],
+            "endpoint": "https://api.antigravity.local",
+            "max_concurrency": 1,
+        },
+    )
+    created_nodes = 0
+    for node_seed in sample_nodes:
+        if node_seed["name"] in existing_nodes:
+            continue
+        session.add(
+            IntegrationNode(
+                workspace_id=workspace.id,
+                name=node_seed["name"],
+                provider=node_seed["provider"],
+                mode=node_seed["mode"],
+                status=node_seed["status"],
+                version=node_seed["version"],
+                capabilities_json='["' + '\", \"'.join(node_seed["capabilities"]) + '\"]',
+                endpoint=node_seed["endpoint"],
+                current_task_count=0,
+                max_concurrency=node_seed["max_concurrency"],
+            )
+        )
+        created_nodes += 1
 
     await session.commit()
     return workspace_created, created_agents

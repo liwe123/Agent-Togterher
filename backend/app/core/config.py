@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     model_request_timeout_seconds: float = Field(default=60.0, gt=0)
     agent_tools_enabled: bool = True
     task_execution_mode: str = "inline"
+    bridge_root_dir: str = "data/bridges"
     worker_poll_interval_seconds: float = Field(default=1.0, gt=0)
     worker_concurrency: int = Field(default=2, ge=1, le=64)
     openai_api_key: SecretStr | None = None

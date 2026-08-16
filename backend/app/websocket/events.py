@@ -8,6 +8,8 @@ EventType = Literal[
     "task.status_changed",
     "task.step_changed",
     "model.call_finished",
+    "integration.status_changed",
+    "integration.heartbeat",
     "error",
     "workspace.snapshot",
 ]

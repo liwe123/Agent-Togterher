@@ -38,6 +38,14 @@ from app.schemas.model import (
     ModelTokenUsage,
     ProviderStatusInfo,
 )
+from app.schemas.integration import (
+    IntegrationDispatchRequest,
+    IntegrationDispatchResponse,
+    IntegrationHeartbeat,
+    IntegrationNodeCreate,
+    IntegrationNodeRead,
+    IntegrationNodeUpdate,
+)
 from app.schemas.plugin import (
     PluginCreate,
     PluginManifest,
@@ -98,6 +106,12 @@ __all__ = [
     "ErrorResponse",
     "InviteCreateRequest",
     "InviteResponse",
+    "IntegrationDispatchRequest",
+    "IntegrationDispatchResponse",
+    "IntegrationHeartbeat",
+    "IntegrationNodeCreate",
+    "IntegrationNodeRead",
+    "IntegrationNodeUpdate",
     "JoinWorkspaceRequest",
     "LoginRequest",
     "MemberRead",

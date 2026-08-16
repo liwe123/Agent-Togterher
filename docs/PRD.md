@@ -137,6 +137,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-15 23:26 | C-114 | 已完成 | [b19cc89](https://github.com/liwe123/Agent-Togterher/commit/b19cc89) | LI | Optimization | 其他、文档 | docs: 统一更新全部 19 份 PRD 文档头部状态为已完成并刷新 HTML 与 Excel 追踪表 | - | - | 否 | 否 | - | - |
 | 2026-08-15 23:30 | C-115 | 已完成 | [ec1f346](https://github.com/liwe123/Agent-Togterher/commit/ec1f346) | LI | Optimization | 其他、文档 | docs: 全面同步更新 README、PRODUCT、项目计划里程碑与变更报表 | - | - | 否 | 否 | - | - |
 | 2026-08-15 23:41 | C-116 | 已完成 | [d61ac17](https://github.com/liwe123/Agent-Togterher/commit/d61ac17) | LI | BUG | 后端 | 修复后端容器启动失败缺陷：优化 app/core/__init__.py 的导出内容，解除与 app/db/session.py 的部分循环初始化依赖，确保 Docker 镜像启动与 Uvicorn 服务平滑拉起 | 无变动 | 优化 backend/app/core/__init__.py 顶级导出，移除导致循环依赖的急切导入 | 否 | 否 | pytest 全量 106 passed；python -c 'from app.main import app' 成功导入；Docker backend 正常启动 | 修复 Docker Compose backend 容器退出报错 |
+| 2026-08-15 23:42 | C-117 | 已完成 | [ed960d5](https://github.com/liwe123/Agent-Togterher/commit/ed960d5) | LI | Optimization | 其他、文档 | docs: 更新变更追踪表与 Excel (C-113 BUG Fix) | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
@@ -166,6 +167,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-工作区配额与限流治理.md](prd/PRD-工作区配额与限流治理.md) | 工作区配额与限流治理（quota_configs 表、月度硬熔断与水位大屏） | a4c0c1f | C-109 |
 | [PRD-插件注册中心.md](prd/PRD-插件注册中心.md) | 插件注册中心（plugins 表、Manifest 校验、工作区挂载与工具热插拔） | 037e968 | C-110 |
 | [PRD-工作流模板引擎.md](prd/PRD-工作流模板引擎.md) | 工作流模板引擎（workflow_templates 表、DAG/步骤节点与一键实例化） | 19d4bdc | C-111 |
+| [PRD-外部Agent软件接入.md](prd/PRD-外部Agent软件接入.md) | 外部 Agent 软件接入与调度（integration_nodes 表、适配器框架、动态 Dock） | — | — |
 
 ---
 
