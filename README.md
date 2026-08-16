@@ -22,6 +22,84 @@
 
 ---
 
+## 架构
+
+```
+用户浏览器
+  │
+  ├─ Next.js 前端 (3000)
+  │   ├─ App Router 页面（/ /chats /tasks /workflows /settings）
+  │   ├─ WebSocket 客户端（实时事件订阅）
+  │   └─ REST API 客户端（Bearer JWT 自动续期）
+  │
+  │  REST ──────────────────────┐
+  │  WebSocket ───────────┐     │
+  │                       │     │
+  ▼                       ▼     ▼
+FastAPI 后端 (8000)
+  │
+  ├─ 认证中间件（JWT + API Token 双轨）
+  ├─ RBAC 权限拦截（owner / admin / member / viewer）
+  ├─ 审计日志拦截器（全局异步埋点）
+  ├─ 配额限流（月度预算 / Token / 并发 / 硬熔断）
+  │
+  ├─ REST 路由层 /api/v1
+  │   ├─ /auth          注册 / 登录 / 刷新 / 登出
+  │   ├─ /workspaces    工作区 CRUD + 邀请码加入
+  │   ├─ /agents        Agent CRUD + 状态广播
+  │   ├─ /conversations 会话与消息
+  │   ├─ /tasks         任务 CRUD + 详情 + 回放
+  │   ├─ /models        模型列表 / 测试 / Provider 状态
+  │   ├─ /provider-keys API Key 管理（DB 优先 / 脱敏）
+  │   ├─ /custom-models 自定义模型注册
+  │   ├─ /plugins       插件注册 / 工作区挂载
+  │   ├─ /workflows     工作流模板 / 一键实例化
+  │   ├─ /integrations  外部 Agent 节点注册 / 心跳 / 派发
+  │   ├─ /audit         审计日志查询
+  │   ├─ /cost          成本统计聚合
+  │   ├─ /quota         配额配置与水位
+  │   └─ /health        健康检查
+  │
+  ├─ WebSocket Manager
+  │   ├─ 工作区级广播（agent.status_changed / task.step_changed / integration.heartbeat ...）
+  │   └─ Redis Pub/Sub 跨进程事件总线（Worker → API → 前端）
+  │
+  ├─ MessageHub（消息中心）
+  │   ├─ @Agent 意图解析
+  │   ├─ 消息持久化
+  │   └─ 任务入队（task_queue_items）
+  │
+  ├─ TaskService（任务状态机）
+  │   ├─ enqueue / claim_next / complete / fail / recover
+  │   └─ 死信与超时租约管理
+  │
+  ├─ AgentOrchestrator（编排流水线）
+  │   ├─ Manager 拆解 → Worker 分工 → QA 审核 → Final 汇总
+  │   ├─ ExecutionTrace 上下文构建器（每轮回灌结构化上下文）
+  │   ├─ Tools Registry（calculate / query_tasks / get_agents / get_system_status）
+  │   ├─ 插件工具热注入（从 workspace_plugins 加载）
+  │   └─ LiteLLM 调用（tools / tool_calls / fallback 降级）
+  │
+  ├─ Bridge 接入层（外部 Agent 软件调度）
+  │   ├─ integration_nodes 节点注册表
+  │   ├─ BaseBridge 适配器基类
+  │   ├─ CursorBridge（文件系统 Bridge）
+  │   └─ CodexBridge（codex exec CLI 子进程）
+  │
+  └─ SQLAlchemy 2.0 Async → SQLite / PostgreSQL（19 张表）
+
+独立 Worker 进程（可选，TASK_EXECUTION_MODE=worker 时启用）
+  ├─ 轮询 task_queue_items 领取任务
+  ├─ 调用 AgentOrchestrator.run_task()
+  └─ 完成回写或失败重试
+
+Redis
+  ├─ Pub/Sub 跨进程事件总线
+  └─ WebSocket 连接解耦（多实例广播）
+```
+
+---
+
 ## 怎么跑
 
 ### Windows 一键启动
