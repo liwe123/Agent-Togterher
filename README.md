@@ -39,7 +39,14 @@ flowchart LR
         direction TB
         REST["REST API · /api/v1<br/>JWT · RBAC · Audit · Quota"]
         WS["WebSocket Manager<br/>实时事件推送"]
-        BRIDGE["Integration Bridge<br/>节点注册 · 心跳 · 任务派发"]
+        INT["Integration Service<br/>节点选择 · 任务派发 · 结果回写"]
+    end
+
+    subgraph BRIDGE_LAYER["Bridge 适配层"]
+        direction TB
+        BASE["BaseBridge<br/>目录契约 · PROMPT.md / task.json / output.md / events.jsonl"]
+        CURSOR["CursorBridge<br/>文件系统 Bridge"]
+        CODEX["CodexBridge<br/>codex exec CLI 子进程"]
     end
 
     subgraph CORE["任务编排核心"]
@@ -63,20 +70,26 @@ flowchart LR
     USER --> WEB
     WEB -->|REST| REST
     WEB <-->|WebSocket| WS
-    AGENTS <-->|Bridge 协议| BRIDGE
+    AGENTS <-->|Bridge 协议| BRIDGE_LAYER
 
     REST --> HUB --> TASK --> ORCH
-    BRIDGE --> ORCH
+    REST -->|/dispatch| INT --> BASE
+    INT -->|写 TaskStep + 任务状态| DB
+    INT -->|节点负载统计| DB
+    BASE --> CURSOR
+    BASE --> CODEX
+    CURSOR --> AGENTS
+    CODEX --> AGENTS
     ORCH --> EXEC --> LLM --> MODELS
 
     TASK --> QUEUE
     QUEUE --> WORKER
     WORKER --> ORCH
     WORKER -->|执行事件| WS
+    INT -->|状态变化| WS
 
     HUB --> DB
     ORCH --> DB
-    BRIDGE --> DB
     WS <-->|跨进程广播| REDIS
 ```
 
@@ -212,14 +225,69 @@ Agent 支持 Function Calling。内置 4 个工具：
 
 Software Dock 不再是静态展示。`Cursor`、`Codex CLI`、`Trae`、`Antigravity` 等外部 Agent 软件可以注册为执行节点，纳入统一调度。
 
+```mermaid
+flowchart TB
+    DOCK["前端 Software Dock<br/>节点状态 · 心跳 · 任务数"]
+    API["Integration REST API<br/>注册 · 心跳 · 派发 · 删除"]
+    SVC["IntegrationService<br/>节点选择 · 负载统计 · 审计"]
+    BRIDGE["BaseBridge<br/>目录契约 · prepare_task"]
+    CURSOR["CursorBridge<br/>文件系统 Bridge"]
+    CODEX["CodexBridge<br/>codex exec CLI 子进程"]
+    WORKDIR["Bridge 工作目录<br/>PROMPT.md · task.json<br/>output.md · events.jsonl"]
+    DB[("integration_nodes<br/>tasks · task_steps<br/>audit_logs")]
+    WS["WebSocket<br/>status_changed · heartbeat<br/>task.step_changed"]
+
+    DOCK -->|REST + WS| API
+    API --> SVC
+    SVC --> BRIDGE
+    BRIDGE --> CURSOR
+    BRIDGE --> CODEX
+    CURSOR --> WORKDIR
+    CODEX --> WORKDIR
+    SVC -->|TaskStep 回写<br/>任务状态更新| DB
+    SVC -->|节点负载 + 心跳| DB
+    SVC -->|审计日志| DB
+    SVC -->|状态广播| WS
+    DOCK <-->|实时更新| WS
 ```
-前端 Software Dock
-    ↓ REST + WebSocket
-后端 Integration 接入层
-    ├─ integration_nodes（状态 / 心跳 / 能力 / 并发）
-    ├─ BaseBridge 适配器基类
-    ├─ CursorBridge（文件系统 Bridge）
-    └─ CodexBridge（codex exec CLI 子进程）
+
+### 调度链路
+
+```
+POST /api/v1/integrations/dispatch
+  │
+  ├─ 校验 task 与 node 同工作区
+  ├─ IntegrationService.dispatch_task_to_node()
+  │   ├─ 选择节点（手动指定 or 自动：能力匹配 + 负载最小化 + 心跳优先）
+  │   ├─ 节点负载 +1，状态 → busy
+  │   ├─ BaseBridge.prepare_task() → 生成工作目录与上下文文件
+  │   ├─ 创建 TaskStep（running）→ WebSocket 广播 task.step_changed
+  │   ├─ Bridge.execute() → 外部 Agent 执行
+  │   ├─ TaskStep 标记 completed/failed，写入结果
+  │   ├─ Task 状态更新（completed/failed），result 写回
+  │   ├─ 节点负载 -1，状态 → online/busy
+  │   ├─ 审计日志 integration_node.dispatch
+  │   └─ WebSocket 广播 integration.status_changed + task.status_changed
+  └─ 返回 BridgeResult（success / message / artifacts / metadata）
+```
+
+### Bridge 目录约定
+
+```
+data/bridges/
+  workspace-<id>/
+    Cursor/
+      task-<task_id>/
+        PROMPT.md        # 任务输入与上下文
+        task.json        # 结构化任务元数据
+        output.md        # 最终文本结果
+        events.jsonl     # 事件流或进度流
+    Codex/
+      task-<task_id>/
+        PROMPT.md
+        task.json
+        output.md
+        events.jsonl
 ```
 
 ### API
@@ -231,7 +299,7 @@ Software Dock 不再是静态展示。`Cursor`、`Codex CLI`、`Trae`、`Antigra
 | `POST /api/v1/integrations/nodes/{id}/heartbeat` | 心跳上报 |
 | `POST /api/v1/integrations/dispatch` | 派发任务到节点 |
 
-WebSocket 推送 `integration.status_changed` / `integration.heartbeat` 事件，前端实时更新。
+WebSocket 推送 `integration.status_changed` / `integration.heartbeat` / `task.step_changed` 事件，前端实时更新。
 
 ### Codex CLI 接入示例
 
@@ -280,7 +348,7 @@ npm run lint
 npm run build
 ```
 
-当前：后端 106 tests passed，前端 28 tests / lint 0 errors / build pass。
+当前：后端 109 tests passed，前端 28 tests / lint 0 errors / build pass。
 
 ---
 
@@ -310,10 +378,10 @@ WORKER_CONCURRENCY=2
 │   │   ├── core/                # orchestrator / config / auth / permissions
 │   │   ├── models/              # 19 张 SQLAlchemy 模型
 │   │   ├── schemas/             # Pydantic 请求与响应
-│   │   ├── services/            # litellm / tools / bridge / cursor_bridge / codex_bridge
+│   │   ├── services/            # litellm / tools / bridge / cursor_bridge / codex_bridge / integration_service
 │   │   ├── websocket/           # WebSocket manager / events / distributed
-│   │   └── worker.py             # 独立 Worker 入口
-│   ├── tests/                    # 106 个测试
+│   │   └── worker.py            # 独立 Worker 入口
+│   ├── tests/                   # 109 个测试
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -324,7 +392,7 @@ WORKER_CONCURRENCY=2
 │   └── package.json
 ├── docs/
 │   ├── prd/                     # 20 份 PRD 文档
-│   ├── PRD.md                   # 变更追踪表（120 行）
+│   ├── PRD.md                   # 变更追踪表（129 行）
 │   ├── generate_change_log.py   # 从 git history 自动生成变更表
 │   └── build_prd_html.py        # 生成单页 PRD.html 阅读器
 ├── docker-compose.yml
