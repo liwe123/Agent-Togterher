@@ -24,15 +24,22 @@
 
 ## 架构
 
+> 深色主题架构图（GitHub 暗色模式效果最佳）：
+
+![Agent Console 架构图](docs/architecture-dark.png)
+
+<details>
+<summary>Mermaid 源码版（可编辑）</summary>
+
 ```mermaid
-%%{init: {'flowchart': {'nodeSpacing': 35, 'rankSpacing': 55, 'curve': 'linear'}, 'themeVariables': {'fontSize': '14px'}} }%%
+%%{init: {'theme': 'dark', 'flowchart': {'nodeSpacing': 40, 'rankSpacing': 60, 'curve': 'linear'}, 'themeVariables': {'fontSize': '14px', 'background': '#0D0F14', 'primaryColor': '#1a1f2e', 'primaryBorderColor': '#3b82f6', 'primaryTextColor': '#e2e8f0', 'lineColor': '#64748b', 'secondaryColor': '#1e293b', 'tertiaryColor': '#0f172a', 'clusterBkg': '#151821', 'clusterBorder': '#334155', 'edgeLabelBackground': '#0D0F14', 'fontFamily': 'system-ui, -apple-system, sans-serif'}} }%%
 flowchart LR
     USER((用户))
 
     subgraph CLIENT["客户端与外部节点"]
         direction TB
         WEB["Web Console<br/>Next.js 16 · :3000"]
-        AGENTS["外部 Agent<br/>Cursor · Codex CLI · Trae · Antigravity"]
+        AGENTS["外部 Agent<br/>Cursor · Codex CLI<br/>Trae · Antigravity"]
     end
 
     subgraph ACCESS["接入层 · FastAPI :8000"]
@@ -44,7 +51,7 @@ flowchart LR
 
     subgraph BRIDGE_LAYER["Bridge 适配层"]
         direction TB
-        BASE["BaseBridge<br/>目录契约 · PROMPT.md / task.json / output.md / events.jsonl"]
+        BASE["BaseBridge<br/>目录契约<br/>PROMPT.md / task.json<br/>output.md / events.jsonl"]
         CURSOR["CursorBridge<br/>文件系统 Bridge"]
         CODEX["CodexBridge<br/>codex exec CLI 子进程"]
     end
@@ -69,8 +76,8 @@ flowchart LR
 
     USER --> WEB
     WEB -->|REST| REST
-    WEB <-->|WebSocket| WS
-    AGENTS <-->|Bridge 协议| BRIDGE_LAYER
+    WEB <-.->|WebSocket| WS
+    AGENTS <-.->|Bridge 协议| BRIDGE_LAYER
 
     REST --> HUB --> TASK --> ORCH
     REST -->|/dispatch| INT --> BASE
@@ -85,13 +92,15 @@ flowchart LR
     TASK --> QUEUE
     QUEUE --> WORKER
     WORKER --> ORCH
-    WORKER -->|执行事件| WS
-    INT -->|状态变化| WS
+    WORKER -.->|执行事件| WS
+    INT -.->|状态变化| WS
 
     HUB --> DB
     ORCH --> DB
-    WS <-->|跨进程广播| REDIS
+    WS <-.->|跨进程广播| REDIS
 ```
+
+</details>
 
 ---
 
