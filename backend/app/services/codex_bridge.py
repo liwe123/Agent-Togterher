@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from pathlib import Path
 
@@ -15,7 +16,7 @@ DEFAULT_TIMEOUT = 300
 class CodexBridge(BaseBridge):
     """Bridge adapter that dispatches tasks to the Codex CLI (`codex exec`).
 
-    Codex CLI is OpenAI's local coding agent.  In non-interactive mode it
+    Codex CLI is OpenAI's local coding agent. In non-interactive mode it
     accepts a prompt argument, streams JSONL events to stderr, and writes the
     final agent message to stdout (or a file via ``-o``).
 
@@ -28,14 +29,8 @@ class CodexBridge(BaseBridge):
     """
 
     async def execute(self, task: BridgeTask) -> BridgeResult:
-        prompt_file = task.task_workdir / "PROMPT.md"
-        prompt_file.write_text(
-            f"# {task.task_title}\n\n{task.task_description}\n",
-            encoding="utf-8",
-        )
-
-        output_file = task.task_workdir / "output.md"
-        events_file = task.task_workdir / "events.jsonl"
+        output_file = task.output_path
+        events_file = task.events_path
 
         cmd = [
             CODEX_BIN,
@@ -46,7 +41,7 @@ class CodexBridge(BaseBridge):
             "--skip-git-repo-check",
             "-o",
             str(output_file),
-            task.task_description,
+            task.prompt_path.name,
         ]
 
         try:
@@ -82,7 +77,7 @@ class CodexBridge(BaseBridge):
                 return BridgeResult(
                     success=False,
                     message=f"Codex CLI exited with code {process.returncode}: {stderr_text[:500]}",
-                    artifacts=[prompt_file, events_file, output_file],
+                    artifacts=[task.prompt_path, task.task_json_path, events_file, output_file],
                     metadata={
                         "node": self.node_name,
                         "mode": "cli",
@@ -98,7 +93,7 @@ class CodexBridge(BaseBridge):
             return BridgeResult(
                 success=True,
                 message=final_message[:4000] if final_message else "Codex CLI completed (no output)",
-                artifacts=[prompt_file, events_file, output_file],
+                artifacts=[task.prompt_path, task.task_json_path, events_file, output_file],
                 metadata={
                     "node": self.node_name,
                     "mode": "cli",

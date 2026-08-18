@@ -9,7 +9,7 @@ from app.api.persistence import commit_or_conflict
 from app.db.base import utc_now
 from app.db.session import get_db
 from app.models.integration_node import IntegrationNode
-from app.models.task import Task, TaskStep
+from app.models.task import Task
 from app.models.workspace import Workspace
 from app.schemas import (
     IntegrationDispatchRequest,
@@ -20,25 +20,11 @@ from app.schemas import (
     IntegrationNodeUpdate,
     SuccessResponse,
 )
-from app.services.bridge import BaseBridge
-from app.services.codex_bridge import CodexBridge
-from app.services.cursor_bridge import CursorBridge
+from app.services.audit_service import record_audit_log
+from app.services.integration_service import dispatch_task_to_node
 from app.websocket import create_event, websocket_manager
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
-
-
-_BRIDGE_FACTORIES = {
-    "cursor": lambda ws, name: CursorBridge(ws, name),
-    "codex": lambda ws, name: CodexBridge(ws, name),
-}
-
-
-def _build_bridge(provider: str, workspace_id: int, name: str) -> BaseBridge:
-    factory = _BRIDGE_FACTORIES.get(provider.lower())
-    if factory is None:
-        raise AppError(422, f"Provider '{provider}' has no registered bridge")
-    return factory(workspace_id, name)
 
 
 def _parse_capabilities(raw: str | None) -> list[str]:
@@ -113,6 +99,14 @@ async def register_node(
         session, "A node with this name already exists in the workspace"
     )
     await session.refresh(node)
+    await record_audit_log(
+        session,
+        workspace_id=node.workspace_id,
+        action="integration_node.register",
+        resource_type="integration_node",
+        resource_id=str(node.id),
+        detail={"provider": node.provider, "mode": node.mode, "name": node.name},
+    )
     return SuccessResponse(data=_serialize(node))
 
 
@@ -180,6 +174,18 @@ async def heartbeat(
     await session.commit()
     await session.refresh(node)
 
+    await record_audit_log(
+        session,
+        workspace_id=node.workspace_id,
+        action="integration_node.heartbeat",
+        resource_type="integration_node",
+        resource_id=str(node.id),
+        detail={
+            "status": node.status,
+            "current_task_count": node.current_task_count,
+            "version": node.version,
+        },
+    )
     await websocket_manager.broadcast_to_workspace(
         node.workspace_id,
         create_event("integration.heartbeat", _serialize(node)),
@@ -214,20 +220,7 @@ async def dispatch_to_node(
     if node.workspace_id != task.workspace_id:
         raise AppError(422, "Node must belong to the same workspace as the task")
 
-    bridge = _build_bridge(node.provider, node.workspace_id, node.name)
-    prepared = bridge.prepare_task(task.id, task.title, task.description)
-    result = await bridge.execute(prepared)
-
-    node.current_task_count = min(node.current_task_count + 1, node.max_concurrency)
-    node.status = "busy" if node.current_task_count >= node.max_concurrency else "online"
-    node.last_heartbeat_at = utc_now()
-    await session.commit()
-    await session.refresh(node)
-
-    await websocket_manager.broadcast_to_workspace(
-        node.workspace_id,
-        create_event("integration.status_changed", _serialize(node)),
-    )
+    result = await dispatch_task_to_node(session, task, node)
 
     return SuccessResponse(
         data=IntegrationDispatchResponse(
@@ -258,6 +251,14 @@ async def delete_node(
     await session.delete(node)
     await session.commit()
 
+    await record_audit_log(
+        session,
+        workspace_id=workspace_id,
+        action="integration_node.delete",
+        resource_type="integration_node",
+        resource_id=str(node_id),
+        detail={"deleted": True},
+    )
     await websocket_manager.broadcast_to_workspace(
         workspace_id,
         create_event("integration.status_changed", {"id": node_id, "status": "removed"}),

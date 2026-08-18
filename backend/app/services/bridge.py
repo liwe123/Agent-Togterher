@@ -17,6 +17,9 @@ class BridgeTask:
     workspace_id: int
     task_workdir: Path
     prompt_path: Path
+    task_json_path: Path
+    output_path: Path
+    events_path: Path
 
 
 @dataclass(frozen=True)
@@ -38,8 +41,13 @@ class BaseBridge(ABC):
     def prepare_task(self, task_id: int, title: str, description: str) -> BridgeTask:
         task_dir = self.bridge_root / f"task-{task_id}"
         task_dir.mkdir(parents=True, exist_ok=True)
-        prompt_path = task_dir / "task.json"
-        prompt_path.write_text(
+
+        task_json_path = task_dir / "task.json"
+        prompt_path = task_dir / "PROMPT.md"
+        output_path = task_dir / "output.md"
+        events_path = task_dir / "events.jsonl"
+
+        task_json_path.write_text(
             json.dumps(
                 {
                     "task_id": task_id,
@@ -53,6 +61,13 @@ class BaseBridge(ABC):
             ),
             encoding="utf-8",
         )
+        prompt_path.write_text(
+            f"# {title}\n\n{description}\n",
+            encoding="utf-8",
+        )
+        output_path.write_text("", encoding="utf-8")
+        events_path.write_text("", encoding="utf-8")
+
         return BridgeTask(
             task_id=task_id,
             task_title=title,
@@ -60,6 +75,9 @@ class BaseBridge(ABC):
             workspace_id=self.workspace_id,
             task_workdir=task_dir,
             prompt_path=prompt_path,
+            task_json_path=task_json_path,
+            output_path=output_path,
+            events_path=events_path,
         )
 
     @abstractmethod

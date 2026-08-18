@@ -143,6 +143,12 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-16 13:21 | C-120 | 已完成 | [39d8f21](https://github.com/liwe123/Agent-Togterher/commit/39d8f21) | LI | Optimization | 文档 | docs: README 新增外部 Agent 软件接入章节、架构图更新、Roadmap E1 | - | - | 否 | 否 | - | - |
 | 2026-08-16 13:22 | C-121 | 已完成 | [591e05d](https://github.com/liwe123/Agent-Togterher/commit/591e05d) | LI | Optimization | 其他、文档 | docs: 重跑生成脚本同步变更追踪表与 PRD.html（120 行） | - | - | 否 | 否 | - | - |
 | 2026-08-16 13:29 | C-122 | 已完成 | [a0c5489](https://github.com/liwe123/Agent-Togterher/commit/a0c5489) | LI | Optimization | 文档 | docs: README 彻底重写，去除 AI 腔，回归工程文档风格 | - | - | 否 | 否 | - | - |
+| 2026-08-16 13:31 | C-123 | 已完成 | [89c8a72](https://github.com/liwe123/Agent-Togterher/commit/89c8a72) | LI | Optimization | 其他、文档 | docs: 重跑生成脚本同步变更追踪表与 PRD.html（122 行） | - | - | 否 | 否 | - | - |
+| 2026-08-16 13:34 | C-124 | 已完成 | [49c9ecc](https://github.com/liwe123/Agent-Togterher/commit/49c9ecc) | LI | Optimization | 文档 | docs: README 新增项目架构图（完整的后端分层与数据流） | - | - | 否 | 否 | - | - |
+| 2026-08-16 14:06 | C-125 | 已完成 | [7bebfcd](https://github.com/liwe123/Agent-Togterher/commit/7bebfcd) | LI | Optimization | 文档 | docs: 架构图从 ASCII 改为 Mermaid 渲染格式 | - | - | 否 | 否 | - | - |
+| 2026-08-16 14:09 | C-126 | 已完成 | [b6a9e04](https://github.com/liwe123/Agent-Togterher/commit/b6a9e04) | LI | Optimization | 文档 | docs: 架构图重画，精简节点数量，GitHub 渲染更清晰 | - | - | 否 | 否 | - | - |
+| 2026-08-16 16:53 | C-127 | 已完成 | [c8b31ac](https://github.com/liwe123/Agent-Togterher/commit/c8b31ac) | LI | Optimization | 其他 | docs: 新增外部 Agent 软件接入技术方案（接入分级、协议、实现顺序） | - | - | 否 | 否 | - | - |
+| 2026-08-18 20:45 | C-128 | 已完成 | [1931049](https://github.com/liwe123/Agent-Togterher/commit/1931049) | LI | Optimization | 文档 | docs: README 架构图优化为横向布局，分层更清晰 | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---

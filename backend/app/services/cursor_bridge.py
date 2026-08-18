@@ -25,6 +25,6 @@ class CursorBridge(BaseBridge):
         return BridgeResult(
             success=True,
             message=f"Cursor Bridge 已准备任务 {task.task_id} 的工作目录",
-            artifacts=[instructions, readme],
+            artifacts=[task.prompt_path, task.task_json_path, instructions, readme],
             metadata={"node": self.node_name, "mode": "bridge"},
         )
