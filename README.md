@@ -25,86 +25,59 @@
 ## 架构
 
 ```mermaid
-flowchart TB
-    U((用户))
+%%{init: {'flowchart': {'nodeSpacing': 35, 'rankSpacing': 55, 'curve': 'linear'}, 'themeVariables': {'fontSize': '14px'}} }%%
+flowchart LR
+    USER((用户))
 
-    subgraph FE["Frontend · Next.js 16 · :3000"]
-        direction LR
-        UI["App Router<br/>/ &nbsp; /chats &nbsp; /tasks &nbsp; /workflows &nbsp; /settings"]
-    end
-
-    subgraph BE["Backend · FastAPI · :8000"]
+    subgraph CLIENT["客户端与外部节点"]
         direction TB
-        GW["Auth · RBAC · Audit · Quota"]
+        WEB["Web Console<br/>Next.js 16 · :3000"]
+        AGENTS["外部 Agent<br/>Cursor · Codex CLI · Trae · Antigravity"]
+    end
 
-        subgraph API["REST /api/v1"]
-            direction LR
-            A1["auth · agents · tasks"]
-            A2["models · plugins · workflows"]
-            A3["integrations · cost · quota"]
-        end
+    subgraph ACCESS["接入层 · FastAPI :8000"]
+        direction TB
+        REST["REST API · /api/v1<br/>JWT · RBAC · Audit · Quota"]
+        WS["WebSocket Manager<br/>实时事件推送"]
+        BRIDGE["Integration Bridge<br/>节点注册 · 心跳 · 任务派发"]
+    end
 
-        HUB{"MessageHub<br/>@Agent 解析"}
-        TSVC["TaskService<br/>状态机 + 队列"]
+    subgraph CORE["任务编排核心"]
+        direction TB
+        HUB["MessageHub<br/>消息接收与 @Agent 路由"]
+        TASK["TaskService<br/>任务状态机与入队"]
         ORCH["AgentOrchestrator<br/>Manager → Worker → QA → Final"]
-        TRACE["ExecutionTrace<br/>上下文回灌 + 裁剪"]
-        TOOLS["Tools · 插件热注入"]
-        LLM["LiteLLM<br/>fallback 降级"]
-
-        subgraph BRG["Bridge 接入层"]
-            direction LR
-            CB["CursorBridge"]
-            XB["CodexBridge"]
-            NB[("integration_nodes")]
-        end
-
-        WSM["WebSocket Manager<br/>+ Redis Pub/Sub"]
-        DB[("19 张领域表<br/>SQLite / PostgreSQL")]
+        EXEC["执行能力<br/>ExecutionTrace · Tools · Plugins"]
+        LLM["模型网关 · LiteLLM<br/>多 Provider · Fallback"]
     end
 
-    QUEUE[("task_queue_items<br/>持久化队列")]
-
-    subgraph WK["Worker 进程 · 可选"]
-        direction LR
-        WP["轮询 → run_task → 回写"]
+    subgraph RUNTIME["运行与数据层"]
+        direction TB
+        WORKER["独立 Worker<br/>领取 · 执行 · 回写"]
+        QUEUE[("task_queue_items<br/>持久化任务队列")]
+        DB[("SQLite / PostgreSQL<br/>19 张领域表")]
+        REDIS[("Redis<br/>Pub/Sub")]
+        MODELS["模型服务<br/>OpenAI · Anthropic · Gemini<br/>DeepSeek · Qwen"]
     end
 
-    REDIS[("Redis")]
+    USER --> WEB
+    WEB -->|REST| REST
+    WEB <-->|WebSocket| WS
+    AGENTS <-->|Bridge 协议| BRIDGE
 
-    subgraph EXT["外部 Agent 软件"]
-        direction LR
-        CUR["Cursor"]
-        COD["Codex CLI"]
-        TRA["Trae"]
-        ANT["Antigravity"]
-    end
+    REST --> HUB --> TASK --> ORCH
+    BRIDGE --> ORCH
+    ORCH --> EXEC --> LLM --> MODELS
 
-    MDL["OpenAI · Anthropic · Gemini · DeepSeek · Qwen"]
+    TASK --> QUEUE
+    QUEUE --> WORKER
+    WORKER --> ORCH
+    WORKER -->|执行事件| WS
 
-    U -->|HTTP| UI
-    UI <-->|WebSocket| WSM
-    UI -->|REST Bearer JWT| GW
-    GW --> API
-    API --> HUB --> TSVC --> ORCH
-    ORCH --> TRACE
-    ORCH --> TOOLS --> LLM --> MDL
-    ORCH --> BRG
     HUB --> DB
-    TSVC --> QUEUE
     ORCH --> DB
-    BRG --> DB
-
-    WP -.->|领取| QUEUE
-    WP -.->|调用| ORCH
-    WP -.->|事件| WSM
-
-    WSM -.-> REDIS
-    REDIS -.->|跨进程广播| WSM
-
-    BRG -.-> CUR
-    BRG -.-> COD
-    BRG -.-> TRA
-    BRG -.-> ANT
+    BRIDGE --> DB
+    WS <-->|跨进程广播| REDIS
 ```
 
 ---
