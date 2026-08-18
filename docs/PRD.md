@@ -152,6 +152,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-18 22:25 | C-129 | 已完成 | [6f1a8f9](https://github.com/liwe123/Agent-Togterher/commit/6f1a8f9) | LI | Requirement | 其他、后端、文档 | feat: 补全外部 Agent 调度链路（任务回写 TaskStep、节点负载统计、审计日志、Bridge 目录契约统一） | - | backend/app/api；backend/app/services；backend/tests/test_integrations.py | 否 | 否 | - | - |
 | 2026-08-18 22:30 | C-130 | 已完成 | [579d578](https://github.com/liwe123/Agent-Togterher/commit/579d578) | LI | Optimization | 其他、文档 | docs: 重跑变更追踪表与 PRD HTML，登记 C-129 外部 Agent 调度链路补全 | - | - | 否 | 否 | - | - |
 | 2026-08-18 22:44 | C-131 | 已完成 | [09a6f8c](https://github.com/liwe123/Agent-Togterher/commit/09a6f8c) | LI | Optimization | 文档 | docs: README 同步外部 Agent 调度链路，更新架构图（Bridge 层拆分、调度链路、目录约定、测试数 109） | - | - | 否 | 否 | - | - |
+| 2026-08-18 22:48 | C-132 | 已完成 | [55a6cf1](https://github.com/liwe123/Agent-Togterher/commit/55a6cf1) | LI | Optimization | 其他、文档 | docs: 重跑生成脚本同步变更追踪表（131 行）与 PRD.html | - | - | 否 | 否 | - | - |
+| 2026-08-18 23:11 | C-133 | 已完成 | [c9e4dea](https://github.com/liwe123/Agent-Togterher/commit/c9e4dea) | LI | Optimization | 文档 | docs: 新增深色主题架构图 PNG/SVG + Mermaid 深色主题版，README 架构图双层呈现 | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
