@@ -154,6 +154,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-18 22:44 | C-131 | 已完成 | [09a6f8c](https://github.com/liwe123/Agent-Togterher/commit/09a6f8c) | LI | Optimization | 文档 | docs: README 同步外部 Agent 调度链路，更新架构图（Bridge 层拆分、调度链路、目录约定、测试数 109） | - | - | 否 | 否 | - | - |
 | 2026-08-18 22:48 | C-132 | 已完成 | [55a6cf1](https://github.com/liwe123/Agent-Togterher/commit/55a6cf1) | LI | Optimization | 其他、文档 | docs: 重跑生成脚本同步变更追踪表（131 行）与 PRD.html | - | - | 否 | 否 | - | - |
 | 2026-08-18 23:11 | C-133 | 已完成 | [c9e4dea](https://github.com/liwe123/Agent-Togterher/commit/c9e4dea) | LI | Optimization | 文档 | docs: 新增深色主题架构图 PNG/SVG + Mermaid 深色主题版，README 架构图双层呈现 | - | - | 否 | 否 | - | - |
+| 2026-08-18 23:19 | C-134 | 已完成 | [61915f8](https://github.com/liwe123/Agent-Togterher/commit/61915f8) | LI | Optimization | 其他、文档 | docs: README 变更表行数同步 131 行，PRD.html 同步 133 条记录 | - | - | 否 | 否 | - | - |
+| 2026-08-18 23:27 | C-135 | 已完成 | [015067b](https://github.com/liwe123/Agent-Togterher/commit/015067b) | LI | Optimization | 文档 | docs: README 调度链路改为 Mermaid 流程图，更直观展示节点选择→执行→回写全链路 | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
