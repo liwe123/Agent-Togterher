@@ -150,6 +150,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-16 16:53 | C-127 | 已完成 | [c8b31ac](https://github.com/liwe123/Agent-Togterher/commit/c8b31ac) | LI | Optimization | 其他 | docs: 新增外部 Agent 软件接入技术方案（接入分级、协议、实现顺序） | - | - | 否 | 否 | - | - |
 | 2026-08-18 20:45 | C-128 | 已完成 | [1931049](https://github.com/liwe123/Agent-Togterher/commit/1931049) | LI | Optimization | 文档 | docs: README 架构图优化为横向布局，分层更清晰 | - | - | 否 | 否 | - | - |
 | 2026-08-18 22:25 | C-129 | 已完成 | [6f1a8f9](https://github.com/liwe123/Agent-Togterher/commit/6f1a8f9) | LI | Requirement | 其他、后端、文档 | feat: 补全外部 Agent 调度链路（任务回写 TaskStep、节点负载统计、审计日志、Bridge 目录契约统一） | - | backend/app/api；backend/app/services；backend/tests/test_integrations.py | 否 | 否 | - | - |
+| 2026-08-18 22:30 | C-130 | 已完成 | [579d578](https://github.com/liwe123/Agent-Togterher/commit/579d578) | LI | Optimization | 其他、文档 | docs: 重跑变更追踪表与 PRD HTML，登记 C-129 外部 Agent 调度链路补全 | - | - | 否 | 否 | - | - |
+| 2026-08-18 22:44 | C-131 | 已完成 | [09a6f8c](https://github.com/liwe123/Agent-Togterher/commit/09a6f8c) | LI | Optimization | 文档 | docs: README 同步外部 Agent 调度链路，更新架构图（Bridge 层拆分、调度链路、目录约定、测试数 109） | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
