@@ -262,22 +262,36 @@ flowchart TB
 
 ### 调度链路
 
-```
-POST /api/v1/integrations/dispatch
-  │
-  ├─ 校验 task 与 node 同工作区
-  ├─ IntegrationService.dispatch_task_to_node()
-  │   ├─ 选择节点（手动指定 or 自动：能力匹配 + 负载最小化 + 心跳优先）
-  │   ├─ 节点负载 +1，状态 → busy
-  │   ├─ BaseBridge.prepare_task() → 生成工作目录与上下文文件
-  │   ├─ 创建 TaskStep（running）→ WebSocket 广播 task.step_changed
-  │   ├─ Bridge.execute() → 外部 Agent 执行
-  │   ├─ TaskStep 标记 completed/failed，写入结果
-  │   ├─ Task 状态更新（completed/failed），result 写回
-  │   ├─ 节点负载 -1，状态 → online/busy
-  │   ├─ 审计日志 integration_node.dispatch
-  │   └─ WebSocket 广播 integration.status_changed + task.status_changed
-  └─ 返回 BridgeResult（success / message / artifacts / metadata）
+```mermaid
+flowchart TB
+    REQ["POST /api/v1/integrations/dispatch<br/>task_id + node_id"]
+    VAL{"校验 task 与 node<br/>同工作区?"}
+    VAL_NO["422 错误"]
+    SVC["IntegrationService<br/>dispatch_task_to_node()"]
+    SELECT{"选择节点"}
+    MANUAL["手动指定 node_id"]
+    AUTO["自动选择<br/>能力匹配 → 负载最小 → 心跳优先"]
+    LOAD_UP["节点负载 +1<br/>状态 → busy"]
+    PREP["BaseBridge.prepare_task()<br/>生成工作目录与上下文文件"]
+    STEP_RUN["创建 TaskStep（running）<br/>WebSocket: task.step_changed"]
+    EXEC["Bridge.execute()<br/>外部 Agent 执行"]
+    STEP_DONE["TaskStep 标记 completed/failed<br/>写入结果"]
+    TASK_UPDATE["Task 状态更新<br/>result 写回"]
+    LOAD_DOWN["节点负载 -1<br/>状态 → online/busy"]
+    AUDIT["审计日志<br/>integration_node.dispatch"]
+    WS_BC["WebSocket 广播<br/>integration.status_changed<br/>task.status_changed"]
+    RESULT["返回 BridgeResult<br/>success / message / artifacts / metadata"]
+
+    REQ --> VAL
+    VAL -->|否| VAL_NO
+    VAL -->|是| SVC
+    SVC --> SELECT
+    SELECT -->|node_id 已指定| MANUAL
+    SELECT -->|node_id 为空| AUTO
+    MANUAL --> LOAD_UP
+    AUTO --> LOAD_UP
+    LOAD_UP --> PREP --> STEP_RUN --> EXEC --> STEP_DONE
+    STEP_DONE --> TASK_UPDATE --> LOAD_DOWN --> AUDIT --> WS_BC --> RESULT
 ```
 
 ### Bridge 目录约定
