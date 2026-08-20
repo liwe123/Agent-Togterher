@@ -347,6 +347,16 @@ CURATED_BY_SUBJECT = {
         "verify": "重跑后改动内容列零英文",
         "notes": "守则① 改动内容中文化；regen 提交自身行由本 subject 登记保持中文",
     },
+    "feat: dispatch group-chat @mentions to external integration nodes and make Cursor bridge execute for real": {
+        "type": "Requirement",
+        "content": "群聊 @外部节点派发与 Cursor 桥接真实执行：@Cursor 等外部集成节点在群聊被 @ 提及时，MessageHub 优先匹配内部 Agent，未命中则按工作区查 integration_nodes 精确匹配节点名，命中即把任务派发给该节点（走 dispatch_task_to_node，不再走内部 LLM 编排）；CursorBridge.execute 从桩改为真实轮询任务工作目录 output.md，非空即回填结果、超时标记失败并落 events.jsonl；docker-compose 新增 ./data/bridges:/app/data/bridges bind mount（与 named volume 共存），让宿主 Cursor 客户端能看到任务目录；宿主新增 bridge/cursor_client.py 心跳保活 + 轮询打开 IDE + 读 output.md；前端 @ 菜单合并展示外部节点",
+        "frontend": "chat-composer.tsx 新增 integrationNodes prop；mention-menu.tsx 新增 MentionEntry 类型与「外部节点」标识，按 name 插入 @Cursor；chat-page.tsx 接入 use-integrations 传入节点",
+        "backend": "message_hub.py 新增 _match_integration_node / _create_node_task / _run_node_dispatch，assigned_agent 改可选；cursor_bridge.py 真实轮询 output.md；config.py 已有 bridge_output_poll_timeout_seconds；schemas/message.py assigned_agent 改可选；新增 backend/tests/test_external_mention.py",
+        "db": "否（复用 integration_nodes 表）",
+        "breaking": "否",
+        "verify": "pytest backend/tests 全量 103 passed；新增 3 用例全过；端到端：@Cursor→assigned_agent=None、step integration_dispatch:cursor:Cursor、写 output.md 后 task completed 且 result 含产出",
+        "notes": "Windows bind-mount 把宿主目录映射为容器内 root:755，故 backend 以 user: 0:0 运行以获写权限（本地开发）；PRD: docs/prd/PRD-外部节点群聊派发与Cursor桥接.md；子 Agent 独立验收待完成",
+    },
 }
 
 # === 35 行「改动类型」耐久修正（原 Docs → Requirement / BUG / Optimization）===
