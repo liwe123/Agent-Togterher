@@ -4,10 +4,11 @@ import { CornerDownLeft, Send, Sparkles, Trash2, Zap } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 
-import { MentionMenu } from "@/components/chat/mention-menu"
+import { MentionMenu, type MentionEntry } from "@/components/chat/mention-menu"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import type { Agent } from "@/types/agent"
+import type { IntegrationNode } from "@/types/integration"
 
 const roleOrder: Record<string, number> = {
   project_architect: 0,
@@ -45,6 +46,7 @@ function findMention(value: string, caret: number): MentionMatch | null {
 
 interface ChatComposerProps {
   agents: Agent[]
+  integrationNodes?: IntegrationNode[]
   disabled: boolean
   isSending: boolean
   onSend: (content: string) => Promise<boolean>
@@ -52,6 +54,7 @@ interface ChatComposerProps {
 
 export function ChatComposer({
   agents,
+  integrationNodes = [],
   disabled,
   isSending,
   onSend,
@@ -93,15 +96,35 @@ export function ChatComposer({
       ),
     [agents],
   )
-  const filteredAgents = useMemo(() => {
+  const allMentionEntries = useMemo<MentionEntry[]>(() => {
+    const agentEntries: MentionEntry[] = orderedAgents.map((agent) => ({
+      key: `agent-${agent.id}`,
+      name: agent.name,
+      kind: "agent",
+      avatar: agent.avatar,
+      subtitle: agent.model_name,
+      status: agent.status,
+    }))
+    const nodeEntries: MentionEntry[] = integrationNodes.map((node) => ({
+      key: `node-${node.id}`,
+      name: node.name,
+      kind: "integration",
+      avatar: node.name.slice(0, 1),
+      subtitle: node.provider,
+      status: node.status,
+    }))
+    return [...agentEntries, ...nodeEntries]
+  }, [orderedAgents, integrationNodes])
+
+  const filteredEntries = useMemo(() => {
     if (!mention) {
       return []
     }
-    return orderedAgents.filter((agent) =>
-      agent.name.toLocaleLowerCase("zh-CN").includes(mention.query),
+    return allMentionEntries.filter((entry) =>
+      entry.name.toLocaleLowerCase("zh-CN").includes(mention.query),
     )
-  }, [mention, orderedAgents])
-  const isMentionOpen = mention !== null && filteredAgents.length > 0
+  }, [mention, allMentionEntries])
+  const isMentionOpen = mention !== null && filteredEntries.length > 0
 
   function updateMention(nextValue: string, caret: number | null) {
     const nextMention = findMention(nextValue, caret ?? nextValue.length)
@@ -109,16 +132,16 @@ export function ChatComposer({
     setActiveMentionIndex(0)
   }
 
-  function selectMention(agent: Agent) {
+  function selectMention(entry: MentionEntry) {
     if (!mention) {
-      setValue((prev) => `${prev.trim()} @${agent.name} `.trimStart())
+      setValue((prev) => `${prev.trim()} @${entry.name} `.trimStart())
       textareaRef.current?.focus()
       return
     }
     const textarea = textareaRef.current
     const caret = textarea?.selectionStart ?? value.length
-    const nextValue = `${value.slice(0, mention.start)}@${agent.name} ${value.slice(caret)}`
-    const nextCaret = mention.start + agent.name.length + 2
+    const nextValue = `${value.slice(0, mention.start)}@${entry.name} ${value.slice(caret)}`
+    const nextCaret = mention.start + entry.name.length + 2
     setValue(nextValue)
     setMention(null)
     requestAnimationFrame(() => {
@@ -150,20 +173,20 @@ export function ChatComposer({
       if (event.key === "ArrowDown") {
         event.preventDefault()
         setActiveMentionIndex(
-          (index) => (index + 1) % filteredAgents.length,
+          (index) => (index + 1) % filteredEntries.length,
         )
         return
       }
       if (event.key === "ArrowUp") {
         event.preventDefault()
         setActiveMentionIndex(
-          (index) => (index - 1 + filteredAgents.length) % filteredAgents.length,
+          (index) => (index - 1 + filteredEntries.length) % filteredEntries.length,
         )
         return
       }
       if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault()
-        selectMention(filteredAgents[activeMentionIndex])
+        selectMention(filteredEntries[activeMentionIndex])
         return
       }
       if (event.key === "Escape") {
@@ -213,19 +236,19 @@ export function ChatComposer({
               </div>
             </div>
             <div>
-              <p className="mb-2 text-xs font-semibold text-foreground">选择 Agent</p>
+              <p className="mb-2 text-xs font-semibold text-foreground">选择协作对象</p>
               <div className="flex flex-wrap gap-2">
-                {orderedAgents.map((agent) => (
+                {allMentionEntries.map((entry) => (
                   <button
-                    key={agent.id}
+                    key={entry.key}
                     type="button"
                     className="min-h-10 rounded-full border border-border/80 bg-secondary/60 px-3.5 text-xs text-foreground font-medium"
                     onClick={() => {
-                      selectMention(agent)
+                      selectMention(entry)
                       setMobileActionsOpen(false)
                     }}
                   >
-                    @{agent.name}
+                    @{entry.name}
                   </button>
                 ))}
               </div>
@@ -250,16 +273,16 @@ export function ChatComposer({
             ))}
           </div>
           <div className="flex items-center gap-1.5">
-            {orderedAgents.map((agent) => (
+            {allMentionEntries.map((entry) => (
               <button
-                key={agent.id}
+                key={entry.key}
                 type="button"
-                title={`@${agent.name}`}
-                onClick={() => selectMention(agent)}
+                title={`@${entry.name}`}
+                onClick={() => selectMention(entry)}
                 className="flex items-center gap-1 rounded-full border border-border/60 bg-secondary/40 px-2.5 py-0.5 text-[11px] text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-foreground transition-all active:scale-95"
               >
-                <span>{agent.avatar ?? "🤖"}</span>
-                <span>@{agent.name.slice(0, 4)}</span>
+                <span>{entry.avatar ?? entry.name.slice(0, 1)}</span>
+                <span>@{entry.name.slice(0, 4)}</span>
               </button>
             ))}
           </div>
@@ -267,7 +290,7 @@ export function ChatComposer({
 
         {isMentionOpen && (
           <MentionMenu
-            agents={filteredAgents}
+            items={filteredEntries}
             activeIndex={activeMentionIndex}
             onSelect={selectMention}
           />

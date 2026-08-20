@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarGroup } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useChat } from "@/hooks/use-chat"
+import { useIntegrations } from "@/hooks/use-integrations"
 
 const connectionLabels = {
   connecting: "连接中",
@@ -32,6 +33,8 @@ export function ChatPage() {
     retry,
     sendMessage,
   } = useChat()
+
+  const { nodes: integrationNodes } = useIntegrations(workspace?.id ?? null)
 
   return (
     <div className="chat-shell grid h-svh min-h-0 grid-rows-[minmax(0,1fr)] overflow-hidden md:grid-cols-[76px_minmax(0,1fr)]">
@@ -145,6 +148,7 @@ export function ChatPage() {
 
                 <ChatComposer
                   agents={agents}
+                  integrationNodes={integrationNodes}
                   disabled={!conversation || Boolean(error)}
                   isSending={isSending}
                   onSend={sendMessage}

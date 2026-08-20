@@ -16,6 +16,10 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    # Windows 下 bind-mount 把宿主目录映射为容器内 root:755，非 root 进程无法在其下写入
+    # 桥接任务目录（data/bridges）。本地开发环境以 root 运行后端以规避该挂载权限限制。
+    # 生产部署应移除此项并改用 named volume（宿主客户端改走 API 读取任务目录）。
+    user: "0:0"
     environment:
       APP_NAME: ${APP_NAME:-Agent Console API}
       APP_ENV: ${APP_ENV:-development}
@@ -38,6 +42,7 @@ services:
       - "8000:8000"
     volumes:
       - backend_data:/app/data
+      - ./data/bridges:/app/data/bridges
     depends_on:
       redis:
         condition: service_healthy

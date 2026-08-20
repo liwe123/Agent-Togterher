@@ -186,6 +186,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-插件注册中心.md](prd/PRD-插件注册中心.md) | 插件注册中心（plugins 表、Manifest 校验、工作区挂载与工具热插拔） | 037e968 | C-110 |
 | [PRD-工作流模板引擎.md](prd/PRD-工作流模板引擎.md) | 工作流模板引擎（workflow_templates 表、DAG/步骤节点与一键实例化） | 19d4bdc | C-111 |
 | [PRD-外部Agent软件接入.md](prd/PRD-外部Agent软件接入.md) | 外部 Agent 软件接入与调度（integration_nodes 表、适配器框架、动态 Dock） | — | — |
+| [PRD-外部节点群聊派发与Cursor桥接.md](docs/prd/PRD-外部节点群聊派发与Cursor桥接.md) | 外部节点群聊派发与 Cursor 桥接（@ 路由到 integration_nodes、CursorBridge 真实执行、宿主文件系统桥接、Docker 共享挂载） | — | — |
 
 ---
 

@@ -29,6 +29,8 @@ class MessageRead(BaseModel):
 
 
 class MessageHubRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     message: MessageRead
     task: TaskRead
-    assigned_agent: AgentRead
+    assigned_agent: AgentRead | None = None

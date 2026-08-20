@@ -17,6 +17,7 @@ from app.db.session import AsyncSessionLocal
 from app.models import (
     Agent,
     Conversation,
+    IntegrationNode,
     Message,
     MessageType,
     SenderType,
@@ -48,6 +49,36 @@ def dispatch_background_task(task_id: int) -> None:
 
     background_task = asyncio.create_task(run_task(task_id))
     background_task.add_done_callback(_log_background_result)
+
+
+async def _run_node_dispatch(task_id: int, node_id: int) -> None:
+    """Execute a task on an integration node in an isolated session.
+
+    Mirrors ``dispatch_background_task`` -> ``run_task``: the caller returns
+    immediately while this coroutine opens its own ``AsyncSessionLocal`` so the
+    integration dispatch never shares the request session.
+    """
+    from app.models.integration_node import IntegrationNode
+    from app.services.integration_service import dispatch_task_to_node
+
+    try:
+        async with AsyncSessionLocal() as session:
+            task = await session.get(Task, task_id)
+            node = await session.get(IntegrationNode, node_id)
+            if task is None or node is None:
+                logger.warning(
+                    "Skipping integration node dispatch: task=%s node=%s not found",
+                    task_id,
+                    node_id,
+                )
+                return
+            await dispatch_task_to_node(session, task, node)
+    except Exception:
+        logger.exception(
+            "Integration node dispatch failed for task=%s node=%s",
+            task_id,
+            node_id,
+        )
 
 
 async def recover_unfinished_tasks(
@@ -126,7 +157,7 @@ def parse_mentions(content: str) -> list[str]:
 class MessageHubResult:
     message: MessageRead
     task: TaskRead
-    assigned_agent: AgentRead
+    assigned_agent: AgentRead | None
 
 
 class MessageHub:
@@ -168,6 +199,14 @@ class MessageHub:
                 .order_by(Agent.id)
             )
         )
+
+        # Route @mentions to integration nodes (e.g. "@Cursor") when no internal
+        # agent matches the mention name. This dispatches the task to a connected
+        # external node instead of the internal LLM orchestrator.
+        matched_node = await self._match_integration_node(content, agents, conversation)
+        if matched_node is not None:
+            return await self._create_node_task(conversation, content, matched_node)
+
         assigned_agent = self._select_agent(content, agents)
 
         message = Message(
@@ -224,6 +263,88 @@ class MessageHub:
         if payload.message_type != MessageType.NORMAL:
             raise AppError(422, "message_type must be normal for user messages")
         return await self.receive_user_message(conversation_id, payload.content)
+
+    async def _match_integration_node(
+        self, content: str, agents: list[Agent], conversation: Conversation
+    ) -> IntegrationNode | None:
+        """Return the integration node whose ``name`` exactly matches the first
+        @mention that is not already an internal agent name."""
+        agents_by_name = {agent.name: agent for agent in agents}
+        nodes = list(
+            await self._session.scalars(
+                select(IntegrationNode).where(
+                    IntegrationNode.workspace_id == conversation.workspace_id
+                )
+            )
+        )
+        nodes_by_name = {node.name: node for node in nodes}
+        for name in parse_mentions(content):
+            if name in agents_by_name:
+                # An internal agent takes priority over an integration node.
+                continue
+            node = nodes_by_name.get(name)
+            if node is not None:
+                return node
+        return None
+
+    async def _create_node_task(
+        self,
+        conversation: Conversation,
+        content: str,
+        node: IntegrationNode,
+    ) -> MessageHubResult:
+        """Persist a user message and dispatch it to an integration node.
+
+        The task is created with ``assigned_agent_id=None`` and executed by the
+        bridge layer (not the internal orchestrator). The dispatch runs in the
+        background so the message endpoint returns immediately.
+        """
+        message = Message(
+            conversation_id=conversation.id,
+            sender_type=SenderType.USER,
+            sender_id=None,
+            content=content,
+            message_type=MessageType.NORMAL,
+        )
+        self._session.add(message)
+        await self._session.flush()
+
+        task = Task(
+            workspace_id=conversation.workspace_id,
+            conversation_id=conversation.id,
+            title=content[:255],
+            description=content,
+            assigned_agent_id=None,
+            status=TaskStatus.PENDING,
+            priority="normal",
+            input_message_id=message.id,
+        )
+        self._session.add(task)
+        await commit_or_conflict(self._session)
+        await self._session.refresh(message)
+        await self._session.refresh(task)
+        await TaskService(self._session).enqueue(task)
+
+        result = MessageHubResult(
+            message=MessageRead.model_validate(message),
+            task=TaskRead.model_validate(task),
+            assigned_agent=None,
+        )
+        await self._broadcaster.broadcast_to_workspace(
+            conversation.workspace_id,
+            create_event("message.created", result.message),
+        )
+        await self._broadcaster.broadcast_to_workspace(
+            conversation.workspace_id,
+            create_event("task.status_changed", result.task),
+        )
+        self._dispatch_to_node(task.id, node.id)
+        return result
+
+    def _dispatch_to_node(self, task_id: int, node_id: int) -> None:
+        """Schedule background dispatch to an integration node."""
+        background_task = asyncio.create_task(_run_node_dispatch(task_id, node_id))
+        background_task.add_done_callback(_log_background_result)
 
     async def _get_conversation(self, conversation_id: int) -> Conversation:
         conversation = await self._session.get(Conversation, conversation_id)

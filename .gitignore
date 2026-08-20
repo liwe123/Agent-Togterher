@@ -25,3 +25,8 @@ Thumbs.db
 
 # Change-tracking workbook backups (守则 4 排除项)
 docs/*_备份.xlsx
+
+# Runtime data (bridges workdir, sqlite, generated task dirs) — never commit
+data/
+bridge/.cursor_client_state.json
+bridge/*_state.json
