@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>22</b> 份</span>
-        <span>变更记录 <b>140</b> 条</span>
-        <span>生成于 2026-08-21 21:41</span>
+        <span>变更记录 <b>142</b> 条</span>
+        <span>生成于 2026-08-21 22:00</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -2527,6 +2527,38 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>是（默认数据库由 SQLite 改为 PostgreSQL，需配置 DATABASE_URL 与 postgres 服务）</td>
 <td>后端全量 115 passed；前端 build/test/lint 0 error；基线迁移 upgrade head 建出 19 张表 + alembic_version；autogenerate 无遗漏；downgrade 回退正常</td>
 <td>PRD: docs/prd/PRD-PostgreSQL迁移与Alembic迁移治理.md；子 Agent 独立验收通过</td>
+</tr>
+<tr>
+<td>2026-08-21 21:41</td>
+<td>C-141</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/e27f363">e27f363</a></td>
+<td>WorkBuddy</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 重跑生成脚本，将 PostgreSQL 迁移特性纳入变更追踪表与 PRD 阅读器</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-21 22:00</td>
+<td>C-142</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/8dca104">8dca104</a></td>
+<td>WorkBuddy</td>
+<td>Optimization</td>
+<td>其他</td>
+<td>ci: pytest 步骤使用 SQLite 测试数据库</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
 </tr>
 </tbody>
 </table></div>
