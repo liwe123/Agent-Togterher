@@ -171,6 +171,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-21 22:53 | C-148 | 已完成 | [b57b232](https://github.com/liwe123/Agent-Togterher/commit/b57b232) | LI | Optimization | 文档 | docs: 同步 README 与今日 PostgreSQL/Alembic 迁移治理改动 | - | - | 否 | 否 | - | - |
 | 2026-08-21 22:55 | C-149 | 已完成 | [b56d4e5](https://github.com/liwe123/Agent-Togterher/commit/b56d4e5) | LI | Optimization | 其他、文档 | docs: 重跑生成脚本将 README 同步提交纳入变更表(C-148) | - | - | 否 | 否 | - | - |
 | 2026-08-21 23:19 | C-150 | 已完成 | [bf48f2a](https://github.com/liwe123/Agent-Togterher/commit/bf48f2a) | LI | Optimization | 其他、后端 | optimize: Codex bridge 配置化与进程树清理加固 | - | backend/app/core；backend/app/services；backend/tests/test_codex_bridge.py | 否 | 否 | - | - |
+| 2026-08-21 23:20 | C-151 | 已完成 | [74bc06b](https://github.com/liwe123/Agent-Togterher/commit/74bc06b) | LI | Optimization | 其他、文档 | docs: 同步变更表至 C-150 | - | - | 否 | 否 | - | - |
+| 2026-08-21 23:32 | C-152 | 已完成 | [ef2afbb](https://github.com/liwe123/Agent-Togterher/commit/ef2afbb) | LI | Optimization | 其他 | optimize: 新增混合模式启动脚本 start-local.bat（P0 拓扑定案） | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
