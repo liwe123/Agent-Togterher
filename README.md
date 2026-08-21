@@ -142,7 +142,26 @@ plugins                 workspace_plugins        workflow_templates
 integration_nodes
 ```
 
-SQLite 启动时自动建表。切 PostgreSQL 只需改 `DATABASE_URL`。
+应用启动自动执行 Alembic 迁移（`alembic upgrade head`），SQLite / PostgreSQL 通用。切 PostgreSQL 只需改 `DATABASE_URL`。
+
+### 迁移治理（Alembic）
+
+数据库模式由 Alembic 统一管理，应用启动即自动 `alembic upgrade head`，无需手动建表。开发（SQLite）/ 生产（PostgreSQL）共用同一套迁移。
+
+手动查看或生成迁移（在 `backend/` 目录）：
+
+```bash
+alembic revision --autogenerate -m "变更描述"
+alembic upgrade head
+alembic downgrade -1
+```
+
+从 SQLite 一次性迁数据到 PostgreSQL：
+
+```bash
+python scripts/migrate_sqlite_to_pg.py --dry-run   # 预检表与行数
+python scripts/migrate_sqlite_to_pg.py             # 实际迁移
+```
 
 ---
 
@@ -371,7 +390,7 @@ npm run lint
 npm run build
 ```
 
-当前：后端 109 tests passed，前端 28 tests / lint 0 errors / build pass。
+当前：后端 115 tests passed，前端 28 tests / lint 0 errors / build pass。
 
 ---
 
@@ -404,7 +423,8 @@ WORKER_CONCURRENCY=2
 │   │   ├── services/            # litellm / tools / bridge / cursor_bridge / codex_bridge / integration_service
 │   │   ├── websocket/           # WebSocket manager / events / distributed
 │   │   └── worker.py            # 独立 Worker 入口
-│   ├── tests/                   # 109 个测试
+│   ├── alembic/                # Alembic 迁移（env.py + versions）
+│   ├── tests/                   # 115 个测试
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -414,8 +434,8 @@ WORKER_CONCURRENCY=2
 │   │   └── app/                 # Next.js App Router 页面
 │   └── package.json
 ├── docs/
-│   ├── prd/                     # 20 份 PRD 文档
-│   ├── PRD.md                   # 变更追踪表（135 行）
+│   ├── prd/                     # 22 份 PRD 文档
+│   ├── PRD.md                   # 变更追踪表（148 行）
 │   ├── generate_change_log.py   # 从 git history 自动生成变更表
 │   └── build_prd_html.py        # 生成单页 PRD.html 阅读器
 ├── docker-compose.yml
