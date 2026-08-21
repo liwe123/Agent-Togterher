@@ -36,5 +36,6 @@ jobs:
       - name: Test with pytest
         env:
           PYTHONPATH: ${{ github.workspace }}/backend
+          DATABASE_URL: sqlite+aiosqlite:///./agent_console_ci.db
         run: |
           pytest -q
