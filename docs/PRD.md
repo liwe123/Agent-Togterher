@@ -167,6 +167,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-21 22:24 | C-144 | 已完成 | [dec81dd](https://github.com/liwe123/Agent-Togterher/commit/dec81dd) | WorkBuddy | BUG | 后端、数据库 | 修复枚举列 CHECK 约束在 SQLite 上导致 Alembic autogenerate 报 3 个 remove_constraint 噪音 diff，使 test_autogenerate_has_no_pending_changes 在 CI 失败；enums.py 改用 create_constraint=False（ORM 层 validate_strings 仍校验枚举值），并重建基线迁移 5291a2a7e49d 替换 e8c50310674b 以保持模型与迁移一致 | - | backend/app/models/enums.py；backend/alembic/versions/5291a2a7e49d_baseline_initial_schema_19_tables.py | 否（仅调整枚举列 CHECK 约束生成策略，未改表结构或列类型） | 否（迁移脚本本身未 emit CHECK，升级不产生破坏性 DDL；生产 PG 枚举列为 VARCHAR，原设计未依赖 DB 级 CHECK） | test_alembic_migrations.py 3 passed（含 test_autogenerate_has_no_pending_changes）；后端全量 115 passed | SQLite + Alembic autogenerate 对列内 CHECK 约束的已知反射噪音；选放弃 DB 级 CHECK 换取 CI 可移植性，应用层校验仍有效 |
 | 2026-08-21 22:26 | C-145 | 已完成 | [0f62364](https://github.com/liwe123/Agent-Togterher/commit/0f62364) | WorkBuddy | Optimization | 其他、文档 | docs: 将枚举 CHECK 修复(dec81dd)纳入变更追踪表并修正标注 | - | - | 否 | 否 | - | - |
 | 2026-08-21 22:34 | C-146 | 已完成 | [1543d49](https://github.com/liwe123/Agent-Togterher/commit/1543d49) | WorkBuddy | Optimization | 其他、文档 | docs: 修正 dec81dd 变更表登记位置，C-144 标注 db/breaking 为否 | - | - | 否 | 否 | - | - |
+| 2026-08-21 22:41 | C-147 | 已完成 | [f21b578](https://github.com/liwe123/Agent-Togterher/commit/f21b578) | LI | Optimization | 其他、文档 | docs: 重跑生成脚本将 1543d49 纳入变更追踪表(C-146) | - | - | 否 | 否 | - | - |
+| 2026-08-21 22:53 | C-148 | 已完成 | [b57b232](https://github.com/liwe123/Agent-Togterher/commit/b57b232) | LI | Optimization | 文档 | docs: 同步 README 与今日 PostgreSQL/Alembic 迁移治理改动 | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
