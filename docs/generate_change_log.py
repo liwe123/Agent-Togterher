@@ -367,6 +367,16 @@ CURATED_BY_SUBJECT = {
         "verify": "后端全量 115 passed；前端 build/test/lint 0 error；基线迁移 upgrade head 建出 19 张表 + alembic_version；autogenerate 无遗漏；downgrade 回退正常",
         "notes": "PRD: docs/prd/PRD-PostgreSQL迁移与Alembic迁移治理.md；子 Agent 独立验收通过",
     },
+    "dec81dd": {
+        "type": "BUG",
+        "content": "修复枚举列 CHECK 约束在 SQLite 上导致 Alembic autogenerate 报 3 个 remove_constraint 噪音 diff，使 test_autogenerate_has_no_pending_changes 在 CI 失败；enums.py 改用 create_constraint=False（ORM 层 validate_strings 仍校验枚举值），并重建基线迁移 5291a2a7e49d 替换 e8c50310674b 以保持模型与迁移一致",
+        "frontend": "-",
+        "backend": "backend/app/models/enums.py；backend/alembic/versions/5291a2a7e49d_baseline_initial_schema_19_tables.py",
+        "db": "否（仅调整枚举列 CHECK 约束生成策略，未改表结构或列类型）",
+        "breaking": "否（迁移脚本本身未 emit CHECK，升级不产生破坏性 DDL；生产 PG 枚举列为 VARCHAR，原设计未依赖 DB 级 CHECK）",
+        "verify": "test_alembic_migrations.py 3 passed（含 test_autogenerate_has_no_pending_changes）；后端全量 115 passed",
+        "notes": "SQLite + Alembic autogenerate 对列内 CHECK 约束的已知反射噪音；选放弃 DB 级 CHECK 换取 CI 可移植性，应用层校验仍有效",
+    },
 }
 
 # === 35 行「改动类型」耐久修正（原 Docs → Requirement / BUG / Optimization）===
