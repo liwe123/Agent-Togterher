@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     task_execution_mode: str = "inline"
     bridge_root_dir: str = "data/bridges"
     bridge_output_poll_timeout_seconds: int = Field(default=600, ge=1)
+    # Codex bridge hardening (P1). --skip-git-repo-check is kept default-True
+    # for backwards compat (bridge task dirs are not git repos), but should be
+    # set False once worktree isolation (P5) makes task dirs real git repos.
+    bridge_codex_skip_git_check: bool = True
+    bridge_codex_timeout_seconds: int = Field(default=300, ge=1)
     worker_poll_interval_seconds: float = Field(default=1.0, gt=0)
     worker_concurrency: int = Field(default=2, ge=1, le=64)
     openai_api_key: SecretStr | None = None

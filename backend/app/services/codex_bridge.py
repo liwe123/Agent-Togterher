@@ -3,14 +3,44 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import subprocess
+import sys
 from pathlib import Path
 
+from app.core.config import get_settings
 from app.services.bridge import BaseBridge, BridgeResult, BridgeTask
 
 logger = logging.getLogger(__name__)
 
 CODEX_BIN = "codex"
-DEFAULT_TIMEOUT = 300
+
+
+async def _kill_process_tree(process: asyncio.subprocess.Process) -> None:
+    """Terminate a subprocess and its descendants.
+
+    asyncio's Process.kill() only signals the direct child; on Windows the
+    Codex CLI may spawn helper processes that survive. Use taskkill /T to
+    reap the whole tree there, falling back to kill() on other platforms.
+    """
+    try:
+        if sys.platform == "win32":
+            subprocess.run(
+                ["taskkill", "/T", "/F", "/PID", str(process.pid)],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+            )
+        else:
+            process.kill()
+    except Exception:
+        try:
+            process.kill()
+        except Exception:
+            pass
+    try:
+        await process.wait()
+    except Exception:
+        pass
 
 
 class CodexBridge(BaseBridge):
@@ -32,17 +62,22 @@ class CodexBridge(BaseBridge):
         output_file = task.output_path
         events_file = task.events_path
 
+        settings = get_settings()
+        timeout_seconds = settings.bridge_codex_timeout_seconds
+
         cmd = [
             CODEX_BIN,
             "exec",
             "--json",
             "--sandbox",
             "workspace-write",
-            "--skip-git-repo-check",
-            "-o",
-            str(output_file),
-            task.prompt_path.name,
         ]
+        if settings.bridge_codex_skip_git_check:
+            # Bridge task dirs are not git repos by default; skip the git trust
+            # check. Set BRIDGE_CODEX_SKIP_GIT_CHECK=false once worktree
+            # isolation (P5) makes task dirs real git repos.
+            cmd.append("--skip-git-repo-check")
+        cmd += ["-o", str(output_file), task.prompt_path.name]
 
         try:
             process = await asyncio.create_subprocess_exec(
@@ -54,14 +89,13 @@ class CodexBridge(BaseBridge):
 
             try:
                 stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                    process.communicate(), timeout=DEFAULT_TIMEOUT
+                    process.communicate(), timeout=timeout_seconds
                 )
             except asyncio.TimeoutError:
-                process.kill()
-                await process.wait()
+                await _kill_process_tree(process)
                 return BridgeResult(
                     success=False,
-                    message=f"Codex CLI timed out after {DEFAULT_TIMEOUT}s for task {task.task_id}",
+                    message=f"Codex CLI timed out after {timeout_seconds}s for task {task.task_id}",
                     metadata={"node": self.node_name, "mode": "cli", "provider": "codex"},
                 )
 
