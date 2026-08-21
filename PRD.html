@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>22</b> 份</span>
-        <span>变更记录 <b>144</b> 条</span>
-        <span>生成于 2026-08-21 22:26</span>
+        <span>变更记录 <b>145</b> 条</span>
+        <span>生成于 2026-08-21 22:33</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -2584,11 +2584,27 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>WorkBuddy</td>
 <td>BUG</td>
 <td>后端、数据库</td>
-<td>fix: 消除枚举 CHECK 约束导致的 Alembic autogenerate 噪音</td>
+<td>修复枚举列 CHECK 约束在 SQLite 上导致 Alembic autogenerate 报 3 个 remove_constraint 噪音 diff，使 test_autogenerate_has_no_pending_changes 在 CI 失败；enums.py 改用 create_constraint=False（ORM 层 validate_strings 仍校验枚举值），并重建基线迁移 5291a2a7e49d 替换 e8c50310674b 以保持模型与迁移一致</td>
 <td>-</td>
-<td>backend/alembic/versions；backend/app/models</td>
-<td>是</td>
-<td>是</td>
+<td>backend/app/models/enums.py；backend/alembic/versions/5291a2a7e49d_baseline_initial_schema_19_tables.py</td>
+<td>否（仅调整枚举列 CHECK 约束生成策略，未改表结构或列类型）</td>
+<td>否（迁移脚本本身未 emit CHECK，升级不产生破坏性 DDL；生产 PG 枚举列为 VARCHAR，原设计未依赖 DB 级 CHECK）</td>
+<td>test_alembic_migrations.py 3 passed（含 test_autogenerate_has_no_pending_changes）；后端全量 115 passed</td>
+<td>SQLite + Alembic autogenerate 对列内 CHECK 约束的已知反射噪音；选放弃 DB 级 CHECK 换取 CI 可移植性，应用层校验仍有效</td>
+</tr>
+<tr>
+<td>2026-08-21 22:26</td>
+<td>C-145</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/0f62364">0f62364</a></td>
+<td>WorkBuddy</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 将枚举 CHECK 修复(dec81dd)纳入变更追踪表并修正标注</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
 <td>-</td>
 <td>-</td>
 </tr>
