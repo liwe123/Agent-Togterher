@@ -1,30 +1,25 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import AsyncIterator
-from unittest.mock import patch
 
 import pytest
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.db.base import Base
 from app.models import Conversation, IntegrationNode, TaskStep, Workspace
 from app.services.bridge import BridgeResult
 from app.services.cursor_bridge import CursorBridge
 
 
 @pytest.mark.asyncio
-async def test_mention_routes_to_integration_node(tmp_path, monkeypatch) -> None:
+async def test_mention_routes_to_integration_node(
+    db_session_factory: async_sessionmaker, monkeypatch
+) -> None:
     """A group-chat ``@Cursor`` mention must dispatch to a Cursor integration
     node (creating a ``integration_dispatch:cursor:Cursor`` TaskStep) instead of
     an internal agent.
     """
-    database_path = tmp_path / "external-mention.db"
-    engine = create_async_engine(f"sqlite+aiosqlite:///{database_path.as_posix()}")
-    factory = async_sessionmaker(engine, expire_on_commit=False)
-    async with engine.begin() as connection:
-        await connection.run_sync(Base.metadata.create_all)
+    factory = db_session_factory  # shared conftest fixture (temp sqlite + create_all)
 
     # Route the background node dispatch to the same test database.
     import app.core.message_hub as message_hub_module
@@ -89,8 +84,6 @@ async def test_mention_routes_to_integration_node(tmp_path, monkeypatch) -> None
     assert step.step_name == "integration_dispatch:cursor:Cursor"
     # Node-routed tasks are not assigned to an internal agent.
     assert result.assigned_agent is None
-
-    await engine.dispose()
 
 
 @pytest.mark.asyncio

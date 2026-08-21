@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     api_v1_prefix: str = "/api/v1"
     cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
 
-    database_url: str = "sqlite+aiosqlite:///./data/agent_console.db"
+    database_url: str = "postgresql+asyncpg://agent:agent@db:5432/agent_console"
     redis_url: str = "redis://localhost:6379/0"
     event_bus_enabled: bool = False
     worker_instance_id: str = Field(default_factory=lambda: __import__("uuid").uuid4().hex)

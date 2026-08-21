@@ -1,4 +1,20 @@
 services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-agent}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-agent}
+      POSTGRES_DB: ${POSTGRES_DB:-agent_console}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-agent} -d ${POSTGRES_DB:-agent_console}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
   redis:
     image: redis:7-alpine
     command: redis-server --appendonly yes
@@ -27,7 +43,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000", "http://127.0.0.1:3000"]}
       APP_API_TOKEN: ${APP_API_TOKEN:-}
       AGENT_TOOLS_ENABLED: ${AGENT_TOOLS_ENABLED:-true}
-      DATABASE_URL: sqlite+aiosqlite:///./data/agent_console.db
+      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://agent:agent@db:5432/agent_console}
       REDIS_URL: ${COMPOSE_REDIS_URL:-redis://redis:6379/0}
       LITELLM_DEFAULT_MODEL: ${LITELLM_DEFAULT_MODEL:-}
       MODELS_CONFIG_PATH: /app/config/models.yaml
@@ -44,6 +60,8 @@ services:
       - backend_data:/app/data
       - ./data/bridges:/app/data/bridges
     depends_on:
+      db:
+        condition: service_healthy
       redis:
         condition: service_healthy
     healthcheck:
@@ -72,3 +90,4 @@ services:
 volumes:
   backend_data:
   redis_data:
+  postgres_data:

@@ -1,7 +1,7 @@
 import asyncio
 
 from sqlalchemy import func, select
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.db.base import Base
 from app.db.seed import DEFAULT_AGENTS, seed_defaults
@@ -223,16 +223,9 @@ def test_all_required_tables_and_columns_are_registered() -> None:
         assert set(Base.metadata.tables[table_name].columns.keys()) == columns
 
 
-def test_seed_is_idempotent(tmp_path) -> None:
+def test_seed_is_idempotent(db_session_factory: async_sessionmaker) -> None:
     async def run_test() -> None:
-        database_path = tmp_path / "seed-test.db"
-        engine = create_async_engine(f"sqlite+aiosqlite:///{database_path.as_posix()}")
-        session_factory = async_sessionmaker(engine, expire_on_commit=False)
-
-        async with engine.begin() as connection:
-            await connection.run_sync(Base.metadata.create_all)
-
-        async with session_factory() as session:
+        async with db_session_factory() as session:
             assert await seed_defaults(session) == (True, len(DEFAULT_AGENTS))
             assert await seed_defaults(session) == (False, 0)
             workspace_count = await session.scalar(
@@ -247,7 +240,6 @@ def test_seed_is_idempotent(tmp_path) -> None:
                 ).all()
             )
 
-        await engine.dispose()
         assert workspace_count == 1
         assert agent_count == 6
         assert seeded_models == {

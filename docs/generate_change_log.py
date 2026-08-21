@@ -357,6 +357,16 @@ CURATED_BY_SUBJECT = {
         "verify": "后端测试套件全量 103 项通过；新增 3 个用例全部通过；端到端验证：群聊 @Cursor 后任务派发步骤为「外部节点派发:cursor:Cursor」且运行中，写入产出文件后任务完成且结果包含产出内容",
         "notes": "Windows 挂载把宿主目录映射为容器内 root:755，故后端以 root 身份（用户 0:0）运行以获写权限（本地开发）；需求文档见 docs/prd/PRD-外部节点群聊派发与Cursor桥接.md；子 Agent 独立验收通过",
     },
+    "feat: 引入 Alembic 迁移治理并将数据库迁移至 PostgreSQL": {
+        "type": "Requirement",
+        "content": "引入 Alembic 迁移治理并将数据库从 SQLite 迁移至 PostgreSQL：建立 Alembic 异步环境（env.py 按 DATABASE_URL 自动路由 sqlite/postgresql）并生成 19 张表的基线迁移；session.py 改为按 database_url 后缀选择 asyncpg/aiosqlite 驱动；config 默认 database_url 指向 PostgreSQL；Dockerfile 与 docker-compose 增加 postgres 服务与 asyncpg 依赖；新增 SQLite→PostgreSQL 数据迁移脚本（--dry-run + 行数校验）；补充共享测试 conftest fixture 与迁移正确性测试",
+        "frontend": "-",
+        "backend": "alembic/ 环境与基线迁移脚本；app/db/session.py 按 URL 后缀选择驱动；app/core/config.py 默认 PostgreSQL；backend/Dockerfile 增加 asyncpg；docker-compose.yml 增加 db(postgres) 服务；scripts/migrate_sqlite_to_pg.py；tests/conftest.py 共享 fixture；tests/test_alembic_migrations.py",
+        "db": "是（迁移至 PostgreSQL；不变更表结构，仅换存储引擎）",
+        "breaking": "是（默认数据库由 SQLite 改为 PostgreSQL，需配置 DATABASE_URL 与 postgres 服务）",
+        "verify": "后端全量 115 passed；前端 build/test/lint 0 error；基线迁移 upgrade head 建出 19 张表 + alembic_version；autogenerate 无遗漏；downgrade 回退正常",
+        "notes": "PRD: docs/prd/PRD-PostgreSQL迁移与Alembic迁移治理.md；子 Agent 独立验收通过",
+    },
 }
 
 # === 35 行「改动类型」耐久修正（原 Docs → Requirement / BUG / Optimization）===
