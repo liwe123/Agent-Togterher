@@ -30,7 +30,13 @@ def string_enum(enum_class: type[StrEnum], name: str) -> Enum:
         enum_class,
         name=name,
         native_enum=False,
-        create_constraint=True,
+        # We intentionally do NOT emit database CHECK constraints.
+        # SQLite reflects CHECK constraints as table-level objects with no
+        # column association, which causes Alembic autogenerate to report
+        # spurious "remove_constraint" diffs on every run. SQLAlchemy still
+        # validates enum values at the ORM level, so data integrity is
+        # preserved for normal application writes.
+        create_constraint=False,
         validate_strings=True,
         values_callable=lambda members: [member.value for member in members],
     )

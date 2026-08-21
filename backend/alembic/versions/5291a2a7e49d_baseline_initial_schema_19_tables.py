@@ -1,8 +1,8 @@
 """baseline: initial schema (19 tables)
 
-Revision ID: e8c50310674b
+Revision ID: 5291a2a7e49d
 Revises: 
-Create Date: 2026-08-21 13:17:34.653606
+Create Date: 2026-08-21 22:14:39.342099
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'e8c50310674b'
+revision: str = '5291a2a7e49d'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -234,10 +234,10 @@ def upgrade() -> None:
     op.create_table('messages',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('conversation_id', sa.Integer(), nullable=False),
-    sa.Column('sender_type', sa.Enum('user', 'agent', 'system', name='sender_type_enum', native_enum=False, create_constraint=True), nullable=False),
+    sa.Column('sender_type', sa.Enum('user', 'agent', 'system', name='sender_type_enum', native_enum=False), nullable=False),
     sa.Column('sender_id', sa.Integer(), nullable=True),
     sa.Column('content', sa.Text(), nullable=False),
-    sa.Column('message_type', sa.Enum('normal', 'task', 'receipt', 'error', name='message_type_enum', native_enum=False, create_constraint=True), nullable=False),
+    sa.Column('message_type', sa.Enum('normal', 'task', 'receipt', 'error', name='message_type_enum', native_enum=False), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
     sa.ForeignKeyConstraint(['conversation_id'], ['conversations.id'], ondelete='CASCADE'),
     sa.PrimaryKeyConstraint('id')
@@ -270,7 +270,7 @@ def upgrade() -> None:
     sa.Column('title', sa.String(length=255), nullable=False),
     sa.Column('description', sa.Text(), nullable=False),
     sa.Column('assigned_agent_id', sa.Integer(), nullable=True),
-    sa.Column('status', sa.Enum('pending', 'running', 'completed', 'failed', 'cancelled', name='task_status_enum', native_enum=False, create_constraint=True), nullable=False),
+    sa.Column('status', sa.Enum('pending', 'running', 'completed', 'failed', 'cancelled', name='task_status_enum', native_enum=False), nullable=False),
     sa.Column('priority', sa.String(length=20), nullable=False),
     sa.Column('input_message_id', sa.Integer(), nullable=True),
     sa.Column('result', sa.Text(), nullable=True),
