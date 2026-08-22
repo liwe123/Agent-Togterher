@@ -173,6 +173,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-08-21 23:19 | C-150 | 已完成 | [bf48f2a](https://github.com/liwe123/Agent-Togterher/commit/bf48f2a) | LI | Optimization | 其他、后端 | optimize: Codex bridge 配置化与进程树清理加固 | - | backend/app/core；backend/app/services；backend/tests/test_codex_bridge.py | 否 | 否 | - | - |
 | 2026-08-21 23:20 | C-151 | 已完成 | [74bc06b](https://github.com/liwe123/Agent-Togterher/commit/74bc06b) | LI | Optimization | 其他、文档 | docs: 同步变更表至 C-150 | - | - | 否 | 否 | - | - |
 | 2026-08-21 23:32 | C-152 | 已完成 | [ef2afbb](https://github.com/liwe123/Agent-Togterher/commit/ef2afbb) | LI | Optimization | 其他 | optimize: 新增混合模式启动脚本 start-local.bat（P0 拓扑定案） | - | - | 否 | 否 | - | - |
+| 2026-08-21 23:33 | C-153 | 已完成 | [8d2f9ff](https://github.com/liwe123/Agent-Togterher/commit/8d2f9ff) | LI | Optimization | 其他、文档 | docs: 同步变更表至 C-152 | - | - | 否 | 否 | - | - |
+| 2026-08-22 11:47 | C-154 | 已完成 | [11b660a](https://github.com/liwe123/Agent-Togterher/commit/11b660a) | LI | Requirement | 后端、数据库、其他、前端 | 外部任务包元数据与状态机补齐（P2）：dispatch 支持验收条件/路径约束/测试命令/预算，新增 waiting_approval 状态、dispatch 异步化、取消接口与孤儿恢复 | TaskStatus 加 waiting_approval；task-status-badge/message-bubble 补「等待审批」映射；task-utils 非终态 rank | bridge.py 任务包扩展；integration_service.py DispatchPackage/结果校验/取消/孤儿恢复；enums.py 加 WAITING_APPROVAL；integrations.py dispatch 异步化(422 预校验)；message_hub.py schedule_node_dispatch；tasks.py 新增 POST /{id}/cancel；Alembic 迁移 f788539de554（status 列 VARCHAR 9→16） | 是（tasks.status 枚举加值 waiting_approval，列类型加宽需迁移） | 否（dispatch 响应保留旧字段仅新增 status=accepted） | 后端 128 passed（新增 9）；前端 build+test 28 passed+lint 干净 | PRD: docs/prd/PRD-外部任务包元数据与状态机补齐.md；budget_turns 本轮透传记录，执行器级控制留 P4/P5 |
 <!-- CHANGELOG:END -->
 
 ---
@@ -205,6 +207,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-外部Agent软件接入.md](prd/PRD-外部Agent软件接入.md) | 外部 Agent 软件接入与调度（integration_nodes 表、适配器框架、动态 Dock） | — | — |
 | [PRD-外部节点群聊派发与Cursor桥接.md](docs/prd/PRD-外部节点群聊派发与Cursor桥接.md) | 外部节点群聊派发与 Cursor 桥接（@ 路由到 integration_nodes、CursorBridge 真实执行、宿主文件系统桥接、Docker 共享挂载） | — | — |
 | [PRD-PostgreSQL迁移与Alembic迁移治理.md](prd/PRD-PostgreSQL迁移与Alembic迁移治理.md) | PostgreSQL 迁移与 Alembic 迁移治理（Alembic 初始化、PG 事实源、下线 create_all 手写补列、数据迁移脚本、测试策略） | — | — |
+| [PRD-外部任务包元数据与状态机补齐.md](prd/PRD-外部任务包元数据与状态机补齐.md) | 外部任务包元数据（验收/路径/测试命令/预算）+ waiting_approval 状态机 + dispatch 异步化 + 取消接口 + 孤儿恢复 | — | — |
 
 ---
 

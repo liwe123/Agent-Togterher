@@ -150,6 +150,16 @@ CURATED = {
         "verify": "test_alembic_migrations.py 3 passed（含 test_autogenerate_has_no_pending_changes）；后端全量 115 passed",
         "notes": "SQLite + Alembic autogenerate 对列内 CHECK 约束的已知反射噪音；选放弃 DB 级 CHECK 换取 CI 可移植性，应用层校验仍有效",
     },
+    "11b660a": {
+        "type": "Requirement",
+        "content": "外部任务包元数据与状态机补齐（P2）：dispatch 支持验收条件/路径约束/测试命令/预算，新增 waiting_approval 状态、dispatch 异步化、取消接口与孤儿恢复",
+        "frontend": "TaskStatus 加 waiting_approval；task-status-badge/message-bubble 补「等待审批」映射；task-utils 非终态 rank",
+        "backend": "bridge.py 任务包扩展；integration_service.py DispatchPackage/结果校验/取消/孤儿恢复；enums.py 加 WAITING_APPROVAL；integrations.py dispatch 异步化(422 预校验)；message_hub.py schedule_node_dispatch；tasks.py 新增 POST /{id}/cancel；Alembic 迁移 f788539de554（status 列 VARCHAR 9→16）",
+        "db": "是（tasks.status 枚举加值 waiting_approval，列类型加宽需迁移）",
+        "breaking": "否（dispatch 响应保留旧字段仅新增 status=accepted）",
+        "verify": "后端 128 passed（新增 9）；前端 build+test 28 passed+lint 干净",
+        "notes": "PRD: docs/prd/PRD-外部任务包元数据与状态机补齐.md；budget_turns 本轮透传记录，执行器级控制留 P4/P5",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even
