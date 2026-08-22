@@ -64,6 +64,8 @@ class CodexBridge(BaseBridge):
 
         settings = get_settings()
         timeout_seconds = settings.bridge_codex_timeout_seconds
+        if task.budget_seconds is not None:
+            timeout_seconds = min(timeout_seconds, task.budget_seconds)
 
         cmd = [
             CODEX_BIN,
@@ -87,17 +89,45 @@ class CodexBridge(BaseBridge):
                 cwd=str(task.task_workdir),
             )
 
-            try:
-                stdout_bytes, stderr_bytes = await asyncio.wait_for(
-                    process.communicate(), timeout=timeout_seconds
-                )
-            except asyncio.TimeoutError:
+            communicate_task = asyncio.ensure_future(process.communicate())
+            cancel_event = task.cancel_event
+            cancel_task = (
+                asyncio.ensure_future(cancel_event.wait())
+                if cancel_event is not None
+                else None
+            )
+            wait_set: set[asyncio.Future] = {communicate_task}
+            if cancel_task is not None:
+                wait_set.add(cancel_task)
+
+            done, _pending = await asyncio.wait(wait_set, timeout=timeout_seconds)
+
+            cancelled_before_done = (
+                cancel_task is not None
+                and cancel_task in done
+                and communicate_task not in done
+            )
+            if communicate_task not in done or cancelled_before_done:
+                communicate_task.cancel()
                 await _kill_process_tree(process)
+                if cancelled_before_done:
+                    return BridgeResult(
+                        success=False,
+                        message=f"任务 {task.task_id} 已被用户取消",
+                        metadata={
+                            "node": self.node_name,
+                            "mode": "cli",
+                            "provider": "codex",
+                            "cancelled": True,
+                        },
+                    )
                 return BridgeResult(
                     success=False,
                     message=f"Codex CLI timed out after {timeout_seconds}s for task {task.task_id}",
                     metadata={"node": self.node_name, "mode": "cli", "provider": "codex"},
                 )
+
+            stdout_bytes, stderr_bytes = communicate_task.result()
 
             stdout_text = stdout_bytes.decode("utf-8", errors="replace").strip()
             stderr_text = stderr_bytes.decode("utf-8", errors="replace").strip()

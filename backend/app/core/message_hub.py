@@ -51,7 +51,7 @@ def dispatch_background_task(task_id: int) -> None:
     background_task.add_done_callback(_log_background_result)
 
 
-async def _run_node_dispatch(task_id: int, node_id: int) -> None:
+async def _run_node_dispatch(task_id: int, node_id: int, package: Any = None) -> None:
     """Execute a task on an integration node in an isolated session.
 
     Mirrors ``dispatch_background_task`` -> ``run_task``: the caller returns
@@ -72,13 +72,24 @@ async def _run_node_dispatch(task_id: int, node_id: int) -> None:
                     node_id,
                 )
                 return
-            await dispatch_task_to_node(session, task, node)
+            await dispatch_task_to_node(session, task, node, package=package)
     except Exception:
         logger.exception(
             "Integration node dispatch failed for task=%s node=%s",
             task_id,
             node_id,
         )
+
+
+_scheduled_node_dispatches: set[asyncio.Task[Any]] = set()
+
+
+def schedule_node_dispatch(task_id: int, node_id: int, package: Any = None) -> None:
+    """Fire-and-forget background dispatch; keeps a strong reference to the task."""
+    background_task = asyncio.create_task(_run_node_dispatch(task_id, node_id, package))
+    _scheduled_node_dispatches.add(background_task)
+    background_task.add_done_callback(_scheduled_node_dispatches.discard)
+    background_task.add_done_callback(_log_background_result)
 
 
 async def recover_unfinished_tasks(

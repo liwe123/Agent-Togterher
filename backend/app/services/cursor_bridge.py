@@ -26,8 +26,18 @@ class CursorBridge(BaseBridge):
         timeout (``BRIDGE_OUTPUT_POLL_TIMEOUT_SECONDS``, default 600s) elapses.
         """
         timeout = get_settings().bridge_output_poll_timeout_seconds
+        if task.budget_seconds is not None:
+            timeout = min(timeout, task.budget_seconds)
         waited = 0.0
         while waited < timeout:
+            if self._is_cancelled(task):
+                self._append_event(task.events_path, "cancelled", {})
+                return BridgeResult(
+                    success=False,
+                    message=f"任务 {task.task_id} 已被用户取消",
+                    artifacts=[task.output_path],
+                    metadata={"node": self.node_name, "mode": "bridge", "cancelled": True},
+                )
             try:
                 content = task.output_path.read_text(
                     encoding="utf-8", errors="replace"
@@ -52,6 +62,16 @@ class CursorBridge(BaseBridge):
             artifacts=[task.output_path],
             metadata={"node": self.node_name, "mode": "bridge"},
         )
+
+    @staticmethod
+    def _is_cancelled(task: BridgeTask) -> bool:
+        event = getattr(task, "cancel_event", None)
+        if event is not None and event.is_set():
+            return True
+        try:
+            return (task.task_workdir / "CANCELLED").exists()
+        except Exception:
+            return False
 
     @staticmethod
     def _append_event(events_path: Path, event: str, detail: dict | None = None) -> None:

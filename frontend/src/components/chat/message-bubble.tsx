@@ -11,6 +11,7 @@ import type { ChatMessage, ChatTask } from "@/types/chat"
 const taskStatusLabels: Record<string, string> = {
   pending: "等待处理",
   running: "进行中",
+  waiting_approval: "等待审批",
   completed: "已完成",
   failed: "失败",
   cancelled: "已取消",

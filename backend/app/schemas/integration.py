@@ -65,6 +65,12 @@ class IntegrationDispatchRequest(BaseModel):
     task_id: int = Field(gt=0)
     node_id: int | None = Field(default=None, gt=0)
     strategy: str = Field(default="manual", min_length=1, max_length=32)
+    acceptance_criteria: list[str] | None = None
+    allowed_paths: list[str] | None = None
+    test_command: str | None = Field(default=None, max_length=2000)
+    budget_seconds: int | None = Field(default=None, ge=1, le=86400)
+    budget_turns: int | None = Field(default=None, ge=1, le=1000)
+    dependencies: list[str] | None = None
 
 
 class IntegrationDispatchResponse(BaseModel):
@@ -75,3 +81,4 @@ class IntegrationDispatchResponse(BaseModel):
     message: str
     artifacts: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    status: str = "accepted"

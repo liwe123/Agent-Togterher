@@ -19,6 +19,7 @@ class MessageType(StrEnum):
 class TaskStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
+    WAITING_APPROVAL = "waiting_approval"
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"

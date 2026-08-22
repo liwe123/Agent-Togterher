@@ -13,6 +13,7 @@ from app.core.orchestrator import (
     TaskNotFoundError,
     TaskNotRunnableError,
 )
+from app.db.base import utc_now
 from app.db.session import get_db
 from app.models import Agent, Conversation, Message, ModelCall, Task, TaskStep, Workspace
 from app.models.enums import TaskStatus
@@ -28,6 +29,10 @@ from app.schemas import (
     TaskTraceEventRead,
     TaskUpdate,
 )
+from app.services.audit_service import record_audit_log
+from app.websocket import create_event, websocket_manager
+
+_TERMINAL_STATUSES = {TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED}
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -196,6 +201,50 @@ async def run_task(
         raise AppError(404, str(exc)) from exc
     except TaskNotRunnableError as exc:
         raise AppError(409, str(exc)) from exc
+    return SuccessResponse(data=task)
+
+
+@router.post("/{task_id}/cancel", response_model=SuccessResponse[TaskRead])
+async def cancel_task(
+    task_id: int,
+    session: AsyncSession = Depends(get_db),
+) -> SuccessResponse[TaskRead]:
+    """Cancel a task; external bridge executions are cancelled best-effort."""
+    from app.services.integration_service import cancel_external_execution
+
+    task = await session.get(Task, task_id)
+    if task is None:
+        raise AppError(404, "Task not found")
+    if task.status in _TERMINAL_STATUSES:
+        raise AppError(409, f"Task already finished with status '{task.status.value}'")
+
+    note = await cancel_external_execution(session, task)
+    task.status = TaskStatus.CANCELLED
+    task.result = note or "任务已取消"
+    task.updated_at = utc_now()
+    await commit_or_conflict(session)
+    await session.refresh(task)
+
+    await record_audit_log(
+        session,
+        workspace_id=task.workspace_id,
+        action="task.cancel",
+        resource_type="task",
+        resource_id=str(task.id),
+        detail={"note": task.result},
+    )
+    await websocket_manager.broadcast_to_workspace(
+        task.workspace_id,
+        create_event(
+            "task.status_changed",
+            {
+                "id": task.id,
+                "status": task.status.value,
+                "result": task.result,
+                "updated_at": task.updated_at.isoformat() if task.updated_at else None,
+            },
+        ),
+    )
     return SuccessResponse(data=task)
 
 

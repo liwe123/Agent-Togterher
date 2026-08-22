@@ -118,7 +118,7 @@ def test_register_heartbeat_and_list_nodes(integration_client: TestClient) -> No
     assert heartbeat["current_task_count"] == 1
 
 
-def test_dispatch_to_node_writes_bridge_files_and_updates_task(
+def test_dispatch_to_node_accepts_and_schedules_background(
     integration_client: TestClient,
     tmp_path,
 ) -> None:
@@ -126,51 +126,55 @@ def test_dispatch_to_node_writes_bridge_files_and_updates_task(
     node = create_node(integration_client, workspace["id"])
     task = create_task(integration_client, workspace["id"])
 
-    with patch(
-        "app.services.integration_service.build_bridge",
-        autospec=True,
-    ) as build_bridge:
-        bridge = AsyncMock()
-        bridge.prepare_task.return_value = type(
-            "PreparedTask",
-            (),
-            {
-                "task_id": task["id"],
-                "task_title": task["title"],
-                "task_description": task["description"],
-                "workspace_id": workspace["id"],
-                "task_workdir": tmp_path,
-                "prompt_path": tmp_path / "PROMPT.md",
-                "task_json_path": tmp_path / "task.json",
-                "output_path": tmp_path / "output.md",
-                "events_path": tmp_path / "events.jsonl",
-            },
-        )
-        bridge.execute.return_value = BridgeResult(
-            success=True,
-            message="dispatch ok",
-            artifacts=[tmp_path / "output.md"],
-            metadata={"provider": "codex"},
-        )
-        build_bridge.return_value = bridge
+    scheduled: list[tuple] = []
 
+    def fake_schedule(task_id: int, node_id: int, package=None) -> None:
+        scheduled.append((task_id, node_id, package))
+
+    with patch(
+        "app.api.v1.endpoints.integrations.schedule_node_dispatch",
+        side_effect=fake_schedule,
+    ):
         result = assert_success(
             integration_client.post(
                 "/api/v1/integrations/dispatch",
-                json={"task_id": task["id"], "node_id": node["id"]},
+                json={
+                    "task_id": task["id"],
+                    "node_id": node["id"],
+                    "acceptance_criteria": ["构建通过"],
+                    "test_command": "npm run build",
+                    "budget_seconds": 120,
+                },
             )
         )
 
     assert result["success"] is True
-    assert result["message"] == "dispatch ok"
+    assert result["status"] == "accepted"
     assert result["node_id"] == node["id"]
     assert result["task_id"] == task["id"]
-    bridge.prepare_task.assert_called_once()
-    bridge.execute.assert_awaited_once()
+    assert len(scheduled) == 1
+    scheduled_task_id, scheduled_node_id, package = scheduled[0]
+    assert scheduled_task_id == task["id"]
+    assert scheduled_node_id == node["id"]
+    assert package.acceptance_criteria == ["构建通过"]
+    assert package.test_command == "npm run build"
+    assert package.budget_seconds == 120
 
     refreshed_task = assert_success(integration_client.get(f"/api/tasks/{task['id']}"))
-    assert refreshed_task["status"] == "completed"
-    assert refreshed_task["result"] == "dispatch ok"
+    assert refreshed_task["status"] == "pending"
+
+
+def test_dispatch_rejects_unsupported_provider(integration_client: TestClient) -> None:
+    workspace = create_workspace(integration_client)
+    node = create_node(integration_client, workspace["id"], provider="trae")
+    task = create_task(integration_client, workspace["id"])
+
+    response = integration_client.post(
+        "/api/v1/integrations/dispatch",
+        json={"task_id": task["id"], "node_id": node["id"]},
+    )
+    assert response.status_code == 422
+    assert "trae" in response.text
 
 
 @pytest.mark.asyncio

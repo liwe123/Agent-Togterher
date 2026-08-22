@@ -21,7 +21,11 @@ from app.schemas import (
     SuccessResponse,
 )
 from app.services.audit_service import record_audit_log
-from app.services.integration_service import dispatch_task_to_node
+from app.services.integration_service import (
+    DispatchPackage,
+    build_bridge,
+)
+from app.core.message_hub import schedule_node_dispatch
 from app.websocket import create_event, websocket_manager
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -220,17 +224,30 @@ async def dispatch_to_node(
     if node.workspace_id != task.workspace_id:
         raise AppError(422, "Node must belong to the same workspace as the task")
 
-    result = await dispatch_task_to_node(session, task, node)
+    try:
+        build_bridge(node.provider, node.workspace_id, node.name)
+    except ValueError as exc:
+        raise AppError(422, str(exc)) from exc
+
+    package = DispatchPackage(
+        acceptance_criteria=payload.acceptance_criteria,
+        allowed_paths=payload.allowed_paths,
+        test_command=payload.test_command,
+        budget_seconds=payload.budget_seconds,
+        budget_turns=payload.budget_turns,
+        dependencies=payload.dependencies,
+    )
+    schedule_node_dispatch(task.id, node.id, package)
 
     return SuccessResponse(
         data=IntegrationDispatchResponse(
             task_id=task.id,
             node_id=node.id,
             node_name=node.name,
-            success=result.success,
-            message=result.message,
-            artifacts=[str(path) for path in (result.artifacts or [])],
-            metadata=result.metadata or {},
+            success=True,
+            message="Dispatch accepted; executing in background",
+            metadata={"strategy": payload.strategy},
+            status="accepted",
         )
     )
 

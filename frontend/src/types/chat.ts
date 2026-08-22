@@ -6,6 +6,7 @@ export type MessageType = "normal" | "task" | "receipt" | "error"
 export type TaskStatus =
   | "pending"
   | "running"
+  | "waiting_approval"
   | "completed"
   | "failed"
   | "cancelled"

@@ -24,10 +24,12 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     from app.db.seed import seed_defaults
     from app.db.session import AsyncSessionLocal
     from app.core.message_hub import recover_unfinished_tasks
+    from app.services.integration_service import recover_orphan_integration_steps
 
     await _event_relay.start()
     async with AsyncSessionLocal() as session:
         await seed_defaults(session)
+        await recover_orphan_integration_steps(session)
         if settings.task_execution_mode == "inline":
             await recover_unfinished_tasks(session)
     yield

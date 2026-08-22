@@ -7,7 +7,7 @@ function taskTimestamp(task: { updated_at: string }): number {
 
 function taskStatusRank(status: string): number {
   if (terminalTaskStatuses.has(status)) return 2
-  return status === "running" ? 1 : 0
+  return status === "running" || status === "waiting_approval" ? 1 : 0
 }
 
 function shouldApplyTaskStatus<
