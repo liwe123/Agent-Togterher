@@ -91,9 +91,16 @@ async def get_daily_cost_trend(
     """获取近 N 天每日 Token 与成本趋势。"""
     start_date = datetime.now(timezone.utc) - timedelta(days=days)
 
+    # 按方言选择日期分组表达式：PostgreSQL 用 to_char，其余（SQLite）用 strftime
+    bind_dialect = db.bind.dialect.name if db.bind is not None else "sqlite"
+    if bind_dialect == "postgresql":
+        day_expr = func.to_char(ModelCall.created_at, "YYYY-MM-DD")
+    else:
+        day_expr = func.strftime("%Y-%m-%d", ModelCall.created_at)
+
     query = (
         select(
-            func.strftime("%Y-%m-%d", ModelCall.created_at).label("day"),
+            day_expr.label("day"),
             func.coalesce(func.sum(ModelCall.prompt_tokens), 0).label("prompt_tokens"),
             func.coalesce(func.sum(ModelCall.completion_tokens), 0).label("completion_tokens"),
             func.coalesce(func.sum(ModelCall.cost), 0.0).label("cost"),
