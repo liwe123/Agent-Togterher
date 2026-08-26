@@ -15,6 +15,12 @@ import { requestData } from "@/lib/task-api"
 import { CONVERSATION_LIST_LIMIT, MESSAGE_LIST_LIMIT, TASK_LIST_LIMIT } from "@/lib/constants"
 import { shouldApplyTaskStatus } from "@/lib/task-utils"
 import { useWorkspaceSocket } from "@/hooks/use-workspace-socket"
+import {
+  WORKSPACE_SWITCH_EVENT,
+  pickActiveWorkspace,
+  toWorkspace,
+} from "@/lib/active-workspace"
+import type { MyWorkspace } from "@/types/membership"
 
 function upsertMessage(
   messages: ChatMessage[],
@@ -87,6 +93,13 @@ export function useChat() {
   }, [])
 
   useEffect(() => {
+    const handleWorkspaceSwitch = () => retry()
+    window.addEventListener(WORKSPACE_SWITCH_EVENT, handleWorkspaceSwitch)
+    return () =>
+      window.removeEventListener(WORKSPACE_SWITCH_EVENT, handleWorkspaceSwitch)
+  }, [retry])
+
+  useEffect(() => {
     if (fetchedRef.current) return
     fetchedRef.current = true
 
@@ -97,13 +110,15 @@ export function useChat() {
       setError(null)
 
       try {
-        const workspaces = await requestData<Workspace[]>("/api/workspaces", {
-          signal: controller.signal,
-        })
-        const currentWorkspace = workspaces[0]
-        if (!currentWorkspace) {
+        const myWorkspaces = await requestData<MyWorkspace[]>(
+          "/api/v1/workspaces/my",
+          { signal: controller.signal },
+        )
+        const active = pickActiveWorkspace(myWorkspaces)
+        if (!active) {
           throw new Error("没有可用工作区，请先启动后端完成默认数据初始化。")
         }
+        const currentWorkspace = toWorkspace(active)
 
         const [workspaceAgents, existingConversations] = await Promise.all([
           requestData<Agent[]>(

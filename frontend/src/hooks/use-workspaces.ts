@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { requestData } from "@/lib/task-api"
 import type { MyWorkspace, WorkspaceRole } from "@/types/membership"
-
-const ACTIVE_WORKSPACE_KEY = "agent_console_active_workspace_id"
+import {
+  ACTIVE_WORKSPACE_KEY,
+  activateWorkspace,
+  readActiveWorkspaceId,
+} from "@/lib/active-workspace"
 
 export function useWorkspaces() {
   const [workspaces, setWorkspaces] = useState<MyWorkspace[]>([])
@@ -23,8 +26,8 @@ export function useWorkspaces() {
       const data = await requestData<MyWorkspace[]>("/api/v1/workspaces/my")
       setWorkspaces(data)
       if (data.length > 0) {
-        const savedId = typeof window !== "undefined" ? localStorage.getItem(ACTIVE_WORKSPACE_KEY) : null
-        const matched = data.find((ws) => String(ws.id) === savedId)
+        const savedId = readActiveWorkspaceId()
+        const matched = data.find((ws) => ws.id === savedId)
         const targetId = matched ? matched.id : data[0].id
         setActiveWorkspaceId(targetId)
         if (typeof window !== "undefined") {
@@ -46,9 +49,7 @@ export function useWorkspaces() {
 
   const switchWorkspace = useCallback((workspaceId: number) => {
     setActiveWorkspaceId(workspaceId)
-    if (typeof window !== "undefined") {
-      localStorage.setItem(ACTIVE_WORKSPACE_KEY, String(workspaceId))
-    }
+    activateWorkspace(workspaceId)
   }, [])
 
   const createWorkspace = useCallback(

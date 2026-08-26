@@ -8,15 +8,21 @@ import type {
   RecentOutput,
   WorkspaceEvent,
 } from "@/types/agent"
-import type { Workspace } from "@/types/chat"
+import type { MyWorkspace } from "@/types/membership"
 
 import { requestData } from "@/lib/task-api"
 import { useWorkspaceSocket } from "@/hooks/use-workspace-socket"
+import {
+  WORKSPACE_SWITCH_EVENT,
+  pickActiveWorkspace,
+  toWorkspace,
+} from "@/lib/active-workspace"
 
 export function useAgentConsole() {
   const [agents, setAgents] = useState<Agent[]>([])
   const [recentOutputs, setRecentOutputs] = useState<RecentOutput[]>([])
   const [workspaceId, setWorkspaceId] = useState<number | null>(null)
+  const [workspaceName, setWorkspaceName] = useState<string | null>(null)
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("connecting")
   const [isLoading, setIsLoading] = useState(true)
@@ -30,6 +36,13 @@ export function useAgentConsole() {
   }, [])
 
   useEffect(() => {
+    const handleWorkspaceSwitch = () => retry()
+    window.addEventListener(WORKSPACE_SWITCH_EVENT, handleWorkspaceSwitch)
+    return () =>
+      window.removeEventListener(WORKSPACE_SWITCH_EVENT, handleWorkspaceSwitch)
+  }, [retry])
+
+  useEffect(() => {
     if (fetchedRef.current) return
     fetchedRef.current = true
 
@@ -40,19 +53,22 @@ export function useAgentConsole() {
       setError(null)
 
       try {
-        const workspaces = await requestData<Workspace[]>("/api/workspaces", {
-          signal: controller.signal,
-        })
-        const currentWorkspace = workspaces[0]
-        if (!currentWorkspace) {
+        const myWorkspaces = await requestData<MyWorkspace[]>(
+          "/api/v1/workspaces/my",
+          { signal: controller.signal },
+        )
+        const active = pickActiveWorkspace(myWorkspaces)
+        if (!active) {
           throw new Error("没有可用工作区，请先启动后端完成默认数据初始化。")
         }
+        const currentWorkspace = toWorkspace(active)
 
         const agentsData = await requestData<Agent[]>(
           `/api/agents?workspace_id=${currentWorkspace.id}`,
           { signal: controller.signal },
         )
         setWorkspaceId(currentWorkspace.id)
+        setWorkspaceName(currentWorkspace.name)
         setAgents(agentsData)
       } catch (requestError) {
         if ((requestError as Error).name !== "AbortError") {
@@ -121,5 +137,6 @@ export function useAgentConsole() {
     isLoading,
     error,
     retry,
+    workspaceName,
   }
 }

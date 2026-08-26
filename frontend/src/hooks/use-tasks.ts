@@ -13,6 +13,12 @@ import type {
 import { TASK_LIST_LIMIT, TASK_REFRESH_DELAY_MS } from "@/lib/constants"
 import { shouldApplyTaskStatus } from "@/lib/task-utils"
 import { useWorkspaceSocket } from "@/hooks/use-workspace-socket"
+import {
+  WORKSPACE_SWITCH_EVENT,
+  pickActiveWorkspace,
+  toWorkspace,
+} from "@/lib/active-workspace"
+import type { MyWorkspace } from "@/types/membership"
 
 function useRequestRetry() {
   const [requestVersion, setRequestVersion] = useState(0)
@@ -34,6 +40,22 @@ export function useTasks() {
 
   // --- refresh timer management (kept in the hook) ---
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const handleWorkspaceSwitch = () => retry()
+    window.addEventListener(WORKSPACE_SWITCH_EVENT, handleWorkspaceSwitch)
+    return () =>
+      window.removeEventListener(WORKSPACE_SWITCH_EVENT, handleWorkspaceSwitch)
+  }, [retry])
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current !== null) {
+        clearTimeout(refreshTimerRef.current)
+        refreshTimerRef.current = null
+      }
+    }
+  }, [])
 
   const scheduleRefresh = useCallback(() => {
     if (refreshTimerRef.current !== null) clearTimeout(refreshTimerRef.current)
@@ -67,13 +89,15 @@ export function useTasks() {
       setIsLoading(true)
       setError(null)
       try {
-        const workspaces = await requestData<Workspace[]>("/api/workspaces", {
-          signal: controller.signal,
-        })
-        const currentWorkspace = workspaces[0]
-        if (!currentWorkspace) {
+        const myWorkspaces = await requestData<MyWorkspace[]>(
+          "/api/v1/workspaces/my",
+          { signal: controller.signal },
+        )
+        const active = pickActiveWorkspace(myWorkspaces)
+        if (!active) {
           throw new Error("没有可用工作区，请先启动后端完成默认数据初始化。")
         }
+        const currentWorkspace = toWorkspace(active)
         const workspaceTasks = await requestData<TaskListItem[]>(
           `/api/tasks?workspace_id=${currentWorkspace.id}&limit=${TASK_LIST_LIMIT}`,
           { signal: controller.signal },
@@ -152,6 +176,15 @@ export function useTaskDetail(taskId: number) {
 
   // --- refresh timer management (kept in the hook) ---
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current !== null) {
+        clearTimeout(refreshTimerRef.current)
+        refreshTimerRef.current = null
+      }
+    }
+  }, [])
 
   const scheduleRefresh = useCallback(() => {
     if (refreshTimerRef.current !== null) clearTimeout(refreshTimerRef.current)

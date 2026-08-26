@@ -22,6 +22,7 @@ export function AgentConsole() {
     isLoading,
     error,
     retry,
+    workspaceName,
   } = useAgentConsole()
 
   const runningCount = agents.filter((a) => a.status === "running").length
@@ -43,7 +44,7 @@ export function AgentConsole() {
             <div className="flex items-center gap-4 text-xs">
               <span className="flex items-center gap-1.5 rounded-full border border-border/60 bg-secondary/40 px-3 py-1 font-mono text-muted-foreground">
                 <span className="size-1.5 rounded-full bg-primary" />
-                DEFAULT WORKSPACE
+                {workspaceName ?? "默认工作区"}
               </span>
               <div className="h-4 w-px bg-border/80" />
               <span className="flex items-center gap-2 rounded-full border border-border/60 bg-secondary/40 px-3 py-1 font-medium text-foreground">
