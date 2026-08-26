@@ -2,6 +2,7 @@ import hmac
 
 from fastapi import Request, WebSocket
 
+from app.core.auth import get_user_id_from_token
 from app.core.config import get_settings
 
 
@@ -45,3 +46,18 @@ def token_is_valid(candidate: str | None) -> bool:
     if expected is None:
         return True
     return candidate is not None and hmac.compare_digest(candidate, expected)
+
+
+def websocket_credential_is_valid(candidate: str | None) -> bool:
+    """Validate a WebSocket handshake credential.
+
+    Accepts the configured static API token or, as a fallback, a valid
+    unexpired JWT access token — mirroring the HTTP auth middleware in
+    ``app.main``. ``None`` is allowed only when no static API token is
+    configured, preserving legacy open-access behaviour.
+    """
+    if candidate is None:
+        return not token_required()
+    if token_is_valid(candidate):
+        return True
+    return get_user_id_from_token(candidate) is not None

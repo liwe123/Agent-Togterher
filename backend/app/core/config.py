@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     api_v1_prefix: str = "/api/v1"
     cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    ws_allowed_origins: list[str] = []
 
     database_url: str = "postgresql+asyncpg://agent:agent@db:5432/agent_console"
     redis_url: str = "redis://localhost:6379/0"
