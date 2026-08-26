@@ -32,7 +32,12 @@ from app.models import (
 from app.schemas import AgentStatusRead, MessageRead, TaskRead, TaskStepEventPayload
 from app.services import litellm_service
 from app.services.litellm_service import ChatCompletionResult
-from app.services.tools import execute_tool, get_tools_spec
+from app.services.tools import (
+    build_plugin_tool_specs,
+    execute_tool,
+    get_tools_spec,
+    load_active_plugin_tools,
+)
 from app.websocket.events import create_event
 from app.websocket.manager import WebSocketManager, websocket_manager
 
@@ -198,6 +203,9 @@ class AgentOrchestrator:
                 # the final one, so the outer scope must NOT save model calls
                 # again. On failure the loop has already recorded the failed
                 # call, so the outer handler only marks the task failed.
+                plugin_tools = await load_active_plugin_tools(
+                    self._session, task.workspace_id
+                )
                 completion = await self._run_agent_with_tools(
                     task,
                     agent,
@@ -210,7 +218,8 @@ class AgentOrchestrator:
                         extra_messages=extra_messages,
                         context_messages=context_messages,
                     ),
-                    tools=get_tools_spec(),
+                    tools=get_tools_spec() + build_plugin_tool_specs(plugin_tools),
+                    plugin_tools=plugin_tools,
                     context_messages=context_messages,
                 )
             else:
@@ -378,6 +387,9 @@ class AgentOrchestrator:
                 if get_settings().agent_tools_enabled:
                     # Tools are enabled ONLY on the worker execution stage;
                     # manager/review/final stay tool-free.
+                    plugin_tools = await load_active_plugin_tools(
+                        self._session, task.workspace_id
+                    )
                     worker_completion = await self._run_agent_with_tools(
                         task,
                         active_agent,
@@ -392,7 +404,8 @@ class AgentOrchestrator:
                             extra_messages=extra_messages,
                             context_messages=context_messages,
                         ),
-                        tools=get_tools_spec(),
+                        tools=get_tools_spec() + build_plugin_tool_specs(plugin_tools),
+                        plugin_tools=plugin_tools,
                         context_messages=worker_context_messages,
                     )
                 else:
@@ -738,6 +751,7 @@ class AgentOrchestrator:
         tools: list[dict],
         max_iterations: int = 5,
         context_messages: list[dict] | None = None,
+        plugin_tools: list[dict] | None = None,
     ) -> ChatCompletionResult:
         """Run a classic function-calling loop against the configured agent.
 
@@ -778,6 +792,7 @@ class AgentOrchestrator:
                     tc.get("arguments", "{}"),
                     session=self._session,
                     workspace_id=task.workspace_id,
+                    plugin_tools=plugin_tools,
                 )
                 await self.save_task_step(
                     task,
