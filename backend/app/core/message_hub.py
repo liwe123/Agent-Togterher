@@ -25,6 +25,7 @@ from app.models import (
     TaskStatus,
 )
 from app.schemas import AgentRead, MessageCreate, MessageRead, TaskRead
+from app.services.quota_service import check_workspace_quota
 from app.services.task_service import TaskService
 from app.websocket import WebSocketManager, create_event, websocket_manager
 
@@ -192,6 +193,7 @@ class MessageHub:
             raise AppError(422, "Message content cannot be empty")
 
         conversation = await self._get_conversation(conversation_id)
+        await self._enforce_quota(conversation.workspace_id)
         active_count = await self._session.scalar(
             select(func.count(Task.id)).where(
                 Task.workspace_id == conversation.workspace_id,
@@ -274,6 +276,25 @@ class MessageHub:
         if payload.message_type != MessageType.NORMAL:
             raise AppError(422, "message_type must be normal for user messages")
         return await self.receive_user_message(conversation_id, payload.content)
+
+    async def _enforce_quota(self, workspace_id: int) -> None:
+        """在创建任务前校验工作区配额，超额硬熔断或触发限流时拒绝派发。
+
+        软限制（未开启硬熔断或未超额）仅记录日志、放行，保持既有软性语义。
+        """
+        result = await check_workspace_quota(self._session, workspace_id)
+        if result.blocked:
+            reason = result.block_reason or "Workspace quota exceeded"
+            await self._broadcaster.broadcast_to_workspace(
+                workspace_id,
+                create_event("error", {"message": reason}),
+            )
+            raise AppError(429, reason)
+        if result.is_exceeded:
+            logger.warning(
+                "Workspace %s quota exceeded but hard limit disabled; allowing dispatch",
+                workspace_id,
+            )
 
     async def _match_integration_node(
         self, content: str, agents: list[Agent], conversation: Conversation

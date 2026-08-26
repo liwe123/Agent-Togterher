@@ -22,6 +22,7 @@ from app.schemas.workflow import (
     WorkflowVariable,
 )
 from app.services.audit_service import record_audit_log
+from app.services.quota_service import check_workspace_quota
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/workflows", tags=["workflows"])
 
@@ -255,6 +256,11 @@ async def run_workflow_template(
     tpl = await db.get(WorkflowTemplate, template_id)
     if tpl is None or (not tpl.is_system and tpl.workspace_id != workspace_id):
         raise AppError(status_code=404, message="工作流模板不存在")
+
+    # 接入工作区配额硬熔断与限流：超额（硬熔断）或超每分钟速率时拒绝建任务。
+    quota = await check_workspace_quota(db, workspace_id)
+    if quota.blocked:
+        raise AppError(status_code=429, message=quota.block_reason or "工作区配额已超限")
 
     # 渲染 Prompt 文本
     nodes_data = []
