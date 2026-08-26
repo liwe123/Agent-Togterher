@@ -1,12 +1,13 @@
 import json
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.errors import AppError
 from app.api.persistence import commit_or_conflict
+from app.api.rbac_compat import enforce_workspace_role
 from app.core.execution_trace import build_trace_artifact
 from app.core.orchestrator import (
     AgentOrchestrator,
@@ -124,12 +125,16 @@ async def _validate_references(
 
 @router.get("", response_model=SuccessResponse[list[TaskListItemRead]])
 async def list_tasks(
+    request: Request,
     workspace_id: int | None = Query(default=None, gt=0),
     task_status: TaskStatus | None = Query(default=None, alias="status"),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[list[TaskListItemRead]]:
+    await enforce_workspace_role(
+        request, session, workspace_id=workspace_id, min_role="viewer"
+    )
     statement = select(Task).options(selectinload(Task.assigned_agent))
     if workspace_id is not None:
         statement = statement.where(Task.workspace_id == workspace_id)
@@ -147,9 +152,13 @@ async def list_tasks(
     "", response_model=SuccessResponse[TaskRead], status_code=status.HTTP_201_CREATED
 )
 async def create_task(
+    request: Request,
     payload: TaskCreate,
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[TaskRead]:
+    await enforce_workspace_role(
+        request, session, workspace_id=payload.workspace_id, min_role="member"
+    )
     await _validate_references(
         session,
         payload.workspace_id,
@@ -167,6 +176,7 @@ async def create_task(
 @router.get("/{task_id}", response_model=SuccessResponse[TaskDetailRead])
 async def get_task(
     task_id: int,
+    request: Request,
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[TaskDetailRead]:
     statement = (
@@ -182,12 +192,16 @@ async def get_task(
     task = await session.scalar(statement)
     if task is None:
         raise AppError(404, "Task not found")
+    await enforce_workspace_role(
+        request, session, workspace_id=task.workspace_id, min_role="viewer"
+    )
     return SuccessResponse(data=_task_detail(task))
 
 
 @router.post("/{task_id}/run", response_model=SuccessResponse[TaskRead])
 async def run_task(
     task_id: int,
+    request: Request,
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[TaskRead]:
     """Run one pending task inline.
@@ -195,6 +209,12 @@ async def run_task(
     Keeping execution behind the orchestrator boundary lets a later Redis
     dispatcher enqueue the same task id without changing task semantics.
     """
+    task = await session.get(Task, task_id)
+    if task is None:
+        raise AppError(404, f"Task {task_id} not found")
+    await enforce_workspace_role(
+        request, session, workspace_id=task.workspace_id, min_role="member"
+    )
     try:
         task = await AgentOrchestrator(session).run_task(task_id)
     except TaskNotFoundError as exc:
@@ -207,6 +227,7 @@ async def run_task(
 @router.post("/{task_id}/cancel", response_model=SuccessResponse[TaskRead])
 async def cancel_task(
     task_id: int,
+    request: Request,
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[TaskRead]:
     """Cancel a task; external bridge executions are cancelled best-effort."""
@@ -217,6 +238,9 @@ async def cancel_task(
         raise AppError(404, "Task not found")
     if task.status in _TERMINAL_STATUSES:
         raise AppError(409, f"Task already finished with status '{task.status.value}'")
+    membership = await enforce_workspace_role(
+        request, session, workspace_id=task.workspace_id, min_role="member"
+    )
 
     note = await cancel_external_execution(session, task)
     task.status = TaskStatus.CANCELLED
@@ -228,6 +252,7 @@ async def cancel_task(
     await record_audit_log(
         session,
         workspace_id=task.workspace_id,
+        user_id=membership.user_id if membership else None,
         action="task.cancel",
         resource_type="task",
         resource_id=str(task.id),
@@ -251,12 +276,16 @@ async def cancel_task(
 @router.patch("/{task_id}", response_model=SuccessResponse[TaskRead])
 async def update_task(
     task_id: int,
+    request: Request,
     payload: TaskUpdate,
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[TaskRead]:
     task = await session.get(Task, task_id)
     if task is None:
         raise AppError(404, "Task not found")
+    await enforce_workspace_role(
+        request, session, workspace_id=task.workspace_id, min_role="member"
+    )
     updates = payload.model_dump(exclude_unset=True)
     await _validate_references(
         session,

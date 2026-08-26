@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import AppError
 from app.api.persistence import commit_or_conflict
+from app.api.rbac_compat import enforce_workspace_role
 from app.db.session import get_db
 from app.models import Agent, Workspace
 from app.schemas import (
@@ -20,10 +21,14 @@ router = APIRouter(prefix="/agents", tags=["agents"])
 
 @router.get("", response_model=SuccessResponse[list[AgentRead]])
 async def list_agents(
+    request: Request,
     workspace_id: int | None = Query(default=None, gt=0),
     agent_status: str | None = Query(default=None, alias="status"),
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[list[AgentRead]]:
+    await enforce_workspace_role(
+        request, session, workspace_id=workspace_id, min_role="viewer"
+    )
     statement = select(Agent)
     if workspace_id is not None:
         statement = statement.where(Agent.workspace_id == workspace_id)
@@ -37,9 +42,13 @@ async def list_agents(
     "", response_model=SuccessResponse[AgentRead], status_code=status.HTTP_201_CREATED
 )
 async def create_agent(
+    request: Request,
     payload: AgentCreate,
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[AgentRead]:
+    await enforce_workspace_role(
+        request, session, workspace_id=payload.workspace_id, min_role="admin"
+    )
     if await session.get(Workspace, payload.workspace_id) is None:
         raise AppError(404, "Workspace not found")
     agent = Agent(**payload.model_dump())
@@ -54,23 +63,31 @@ async def create_agent(
 @router.get("/{agent_id}", response_model=SuccessResponse[AgentRead])
 async def get_agent(
     agent_id: int,
+    request: Request,
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[AgentRead]:
     agent = await session.get(Agent, agent_id)
     if agent is None:
         raise AppError(404, "Agent not found")
+    await enforce_workspace_role(
+        request, session, workspace_id=agent.workspace_id, min_role="viewer"
+    )
     return SuccessResponse(data=agent)
 
 
 @router.patch("/{agent_id}", response_model=SuccessResponse[AgentRead])
 async def update_agent(
     agent_id: int,
+    request: Request,
     payload: AgentUpdate,
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[AgentRead]:
     agent = await session.get(Agent, agent_id)
     if agent is None:
         raise AppError(404, "Agent not found")
+    await enforce_workspace_role(
+        request, session, workspace_id=agent.workspace_id, min_role="admin"
+    )
     updates = payload.model_dump(exclude_unset=True)
     previous_status = agent.status
     for field, value in updates.items():
@@ -97,11 +114,15 @@ async def update_agent(
 )
 async def get_agent_status(
     agent_id: int,
+    request: Request,
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[AgentStatusRead]:
     agent = await session.get(Agent, agent_id)
     if agent is None:
         raise AppError(404, "Agent not found")
+    await enforce_workspace_role(
+        request, session, workspace_id=agent.workspace_id, min_role="viewer"
+    )
     return SuccessResponse(
         data=AgentStatusRead(
             id=agent.id,

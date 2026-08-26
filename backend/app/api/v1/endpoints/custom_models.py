@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.errors import AppError
 from app.api.persistence import commit_or_conflict
+from app.api.rbac_compat import enforce_global_role
 from app.db.session import get_db
 from app.models import Agent, CustomModelConfig
 from app.schemas import CustomModelCreate, CustomModelRead, SuccessResponse
@@ -10,12 +11,20 @@ from app.schemas import CustomModelCreate, CustomModelRead, SuccessResponse
 router = APIRouter(prefix="/custom-models", tags=["custom-models"])
 
 @router.get("", response_model=SuccessResponse[list[CustomModelRead]])
-async def list_custom_models(session: AsyncSession = Depends(get_db)):
+async def list_custom_models(
+    request: Request, session: AsyncSession = Depends(get_db)
+):
+    await enforce_global_role(request, session, min_role="viewer")
     rows = (await session.execute(select(CustomModelConfig).order_by(CustomModelConfig.id))).scalars().all()
     return SuccessResponse(data=[CustomModelRead.model_validate(r) for r in rows])
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=SuccessResponse[CustomModelRead])
-async def create_custom_model(payload: CustomModelCreate, session: AsyncSession = Depends(get_db)):
+async def create_custom_model(
+    request: Request,
+    payload: CustomModelCreate,
+    session: AsyncSession = Depends(get_db),
+):
+    await enforce_global_role(request, session, min_role="admin")
     existing = (
         await session.execute(
             select(CustomModelConfig).where(CustomModelConfig.name == payload.name)
@@ -30,7 +39,10 @@ async def create_custom_model(payload: CustomModelCreate, session: AsyncSession 
     return SuccessResponse(data=CustomModelRead.model_validate(cfg))
 
 @router.delete("/{name}", response_model=SuccessResponse[dict])
-async def delete_custom_model(name: str, session: AsyncSession = Depends(get_db)):
+async def delete_custom_model(
+    name: str, request: Request, session: AsyncSession = Depends(get_db)
+):
+    await enforce_global_role(request, session, min_role="admin")
     cfg = (
         await session.execute(
             select(CustomModelConfig).where(CustomModelConfig.name == name)

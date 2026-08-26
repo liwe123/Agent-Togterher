@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import AppError
+from app.api.rbac_compat import enforce_global_role
 from app.db.session import get_db
 from app.models import ProviderCredential
 from app.schemas import ProviderKeyUpsert, ProviderKeyValue, ProviderStatusInfo, SuccessResponse
@@ -23,8 +24,11 @@ async def _load_provider_rows(session: AsyncSession) -> list[ProviderCredential]
 
 
 @router.get("", response_model=SuccessResponse[list[ProviderStatusInfo]])
-async def list_provider_keys(session: AsyncSession = Depends(get_db)):
+async def list_provider_keys(
+    request: Request, session: AsyncSession = Depends(get_db)
+):
     """Return which providers have keys configured (DB or env). Never exposes key values."""
+    await enforce_global_role(request, session, min_role="viewer")
     rows = await _load_provider_rows(session)
     db_configured = {_canonical_provider(row.provider) for row in rows if row.api_key.strip()}
 
@@ -53,8 +57,11 @@ def _mask_key(value: str) -> str:
 
 
 @router.get("/{provider}", response_model=SuccessResponse[ProviderKeyValue])
-async def get_provider_key(provider: str, session: AsyncSession = Depends(get_db)):
+async def get_provider_key(
+    provider: str, request: Request, session: AsyncSession = Depends(get_db)
+):
     """Return credential metadata without exposing the complete secret."""
+    await enforce_global_role(request, session, min_role="viewer")
     canonical_provider = _canonical_provider(provider)
     rows = await _load_provider_rows(session)
     row = next(
@@ -88,10 +95,12 @@ async def get_provider_key(provider: str, session: AsyncSession = Depends(get_db
 @router.put("/{provider}", status_code=status.HTTP_200_OK, response_model=SuccessResponse[ProviderStatusInfo])
 async def upsert_provider_key(
     provider: str,
+    request: Request,
     payload: ProviderKeyUpsert,
     session: AsyncSession = Depends(get_db),
 ):
     """Store an API key for any provider. Overwrites if already exists."""
+    await enforce_global_role(request, session, min_role="admin")
     canonical_provider = _canonical_provider(provider)
     if not canonical_provider:
         raise AppError(422, "Provider name cannot be empty")
@@ -123,8 +132,11 @@ async def upsert_provider_key(
 
 
 @router.delete("/{provider}", response_model=SuccessResponse[ProviderStatusInfo])
-async def delete_provider_key(provider: str, session: AsyncSession = Depends(get_db)):
+async def delete_provider_key(
+    provider: str, request: Request, session: AsyncSession = Depends(get_db)
+):
     """Remove a stored API key for a provider."""
+    await enforce_global_role(request, session, min_role="admin")
     canonical_provider = _canonical_provider(provider)
     rows = await _load_provider_rows(session)
     row = next(
