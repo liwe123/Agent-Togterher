@@ -1,23 +1,28 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, Request
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import AppError
 from app.core.auth import (
+    REFRESH_TOKEN_EXPIRE_DAYS,
     authenticate_user,
     create_access_token,
     create_refresh_token,
+    get_jti_from_token,
     get_user_by_email,
     get_user_by_id,
     get_user_id_from_token,
     hash_password,
 )
 from app.db.session import get_db
+from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.schemas.auth import (
     AuthResponse,
     LoginRequest,
+    LogoutRequest,
     RefreshRequest,
     RegisterRequest,
     TokenRefreshResponse,
@@ -26,6 +31,27 @@ from app.schemas.auth import (
 from app.schemas.common import SuccessResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+async def _store_refresh_token(db: AsyncSession, user_id: int, token: str) -> None:
+    """持久化刷新令牌记录，并清理该用户已过期记录。"""
+    jti = get_jti_from_token(token)
+    if jti is None:
+        return
+    now = datetime.now(timezone.utc)
+    await db.execute(
+        delete(RefreshToken).where(
+            RefreshToken.user_id == user_id,
+            RefreshToken.expires_at < now,
+        )
+    )
+    db.add(
+        RefreshToken(
+            user_id=user_id,
+            jti=jti,
+            expires_at=now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        )
+    )
 
 async def get_current_user_dep(request: Request, db: AsyncSession = Depends(get_db)) -> User:
     """FastAPI dependency to extract and validate the current user from JWT."""
@@ -91,6 +117,8 @@ async def register(body: RegisterRequest, db: AsyncSession = Depends(get_db)):
 
     access_token = create_access_token(user.id)
     refresh_token = create_refresh_token(user.id)
+    await _store_refresh_token(db, user.id, refresh_token)
+    await db.commit()
 
     return SuccessResponse(
         data=AuthResponse(
@@ -124,6 +152,8 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
 
     access_token = create_access_token(user.id)
     refresh_token = create_refresh_token(user.id)
+    await _store_refresh_token(db, user.id, refresh_token)
+    await db.commit()
 
     return SuccessResponse(
         data=AuthResponse(
@@ -141,6 +171,12 @@ async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)
     if user_id is None:
         raise AppError(status_code=401, message="refresh_token 无效或已过期")
 
+    jti = get_jti_from_token(body.refresh_token)
+    if jti is not None:
+        record = await db.scalar(select(RefreshToken).where(RefreshToken.jti == jti))
+        if record is not None and record.revoked_at is not None:
+            raise AppError(status_code=401, message="refresh_token 已失效，请重新登录")
+
     user = await get_user_by_id(db, user_id)
     if user is None or not user.is_active:
         raise AppError(status_code=401, message="用户不存在或已被禁用")
@@ -152,8 +188,34 @@ async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)
 
 
 @router.post("/logout", response_model=SuccessResponse[dict])
-async def logout():
-    """用户登出（前端清除 token 即可）。"""
+async def logout(
+    body: LogoutRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+):
+    """用户登出：吊销 refresh token（若提供）。"""
+    refresh_token = body.refresh_token if body is not None else None
+    if refresh_token:
+        jti = get_jti_from_token(refresh_token)
+        if jti is not None:
+            existing = await db.scalar(
+                select(RefreshToken).where(RefreshToken.jti == jti)
+            )
+            if existing is not None:
+                if existing.revoked_at is None:
+                    existing.revoked_at = datetime.now(timezone.utc)
+                    await db.commit()
+            else:
+                owner_id = get_user_id_from_token(refresh_token, expected_type="refresh")
+                if owner_id is not None:
+                    db.add(
+                        RefreshToken(
+                            user_id=owner_id,
+                            jti=jti,
+                            expires_at=datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+                            revoked_at=datetime.now(timezone.utc),
+                        )
+                    )
+                    await db.commit()
     return SuccessResponse(data={"message": "已登出"})
 
 

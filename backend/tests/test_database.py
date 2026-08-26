@@ -203,6 +203,14 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "created_at",
             "updated_at",
         },
+        "refresh_tokens": {
+            "id",
+            "user_id",
+            "jti",
+            "expires_at",
+            "revoked_at",
+            "created_at",
+        },
         "workflow_templates": {
             "id",
             "workspace_id",

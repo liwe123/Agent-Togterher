@@ -12,6 +12,7 @@ from app.models.integration_node import IntegrationNode
 from app.models.plugin import Plugin, WorkspacePlugin
 from app.models.provider_credential import ProviderCredential
 from app.models.quota_config import QuotaConfig
+from app.models.refresh_token import RefreshToken
 from app.models.task import Task, TaskStep
 from app.models.task_queue import TaskQueueItem
 from app.models.user import User
@@ -30,6 +31,7 @@ __all__ = [
     "Plugin",
     "ProviderCredential",
     "QuotaConfig",
+    "RefreshToken",
     "SenderType",
     "Task",
     "TaskStatus",

@@ -2,6 +2,7 @@ import hashlib
 import hmac
 import os
 import time
+import uuid
 from datetime import datetime, timezone
 
 import jwt
@@ -71,6 +72,7 @@ def create_refresh_token(user_id: int) -> str:
     payload = {
         "sub": str(user_id),
         "type": "refresh",
+        "jti": uuid.uuid4().hex,
         "iat": now,
         "exp": now + REFRESH_TOKEN_EXPIRE_DAYS * 86400,
     }
@@ -97,6 +99,14 @@ def get_user_id_from_token(token: str, expected_type: str = "access") -> int | N
         return int(payload["sub"])
     except (KeyError, ValueError, TypeError):
         return None
+
+
+def get_jti_from_token(token: str) -> str | None:
+    """Extract the jti claim from a valid refresh token, if present."""
+    payload = decode_token(token)
+    if payload is None:
+        return None
+    return payload.get("jti")
 
 
 async def get_user_by_email(session: AsyncSession, email: str) -> User | None:
