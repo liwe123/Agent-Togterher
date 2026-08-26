@@ -115,66 +115,6 @@ class AgentOrchestrator:
             "error_message": AgentOrchestrator._clip_text(call.error_message),
         }
 
-    async def _build_task_context_messages(
-        self,
-        task: Task,
-        agent: Agent | None,
-        *,
-        stage: str,
-        note: str | None = None,
-        recent_steps_limit: int = 6,
-        recent_calls_limit: int = 6,
-    ) -> list[dict[str, str]]:
-        steps = list(
-            await self._session.scalars(
-                select(TaskStep)
-                .where(TaskStep.task_id == task.id)
-                .order_by(TaskStep.id.desc())
-                .limit(recent_steps_limit)
-            )
-        )
-        calls = list(
-            await self._session.scalars(
-                select(ModelCall)
-                .where(ModelCall.task_id == task.id)
-                .order_by(ModelCall.id.desc())
-                .limit(recent_calls_limit)
-            )
-        )
-        steps.reverse()
-        calls.reverse()
-        context_payload = {
-            "task": {
-                "id": task.id,
-                "title": task.title,
-                "status": task.status.value,
-                "priority": task.priority,
-                "assigned_agent": getattr(agent, "name", None),
-                "conversation_id": task.conversation_id,
-                "input": self._clip_text(task.description, 1200),
-                "result": self._clip_text(task.result, 1200),
-            },
-            "stage": stage,
-            "note": note,
-            "completed_steps": [
-                self._summarize_step(step)
-                for step in steps
-                if step.status == "completed"
-            ],
-            "recent_steps": [self._summarize_step(step) for step in steps],
-            "recent_model_calls": [self._summarize_call(call) for call in calls],
-        }
-        return [
-            {
-                "role": "system",
-                "content": (
-                    "你正在继续执行同一条任务。请严格继承下面的任务级上下文，"
-                    "优先基于已完成步骤、工具结果和失败信息继续推进，不要重复已经完成的工作。\n"
-                    f"任务级上下文：\n{json.dumps(context_payload, ensure_ascii=False)}"
-                ),
-            }
-        ]
-
     async def run_task(self, task_id: int) -> TaskRead:
         task = await self._claim_pending_task(task_id)
         lease_token = task.execution_token
