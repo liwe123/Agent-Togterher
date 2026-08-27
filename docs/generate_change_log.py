@@ -229,6 +229,24 @@ CURATED = {
         "verify": "新增 tests/test_refresh_revocation.py（+154）",
         "notes": "签发时顺带清理该用户过期记录",
     },
+    "e1203d9": {
+        "type": "Requirement",
+        "content": "任务轨迹 WebSocket 实时推送与开发者/用户双层视图：新增 task.trace_updated 事件，orchestrator 在步骤/模型调用保存后广播轻量增量轨迹事件，前端直接合并免刷新；任务详情页新增视图切换，用户视图隐藏 Token/成本/上下文快照/步骤输入输出与轨迹明细",
+        "frontend": "task-detail-page.tsx 视图切换与敏感内容条件渲染；use-tasks.ts useTaskDetail 合并轨迹；task-utils.ts 新增 mergeTraceEvent；types/task.ts 增事件类型",
+        "backend": "websocket/events.py 加 task.trace_updated；execution_trace.py 提取 step_trace_event/call_trace_event 单事件构建；orchestrator.py _emit_trace_update 广播",
+        "db": "否", "breaking": "否",
+        "verify": "后端 168 passed；前端 31 passed + lint 0 error + build 通过",
+        "notes": "PRD-单任务上下文连续性 §16 FR8/FR9 更新为已落地",
+    },
+    "7eacddf": {
+        "type": "Requirement",
+        "content": "Provider Key 信封加密：provider_credentials.api_key 由明文改为 Fernet 信封加密存储（v1: 前缀），主密钥由 JWT 密钥经 PBKDF2 派生；存量明文透传兼容、零表结构迁移；模型调用读取链路自动解密",
+        "frontend": "-",
+        "backend": "新增 core/crypto.py（encrypt/decrypt/is_encrypted + PBKDF2 主密钥派生）；provider_keys.py 写入加密、掩码前解密；litellm_service.get_db_api_keys 解密（单条失败跳过）；requirements 补 cryptography",
+        "db": "否（复用 provider_credentials Text 列，v1: 前缀，零迁移）", "breaking": "否（存量明文兼容）",
+        "verify": "后端 175 passed（新增 7）；端点掩码/存在性测试通过",
+        "notes": "PRD: docs/prd/PRD-ProviderKey信封加密.md；生产须显式配置 jwt_secret_key，轮换主密钥需重录 Key；Docker 需重建纳入 cryptography",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even
