@@ -195,16 +195,30 @@ async def test_run_task_completes_and_persists_result(orchestrator_session) -> N
         "task.status_changed",
         "agent.status_changed",
         "task.step_changed",
+        "task.trace_updated",
         "model.call_finished",
+        "task.trace_updated",
         "task.step_changed",
+        "task.trace_updated",
         "task.status_changed",
         "agent.status_changed",
         "message.created",
     ]
     assert broadcaster.events[0][1]["payload"]["status"] == "running"
     assert broadcaster.events[1][1]["payload"]["status"] == "running"
-    assert broadcaster.events[5][1]["payload"]["status"] == "completed"
-    assert broadcaster.events[6][1]["payload"]["status"] == "idle"
+    assert broadcaster.events[8][1]["payload"]["status"] == "completed"
+    assert broadcaster.events[9][1]["payload"]["status"] == "idle"
+    trace_events = [
+        event[1]["payload"] for event in broadcaster.events
+        if event[1]["type"] == "task.trace_updated"
+    ]
+    assert len(trace_events) == 3
+    assert all(payload["task_id"] == task.id for payload in trace_events)
+    assert [payload["event"]["source_type"] for payload in trace_events] == [
+        "task_step",
+        "model_call",
+        "task_step",
+    ]
 
 
 @pytest.mark.asyncio
@@ -263,17 +277,20 @@ async def test_run_task_failure_is_persisted_and_reported(orchestrator_session) 
         "task.status_changed",
         "agent.status_changed",
         "task.step_changed",
+        "task.trace_updated",
         "model.call_finished",
+        "task.trace_updated",
         "task.step_changed",
+        "task.trace_updated",
         "task.status_changed",
         "agent.status_changed",
         "message.created",
         "error",
     ]
-    assert broadcaster.events[3][1]["payload"]["status"] == "failed"
     assert broadcaster.events[4][1]["payload"]["status"] == "failed"
-    assert broadcaster.events[5][1]["payload"]["status"] == "failed"
     assert broadcaster.events[6][1]["payload"]["status"] == "failed"
+    assert broadcaster.events[8][1]["payload"]["status"] == "failed"
+    assert broadcaster.events[9][1]["payload"]["status"] == "failed"
 
 
 @pytest.mark.asyncio

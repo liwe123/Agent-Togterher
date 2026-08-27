@@ -142,47 +142,47 @@ def build_execution_trace(
     return artifact.execution_trace
 
 
+def step_trace_event(step: TaskStep, *, stage: str | None = None) -> dict[str, Any]:
+    """Build a single normalized trace event for one task step."""
+    return {
+        "type": _event_type_for_step(step),
+        "stage": stage or step.step_name,
+        "title": step.step_name,
+        "actor": getattr(getattr(step, "agent", None), "name", None),
+        "summary": _step_summary(step),
+        "detail": _trim(_primary_text(step.output or step.input), MAX_SUMMARY_TEXT),
+        "status": step.status,
+        "created_at": _datetime_iso(step.started_at),
+        "source_id": step.id,
+        "source_type": "task_step",
+    }
+
+
+def call_trace_event(call: ModelCall, *, stage: str | None = None) -> dict[str, Any]:
+    """Build a single normalized trace event for one model call."""
+    return {
+        "type": "model_call",
+        "stage": stage or "model_call",
+        "title": call.model_name,
+        "actor": getattr(getattr(call, "agent", None), "name", None),
+        "summary": _model_call_summary(call),
+        "detail": _trim(call.error_message or "", MAX_SUMMARY_TEXT) or None,
+        "status": call.status,
+        "created_at": _datetime_iso(call.created_at),
+        "source_id": call.id,
+        "source_type": "model_call",
+    }
+
+
 def _execution_trace(
     steps: Sequence[TaskStep],
     calls: Sequence[ModelCall],
     current_stage: str,
 ) -> list[dict[str, Any]]:
-    events: list[dict[str, Any]] = []
-    step_by_id = {step.id: step for step in steps}
-    call_by_id = {call.id: call for call in calls}
-
-    for step in steps:
-        events.append(
-            {
-                "type": _event_type_for_step(step),
-                "stage": current_stage,
-                "title": step.step_name,
-                "actor": getattr(getattr(step, "agent", None), "name", None),
-                "summary": _step_summary(step),
-                "detail": _trim(_primary_text(step.output or step.input), MAX_SUMMARY_TEXT),
-                "status": step.status,
-                "created_at": _datetime_iso(step.started_at),
-                "source_id": step.id,
-                "source_type": "task_step",
-            }
-        )
-
-    for call in calls:
-        events.append(
-            {
-                "type": "model_call",
-                "stage": current_stage,
-                "title": call.model_name,
-                "actor": getattr(getattr(call, "agent", None), "name", None),
-                "summary": _model_call_summary(call),
-                "detail": _trim(call.error_message or "", MAX_SUMMARY_TEXT) or None,
-                "status": call.status,
-                "created_at": _datetime_iso(call.created_at),
-                "source_id": call.id,
-                "source_type": "model_call",
-            }
-        )
-
+    events: list[dict[str, Any]] = [
+        step_trace_event(step, stage=current_stage) for step in steps
+    ]
+    events.extend(call_trace_event(call, stage=current_stage) for call in calls)
     events.sort(key=lambda item: (item.get("created_at") or "", item.get("source_id") or 0))
     return events
 
@@ -360,4 +360,6 @@ __all__ = [
     "build_execution_trace",
     "build_trace_artifact",
     "build_trace_summary",
+    "call_trace_event",
+    "step_trace_event",
 ]

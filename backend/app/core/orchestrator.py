@@ -16,7 +16,13 @@ from sqlalchemy.orm import selectinload
 
 from app.agents import final_agent, manager_agent, review_agent, worker_agent
 from app.core.config import get_settings
-from app.core.execution_trace import build_context_message, build_execution_trace, build_trace_summary
+from app.core.execution_trace import (
+    build_context_message,
+    build_execution_trace,
+    build_trace_summary,
+    call_trace_event,
+    step_trace_event,
+)
 from app.db.base import utc_now
 from app.db.session import AsyncSessionLocal
 from app.models import (
@@ -872,7 +878,18 @@ class AgentOrchestrator:
                 TaskStepEventPayload.model_validate(step),
             ),
         )
+        await self._emit_trace_update(task, step_trace_event(step))
         return step
+
+    async def _emit_trace_update(self, task: Task, event: dict[str, object]) -> None:
+        """Broadcast a lightweight incremental trace event for live timeline updates."""
+        await self._broadcaster.broadcast_to_workspace(
+            task.workspace_id,
+            create_event(
+                "task.trace_updated",
+                {"task_id": task.id, "event": event},
+            ),
+        )
 
     async def save_model_call(
         self,
@@ -935,6 +952,7 @@ class AgentOrchestrator:
                 },
             ),
         )
+        await self._emit_trace_update(task, call_trace_event(model_call))
         return model_call
 
     async def send_result_message(

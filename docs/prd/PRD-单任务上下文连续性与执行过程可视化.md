@@ -325,7 +325,7 @@
 
 ---
 
-## 16. 实施状态（2026-08-10 核对）
+## 16. 实施状态（2026-08-27 核对）
 
 核心功能已落地，数据模型按 §8.4 决策执行。
 
@@ -340,12 +340,13 @@
 | FR5 失败/重试读取历史 | ✅ | `failure_notes` 参数贯穿，恢复时 `build_trace_artifact` 提供历史轨迹 |
 | FR6 摘要裁剪 | ✅ | `MAX_CONTEXT_ITEMS=8` + `MAX_CONTEXT_TEXT=900` + `MAX_SUMMARY_TEXT=1800` 两级压缩 |
 | FR7 前端轨迹视图 | ✅ | `frontend/src/components/tasks/task-detail-page.tsx` 的 `ExecutionTracePanel`（摘要卡 + 时间线） |
+| FR8 WebSocket 实时推送 | ✅ | `websocket/events.py` 新增 `task.trace_updated`；`orchestrator.py` 在 `save_task_step`/`save_model_call` 后经 `_emit_trace_update` 广播轻量增量轨迹事件；前端 `use-tasks.ts` `useTaskDetail` 直接 `mergeTraceEvent` 合并（保留 HTTP 兜底刷新） |
+| FR9 开发者/用户两层视图 | ✅ | `task-detail-page.tsx` 头部「开发者视图/用户视图」切换；用户视图隐藏 Token 指标、模型调用日志、上下文快照、步骤输入/输出与轨迹明细 |
 | FR10 敏感信息脱敏 | ⚠️ 结构性 | 密钥字段不进 trace（`ModelCall` 快照仅 model/provider/status/latency/error）；但工具参数原文会进 `recent_tool_results`，无内容级 mask/redact |
 
-### 未落地（P1 级增强，不影响主功能）
+### 未落地（后续增强）
 
-- **FR8 WebSocket 实时推送**：后端 WebSocket 无 trace 广播，前端无 ws 订阅；AC6 由前端 HTTP 轮询（`use-tasks.ts` `scheduleRefresh` + `TASK_REFRESH_DELAY_MS`）达成。
-- **FR9 开发者/用户两层视图**：当前前端单层展示，无独立的「开发者可读完整结构化轨迹」入口。
+- 无。FR1–FR9 已全部落地；FR10 为结构性部分脱敏，内容级 redact 留作后续安全增强。
 
 ### 数据模型决策落地
 

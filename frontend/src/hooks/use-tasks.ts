@@ -11,7 +11,7 @@ import type {
   Workspace,
 } from "@/types/task"
 import { TASK_LIST_LIMIT, TASK_REFRESH_DELAY_MS } from "@/lib/constants"
-import { shouldApplyTaskStatus } from "@/lib/task-utils"
+import { mergeTraceEvent, shouldApplyTaskStatus } from "@/lib/task-utils"
 import { useWorkspaceSocket } from "@/hooks/use-workspace-socket"
 import {
   WORKSPACE_SWITCH_EVENT,
@@ -268,6 +268,23 @@ export function useTaskDetail(taskId: number) {
         e.payload.task_id === taskId
       ) {
         scheduleRefresh()
+      }
+
+      if (
+        e.type === "task.trace_updated" &&
+        e.payload.task_id === taskId
+      ) {
+        setTask((current) =>
+          current
+            ? {
+                ...current,
+                execution_trace: mergeTraceEvent(
+                  current.execution_trace,
+                  e.payload.event,
+                ),
+              }
+            : current,
+        )
       }
 
       if (e.type === "error") setError(e.payload.message)

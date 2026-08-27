@@ -7,6 +7,7 @@ EventType = Literal[
     "agent.status_changed",
     "task.status_changed",
     "task.step_changed",
+    "task.trace_updated",
     "model.call_finished",
     "integration.status_changed",
     "integration.heartbeat",

@@ -50,4 +50,31 @@ describe("task-utils", () => {
       assert.equal(mod.shouldApplyTaskStatus(current, next), false)
     })
   })
+
+  describe("mergeTraceEvent", () => {
+    const stepEvent = { source_type: "task_step", source_id: 7, status: "running" }
+
+    it("appends an event when its key is not present", () => {
+      const result = mod.mergeTraceEvent([], stepEvent)
+      assert.equal(result.length, 1)
+      assert.equal(result[0].source_id, 7)
+    })
+
+    it("replaces an existing event with the same source_type and source_id", () => {
+      const current = [{ source_type: "task_step", source_id: 7, status: "running" }]
+      const result = mod.mergeTraceEvent(current, { ...stepEvent, status: "completed" })
+      assert.equal(result.length, 1)
+      assert.equal(result[0].status, "completed")
+    })
+
+    it("keeps unrelated events untouched", () => {
+      const current = [
+        { source_type: "task_step", source_id: 1, status: "completed" },
+        { source_type: "model_call", source_id: 2, status: "completed" },
+      ]
+      const result = mod.mergeTraceEvent(current, stepEvent)
+      assert.equal(result.length, 3)
+      assert.equal(result[2].source_id, 7)
+    })
+  })
 })

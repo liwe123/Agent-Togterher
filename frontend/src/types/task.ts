@@ -80,6 +80,10 @@ export type TaskWorkspaceEvent =
   | { type: "task.status_changed"; payload: TaskStatusEvent }
   | { type: "task.step_changed"; payload: Partial<TaskStep> & { task_id: number } }
   | { type: "model.call_finished"; payload: Partial<ModelCall> & { task_id?: number } }
+  | {
+      type: "task.trace_updated"
+      payload: { task_id: number; event: TaskTraceEvent }
+    }
   | { type: "error"; payload: { message: string } }
   | {
       type: "message.created" | "agent.status_changed"

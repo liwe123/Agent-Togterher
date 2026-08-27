@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import {
   Activity,
   AlertCircle,
@@ -55,6 +56,8 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
     error,
     retry,
   } = useTaskDetail(taskId)
+  const [viewMode, setViewMode] = useState<"developer" | "user">("developer")
+  const developer = viewMode === "developer"
 
   return (
     <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[76px_minmax(0,1fr)]">
@@ -84,17 +87,20 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
                   </h1>
                 </div>
               </div>
-              <Badge
-                className="connection-chip mt-9"
-                variant={connectionStatus === "offline" ? "destructive" : "outline"}
-              >
-                <span
-                  className="status-dot size-1.5 rounded-full"
-                  data-status={connectionStatus}
-                  aria-hidden="true"
-                />
-                {connectionLabels[connectionStatus]}
-              </Badge>
+              <div className="mt-9 flex flex-col items-end gap-2.5">
+                <ViewModeToggle viewMode={viewMode} onChange={setViewMode} />
+                <Badge
+                  className="connection-chip"
+                  variant={connectionStatus === "offline" ? "destructive" : "outline"}
+                >
+                  <span
+                    className="status-dot size-1.5 rounded-full"
+                    data-status={connectionStatus}
+                    aria-hidden="true"
+                  />
+                  {connectionLabels[connectionStatus]}
+                </Badge>
+              </div>
             </header>
 
             {isLoading ? (
@@ -105,17 +111,55 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
               <>
                 {error ? <RealtimeError error={error} onRetry={retry} /> : null}
                 <TaskOverview task={task} />
-                <TaskMetrics task={task} />
+                <TaskMetrics task={task} developer={developer} />
                 <TaskReplayPlayer taskId={task.id} onTaskResumed={retry} />
-                <ExecutionTracePanel task={task} />
+                <ExecutionTracePanel task={task} developer={developer} />
                 <OriginalInput task={task} />
-                <TaskSteps steps={task.task_steps} />
-                <ModelCallLogs calls={task.model_calls} />
+                <TaskSteps steps={task.task_steps} developer={developer} />
+                {developer ? <ModelCallLogs calls={task.model_calls} /> : null}
               </>
             )}
           </div>
         </main>
       </ErrorBoundary>
+    </div>
+  )
+}
+
+function ViewModeToggle({
+  viewMode,
+  onChange,
+}: {
+  viewMode: "developer" | "user"
+  onChange: (mode: "developer" | "user") => void
+}) {
+  const options = [
+    { value: "developer", label: "开发者视图" },
+    { value: "user", label: "用户视图" },
+  ] as const
+  return (
+    <div
+      role="tablist"
+      aria-label="任务详情视图切换"
+      className="flex rounded-full border border-border/70 bg-secondary/40 p-0.5"
+    >
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          role="tab"
+          aria-selected={viewMode === option.value}
+          onClick={() => onChange(option.value)}
+          className={cn(
+            "rounded-full px-3 py-1 text-xs font-medium transition-colors",
+            viewMode === option.value
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {option.label}
+        </button>
+      ))}
     </div>
   )
 }
@@ -206,11 +250,13 @@ function OverviewItem({
   )
 }
 
-function TaskMetrics({ task }: { task: TaskDetail }) {
+function TaskMetrics({ task, developer }: { task: TaskDetail; developer: boolean }) {
   const metrics = [
     { label: "执行步骤", value: formatTokens(task.task_steps.length), icon: ListChecks },
     { label: "模型调用", value: formatTokens(task.model_calls.length), icon: ServerCog },
-    { label: "Token 使用", value: formatTokens(task.token_usage.total_tokens), icon: Coins },
+    ...(developer
+      ? [{ label: "Token 使用", value: formatTokens(task.token_usage.total_tokens), icon: Coins }]
+      : []),
     { label: "总耗时", value: formatDuration(task.duration_ms), icon: Timer },
   ]
 
@@ -236,7 +282,7 @@ function TaskMetrics({ task }: { task: TaskDetail }) {
   )
 }
 
-function ExecutionTracePanel({ task }: { task: TaskDetail }) {
+function ExecutionTracePanel({ task, developer }: { task: TaskDetail; developer: boolean }) {
   const trace = task.execution_trace
   return (
     <section className="console-panel overflow-hidden rounded-3xl border border-border/70 bg-card/90 shadow-sm">
@@ -247,7 +293,11 @@ function ExecutionTracePanel({ task }: { task: TaskDetail }) {
       />
       <div className="grid gap-5 p-5 sm:p-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div className="min-w-0 space-y-3">
-          <TraceSummaryCard traceSummary={task.trace_summary} contextSnapshot={task.context_snapshot} />
+          <TraceSummaryCard
+            traceSummary={task.trace_summary}
+            contextSnapshot={task.context_snapshot}
+            developer={developer}
+          />
         </div>
         <div className="min-w-0">
           <div className="rounded-2xl border border-border/70 bg-secondary/30 p-4">
@@ -256,7 +306,7 @@ function ExecutionTracePanel({ task }: { task: TaskDetail }) {
               {trace.length === 0 ? (
                 <p className="py-8 text-center text-xs text-muted-foreground">当前任务尚未产生轨迹事件。</p>
               ) : (
-                trace.map((item) => <TraceEventRow key={`${item.source_type ?? 'trace'}-${item.source_id ?? item.created_at}-${item.title}`} event={item} />)
+                trace.map((item) => <TraceEventRow key={`${item.source_type ?? 'trace'}-${item.source_id ?? item.created_at}-${item.title}`} event={item} developer={developer} />)
               )}
             </div>
           </div>
@@ -269,9 +319,11 @@ function ExecutionTracePanel({ task }: { task: TaskDetail }) {
 function TraceSummaryCard({
   traceSummary,
   contextSnapshot,
+  developer,
 }: {
   traceSummary: string | null
   contextSnapshot: string | null
+  developer: boolean
 }) {
   return (
     <div className="space-y-3.5">
@@ -279,15 +331,17 @@ function TraceSummaryCard({
         <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">轨迹摘要</p>
         <pre className="max-h-56 overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground scrollbar-thin">{traceSummary ?? "暂无轨迹摘要。"}</pre>
       </div>
-      <div className="rounded-2xl border border-border/70 bg-secondary/30 p-4.5">
-        <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">模型上下文快照</p>
-        <pre className="max-h-[22rem] overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground scrollbar-thin">{contextSnapshot ?? "暂无上下文快照。"}</pre>
-      </div>
+      {developer ? (
+        <div className="rounded-2xl border border-border/70 bg-secondary/30 p-4.5">
+          <p className="mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">模型上下文快照</p>
+          <pre className="max-h-[22rem] overflow-auto whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-foreground scrollbar-thin">{contextSnapshot ?? "暂无上下文快照。"}</pre>
+        </div>
+      ) : null}
     </div>
   )
 }
 
-function TraceEventRow({ event }: { event: TaskTraceEvent }) {
+function TraceEventRow({ event, developer }: { event: TaskTraceEvent; developer: boolean }) {
   return (
     <article className="rounded-2xl border border-border/70 bg-card/90 p-3.5 shadow-sm transition-all hover:border-primary/30">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -298,7 +352,7 @@ function TraceEventRow({ event }: { event: TaskTraceEvent }) {
         <Badge variant="outline" className="shrink-0 rounded-full text-[10px]">{event.status ?? "trace"}</Badge>
       </div>
       <p className="mt-2 text-xs leading-relaxed text-foreground/90">{event.summary}</p>
-      {event.detail ? <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-xl border border-border/60 bg-secondary/40 p-2.5 font-mono text-[11px] leading-relaxed scrollbar-thin">{event.detail}</pre> : null}
+      {developer && event.detail ? <pre className="mt-2 max-h-32 overflow-auto whitespace-pre-wrap rounded-xl border border-border/60 bg-secondary/40 p-2.5 font-mono text-[11px] leading-relaxed scrollbar-thin">{event.detail}</pre> : null}
     </article>
   )
 }
@@ -320,7 +374,7 @@ function OriginalInput({ task }: { task: TaskDetail }) {
   )
 }
 
-function TaskSteps({ steps }: { steps: TaskStep[] }) {
+function TaskSteps({ steps, developer }: { steps: TaskStep[]; developer: boolean }) {
   return (
     <section className="console-panel overflow-hidden rounded-3xl border border-border/70 bg-card/90 shadow-sm">
       <SectionHeader
@@ -377,14 +431,16 @@ function TaskSteps({ steps }: { steps: TaskStep[] }) {
                   <TaskStatusBadge status={step.status} />
                 </div>
 
-                <div className="mt-3.5 grid gap-3 xl:grid-cols-2">
-                  <StepPayload label="步骤输入" value={step.input} />
-                  <StepPayload
-                    label={step.status === "failed" ? "错误输出" : "步骤输出"}
-                    value={step.output}
-                    isError={step.status === "failed"}
-                  />
-                </div>
+                {developer ? (
+                  <div className="mt-3.5 grid gap-3 xl:grid-cols-2">
+                    <StepPayload label="步骤输入" value={step.input} />
+                    <StepPayload
+                      label={step.status === "failed" ? "错误输出" : "步骤输出"}
+                      value={step.output}
+                      isError={step.status === "failed"}
+                    />
+                  </div>
+                ) : null}
               </div>
             </article>
           ))}

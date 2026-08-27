@@ -19,4 +19,27 @@ function shouldApplyTaskStatus<
   return taskStatusRank(next.status) >= taskStatusRank(current.status)
 }
 
-export { shouldApplyTaskStatus, taskStatusRank, taskTimestamp, terminalTaskStatuses }
+interface TraceEventLike {
+  source_type: string | null
+  source_id: number | null
+}
+
+function traceEventKey(event: TraceEventLike): string {
+  return `${event.source_type ?? "trace"}-${event.source_id ?? "none"}`
+}
+
+function mergeTraceEvent<T extends TraceEventLike>(current: T[], incoming: T): T[] {
+  const key = traceEventKey(incoming)
+  const index = current.findIndex((event) => traceEventKey(event) === key)
+  if (index === -1) return [...current, incoming]
+  return current.map((event, i) => (i === index ? incoming : event))
+}
+
+export {
+  mergeTraceEvent,
+  shouldApplyTaskStatus,
+  taskStatusRank,
+  taskTimestamp,
+  terminalTaskStatuses,
+  traceEventKey,
+}
