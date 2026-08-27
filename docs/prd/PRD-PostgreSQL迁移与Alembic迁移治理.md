@@ -1,6 +1,6 @@
 # PRD：PostgreSQL 迁移与 Alembic 迁移治理
 
-> 类型：新需求（Requirement）｜状态：待实施｜目标：引入 Alembic 做可审计的 schema 演进，并将领域事实源从 SQLite 迁移至 PostgreSQL，为后续 TaskService 拆分、独立 Worker 与事件总线提供可靠的持久化底座。
+> 类型：新需求（Requirement）｜状态：已完成（2026-08-21 上线，C-140 / 18fb247；生产默认 PostgreSQL + Alembic 治理）｜目标：引入 Alembic 做可审计的 schema 演进，并将领域事实源从 SQLite 迁移至 PostgreSQL，为后续 TaskService 拆分、独立 Worker 与事件总线提供可靠的持久化底座。
 
 ---
 

@@ -1,8 +1,8 @@
 # Agent Console 项目接力文档 (HANDOFF)
 
-> 更新时间：2026-08-15  
+> 更新时间：2026-08-27  
 > 工作目录：`E:\Agents`  
-> 当前阶段：**Phase 4（产品化）已全部圆满完成并全量推送到远程仓库！**
+> 当前阶段：**Phase 5（外部接入与治理深化）进行中：PostgreSQL 已上线、外部节点桥接与配额熔断已落地，欠账清理批次（C-155~C-165）收尾中。**
 
 ---
 
@@ -48,15 +48,15 @@
                 ▼                             ▼
 ┌───────────────────────────────┐ ┌───────────────────────────┐
 │     SQLAlchemy 数据持久层     │ │    独立 Worker 消费进程   │
-│  - 18 张领域数据表            │ │  - app/worker.py          │
-│  - SQLite (生产可切 PostgreSQL)│ │  - worker_concurrency 控制 │
+│  - 20 张领域数据表            │ │  - app/worker.py          │
+│  - PostgreSQL (Alembic 治理)  │ │  - worker_concurrency 控制 │
 │  - 默认工作区与 6 个预设 Agent │ │  - 租约心跳与死信重试      │
 └───────────────────────────────┘ └───────────────────────────┘
 ```
 
 ---
 
-## 2. 数据库表清单 (共 18 张)
+## 2. 数据库表清单 (共 20 张)
 
 | 表名 | 模块 | 核心作用 |
 |---|---|---|
@@ -78,6 +78,8 @@
 | `model_calls` | 审计 | LLM 调用统计 (`prompt_tokens`, `completion_tokens`, `cost`, `latency_ms`) |
 | `provider_credentials` | 密钥 | 模型厂商 API Key 存储（掩码管理） |
 | `custom_model_configs` | 模型 | 自定义模型与 Fallback 容灾映射 |
+| `integration_nodes` | 外部接入 | 外部 Agent 集成节点注册（Cursor / Codex 桥接） |
+| `refresh_tokens` (✨ 新增) | 认证 | 服务端 refresh token 记录与吊销 (`jti`, `expires_at`, `revoked_at`) |
 
 ---
 
@@ -96,8 +98,8 @@
 
 ## 4. 质量与验证基准
 
-- **后端自动化测试**：23 个测试模块，共计 **106 tests passed**（100% 通过）。
-- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 28 passed，`next build` 12 个页面全部编译成功。
+- **后端自动化测试**：34 个测试模块，共计 **168 tests passed**（100% 通过；SQLite 内存库跑测，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性）。
+- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 28 passed，`next build` 12+ 页面全部编译成功。
 - **文档自动化体系**：14 列变更记录全量无空值，`PRD.md`、`Agent_Console_变更追踪.xlsx` 与 `PRD.html` 自动化生成并与 Git 历史完全同步。
 
 ---
