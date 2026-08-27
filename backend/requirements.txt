@@ -9,3 +9,4 @@ redis>=5.2,<8.0
 litellm>=1.60,<2.0
 PyYAML>=6.0,<7.0
 PyJWT>=2.8,<3.0
+cryptography>=43,<50

@@ -308,15 +308,28 @@ def get_api_key_value(provider: str) -> str | None:
 
 
 async def get_db_api_keys(session) -> dict[str, str]:
-    """Load all provider API keys stored in the database."""
+    """Load all provider API keys stored in the database.
+
+    Envelope-encrypted values (``v1:`` prefix) are decrypted; legacy plaintext
+    values pass through. A value that cannot be decrypted is skipped (logged)
+    so one corrupted key does not break every provider.
+    """
     from app.models import ProviderCredential
     from sqlalchemy import select as sa_select
+    from app.core.crypto import decrypt_api_key
     rows = (await session.execute(sa_select(ProviderCredential))).scalars().all()
-    return {
-        normalize_provider(row.provider): row.api_key
-        for row in rows
-        if row.api_key.strip()
-    }
+    keys: dict[str, str] = {}
+    for row in rows:
+        if not row.api_key.strip():
+            continue
+        try:
+            keys[normalize_provider(row.provider)] = decrypt_api_key(row.api_key)
+        except ValueError:
+            logger.warning(
+                "Skipping undecryptable provider API key; re-enter it in settings",
+                extra={"provider": row.provider},
+            )
+    return keys
 
 
 async def get_db_custom_models(session) -> dict[str, dict]:

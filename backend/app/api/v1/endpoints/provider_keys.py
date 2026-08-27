@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import AppError
 from app.api.rbac_compat import enforce_global_role
+from app.core.crypto import decrypt_api_key, encrypt_api_key
 from app.db.session import get_db
 from app.models import ProviderCredential
 from app.schemas import ProviderKeyUpsert, ProviderKeyValue, ProviderStatusInfo, SuccessResponse
@@ -73,7 +74,7 @@ async def get_provider_key(
             data=ProviderKeyValue(
                 provider=canonical_provider,
                 configured=True,
-                masked_key=_mask_key(row.api_key),
+                masked_key=_mask_key(decrypt_api_key(row.api_key)),
                 source="database",
             )
         )
@@ -120,11 +121,11 @@ async def upsert_provider_key(
         None,
     )
     if row is None:
-        row = ProviderCredential(provider=canonical_provider, api_key=key)
+        row = ProviderCredential(provider=canonical_provider, api_key=encrypt_api_key(key))
         session.add(row)
     else:
         row.provider = canonical_provider
-        row.api_key = key
+        row.api_key = encrypt_api_key(key)
 
     await session.commit()
     await session.refresh(row)
