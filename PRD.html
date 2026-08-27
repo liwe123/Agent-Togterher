@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>24</b> 份</span>
-        <span>变更记录 <b>166</b> 条</span>
-        <span>生成于 2026-08-27 22:01</span>
+        <span>变更记录 <b>168</b> 条</span>
+        <span>生成于 2026-08-27 22:21</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -2904,13 +2904,13 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>LI</td>
 <td>Optimization</td>
 <td>文档、其他</td>
-<td>docs: 回写滞后文档并补登 8 项提交变更表记录</td>
+<td>回写滞后文档并补登历史提交变更表：HANDOFF 更新为 20 表/168 测试/PostgreSQL 现状并补 refresh_tokens、integration_nodes 两表；两份已上线 PRD 状态由待实施改为已完成；项目计划数据层描述改 PostgreSQL；CURATED 补登 C-155~C-163 共 8 项提交</td>
 <td>-</td>
 <td>-</td>
 <td>否</td>
 <td>否</td>
-<td>-</td>
-<td>-</td>
+<td>重跑 generate_change_log.py + build_prd_html.py：163 行/23 份 PRD 生成成功</td>
+<td>纯文档与生成脚本同步，无代码行为变化</td>
 </tr>
 <tr>
 <td>2026-08-27 21:54</td>
@@ -2925,8 +2925,8 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>websocket/events.py 加 task.trace_updated；execution_trace.py 提取 step_trace_event/call_trace_event 单事件构建；orchestrator.py _emit_trace_update 广播</td>
 <td>否</td>
 <td>否</td>
-<td>后端 168 passed；前端 31 passed + lint 0 error + build 通过</td>
-<td>PRD-单任务上下文连续性 §16 FR8/FR9 更新为已落地</td>
+<td>后端 168 passed；前端 31 passed + lint 0 error + build 通过；浏览器 A/B：开发者视图全量展示，用户视图隐藏 Token/成本/回放/快照/载荷</td>
+<td>PRD-单任务上下文连续性 §16 FR8/FR9 更新为已落地；子 Agent 独立验收通过；A/B 发现回放器漏门控由 3b07f14 修复</td>
 </tr>
 <tr>
 <td>2026-08-27 22:00</td>
@@ -2942,7 +2942,39 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否（复用 provider_credentials Text 列，v1: 前缀，零迁移）</td>
 <td>否（存量明文兼容）</td>
 <td>后端 175 passed（新增 7）；端点掩码/存在性测试通过</td>
-<td>PRD: docs/prd/PRD-ProviderKey信封加密.md；生产须显式配置 jwt_secret_key，轮换主密钥需重录 Key；Docker 需重建纳入 cryptography</td>
+<td>PRD: docs/prd/PRD-ProviderKey信封加密.md；生产须显式配置 jwt_secret_key，轮换主密钥需重录 Key；Docker 需重建纳入 cryptography；子 Agent 独立验收通过</td>
+</tr>
+<tr>
+<td>2026-08-27 22:01</td>
+<td>C-167</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/854078d">854078d</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>登记 C-164/C-165 并重跑生成脚本：CURATED 补登任务轨迹双层视图与 Provider Key 信封加密两条 Requirement，重生改动表、xlsx 与 PRD.html（24 份）</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>166 行/24 份 PRD 生成成功</td>
+<td>纯文档与生成脚本同步</td>
+</tr>
+<tr>
+<td>2026-08-27 22:20</td>
+<td>C-168</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/3b07f14">3b07f14</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>前端</td>
+<td>修复用户视图遗漏隐藏任务时序回放器：浏览器 A/B 验证发现用户视图仍显示回放器（含累计成本与输入/输出 Payload），将其纳入开发者视图门控</td>
+<td>task-detail-page.tsx 回放器改为仅开发者视图渲染</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>浏览器 A/B 复验：用户视图回放器/成本/载荷全部隐藏；前端 31 passed + lint 0 + build 通过</td>
+<td>C-164 FR9 收尾；A/B 验证发现的展示层遗漏</td>
 </tr>
 </tbody>
 </table></div>
