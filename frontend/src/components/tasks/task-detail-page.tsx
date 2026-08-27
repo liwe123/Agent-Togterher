@@ -112,7 +112,9 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
                 {error ? <RealtimeError error={error} onRetry={retry} /> : null}
                 <TaskOverview task={task} />
                 <TaskMetrics task={task} developer={developer} />
-                <TaskReplayPlayer taskId={task.id} onTaskResumed={retry} />
+                {developer ? (
+                  <TaskReplayPlayer taskId={task.id} onTaskResumed={retry} />
+                ) : null}
                 <ExecutionTracePanel task={task} developer={developer} />
                 <OriginalInput task={task} />
                 <TaskSteps steps={task.task_steps} developer={developer} />
