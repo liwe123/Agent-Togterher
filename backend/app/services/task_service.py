@@ -92,6 +92,33 @@ class TaskService:
             await self._session.rollback()
         return None
 
+    async def renew(self, item_id: int, lease_token: str, *, lease_seconds: int) -> bool:
+        """Extend the lease of an in-flight queue item (C-170).
+
+        Workers call this periodically while a task is still running so that
+        long-running executions are not mistaken for a crashed worker and
+        re-queued by :meth:`recover`.
+
+        Returns ``False`` when the lease was lost — the item was already
+        finished, re-queued, or stolen by another worker — which tells the
+        caller it must stop touching the task.
+        """
+        now = utc_now()
+        renewed = await self._session.execute(
+            update(TaskQueueItem)
+            .where(
+                TaskQueueItem.id == item_id,
+                TaskQueueItem.status == "leased",
+                TaskQueueItem.lease_token == lease_token,
+            )
+            .values(
+                lease_expires_at=now + timedelta(seconds=lease_seconds),
+                updated_at=now,
+            )
+        )
+        await self._session.commit()
+        return renewed.rowcount == 1
+
     async def complete(self, item_id: int, lease_token: str) -> bool:
         return await self._finish(item_id, lease_token, status="completed")
 

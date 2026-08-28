@@ -96,3 +96,65 @@ async def test_queue_recovers_expired_lease(queue_session) -> None:
     assert recovered is not None
     assert recovered.status == "queued"
     assert recovered.lease_token is None
+
+
+# --- C-170: lease renewal -------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_renew_extends_lease_and_blocks_recovery(queue_session) -> None:
+    """A renewed in-flight item must survive a recovery sweep."""
+    task = await create_task(queue_session)
+    service = TaskService(queue_session)
+    await service.enqueue(task)
+    claimed = await service.claim_next()
+    assert claimed is not None and claimed.lease_token is not None
+
+    # Force the lease to the brink of expiry, as a long-running task would.
+    claimed.lease_expires_at = utc_now() + timedelta(seconds=1)
+    await queue_session.commit()
+
+    assert await service.renew(claimed.id, claimed.lease_token, lease_seconds=600)
+    assert await service.recover() == 0
+
+    renewed = await queue_session.get(TaskQueueItem, claimed.id)
+    assert renewed is not None
+    assert renewed.status == "leased"
+    assert renewed.lease_expires_at > utc_now() + timedelta(seconds=500)
+    # A renewed lease is still finishable by its owner.
+    assert await service.complete(claimed.id, claimed.lease_token)
+
+
+@pytest.mark.asyncio
+async def test_renew_rejects_stale_or_finished_items(queue_session) -> None:
+    task = await create_task(queue_session)
+    service = TaskService(queue_session)
+    await service.enqueue(task)
+    claimed = await service.claim_next()
+    assert claimed is not None and claimed.lease_token is not None
+
+    # Wrong token: another worker owns the item.
+    assert not await service.renew(claimed.id, "not-my-token", lease_seconds=600)
+
+    # Already completed: nothing left to renew.
+    assert await service.complete(claimed.id, claimed.lease_token)
+    assert not await service.renew(claimed.id, claimed.lease_token, lease_seconds=600)
+
+
+@pytest.mark.asyncio
+async def test_unrenewed_lease_is_reclaimed_by_recovery(queue_session) -> None:
+    """Control case: without renewal the expired item goes back to the queue."""
+    task = await create_task(queue_session)
+    service = TaskService(queue_session)
+    await service.enqueue(task)
+    claimed = await service.claim_next()
+    assert claimed is not None
+
+    claimed.lease_expires_at = utc_now() - timedelta(seconds=1)
+    await queue_session.commit()
+
+    assert await service.recover() == 1
+    requeued = await queue_session.get(TaskQueueItem, claimed.id)
+    assert requeued is not None
+    assert requeued.status == "queued"
+    assert requeued.lease_token is None

@@ -10,6 +10,7 @@ covered separately by ``test_alembic_migrations.py``.
 
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncIterator
 
 import pytest
@@ -22,6 +23,25 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.db.base import Base
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    """Pin the unit-test environment to a hermetic single-instance setup.
+
+    C-169 turns on the Redis event bus and queue-based execution by deployment
+    default. Unit tests must stay runnable with no external service and with
+    the in-process dispatch semantics they were written against, so we pin the
+    three switches here — before any test module imports ``app.main`` (which
+    builds the event relay at import time).
+
+    ``setdefault`` is deliberate: a test run that *wants* to exercise the real
+    bus (e.g. an integration job) can still set the env vars explicitly. The
+    bus-specific tests in ``test_distributed_event_bus.py`` and
+    ``test_event_relay.py`` patch ``get_settings`` directly and are unaffected.
+    """
+    os.environ.setdefault("EVENT_BUS_ENABLED", "false")
+    os.environ.setdefault("DISTRIBUTED_LOCK_ENABLED", "false")
+    os.environ.setdefault("TASK_EXECUTION_MODE", "inline")
 
 
 @pytest_asyncio.fixture
