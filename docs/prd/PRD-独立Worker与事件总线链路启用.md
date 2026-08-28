@@ -1,6 +1,6 @@
 # PRD：独立 Worker 与事件总线链路启用
 
-> 类型：技术补完（Requirement）｜状态：实施中｜编号：**C-169**｜日期：2026-08-28
+> 类型：技术补完（Requirement）｜状态：实施中｜编号：**C-170**｜日期：2026-08-28
 >
 > 目标：把「**代码已经写完、但从来没有真正启用**」的分布式调度与事件链路接通 —— 让独立 Worker 进程真正消费持久化任务队列，让 Redis 事件总线真正承担跨实例 WebSocket 广播，从而使项目文档中 Phase 2「持久化任务队列 / 独立 Worker」与 Phase 3「事件总线 / 多实例 WebSocket 解耦」的「✅ 已达成」断言成立。
 >
@@ -236,7 +236,7 @@ Worker 进程、Redis 事件总线、跨实例中继（`relay.py` + `distributed
 
 | 变量 | 默认值（代码） | compose 注入值 | 作用域 | 说明 |
 |------|----------------|----------------|--------|------|
-| `TASK_EXECUTION_MODE` | `queue`（C-169 后） | 继承默认 | backend | 设 `inline` 即回到 API 进程内执行 |
+| `TASK_EXECUTION_MODE` | `queue`（C-170 后） | 继承默认 | backend | 设 `inline` 即回到 API 进程内执行 |
 | `EVENT_BUS_ENABLED` | `False`（代码默认） | `${EVENT_BUS_ENABLED:-true}` | backend + worker | 编排中显式打开；设 `false` 关闭 |
 | `DISTRIBUTED_LOCK_ENABLED` | `False`（代码默认） | `${DISTRIBUTED_LOCK_ENABLED:-true}` | backend + worker | 预留开关，当前无消费方（§10.4） |
 | `REDIS_URL` | `redis://localhost:6379/0` | `${COMPOSE_REDIS_URL:-redis://redis:6379/0}` | backend + worker | 容器内需指向 `redis` 服务名 |
@@ -262,7 +262,7 @@ Worker 进程、Redis 事件总线、跨实例中继（`relay.py` + `distributed
 ### 9.4 配置样例（`.env.example`）
 
 ```dotenv
-# 任务执行模式：queue = 入持久化队列，由独立 Worker 消费（默认，C-169）
+# 任务执行模式：queue = 入持久化队列，由独立 Worker 消费（默认，C-170）
 #                inline = 在 API 进程内直接执行（回退 / 单机调试路径）
 TASK_EXECUTION_MODE=queue
 
@@ -283,7 +283,7 @@ DISTRIBUTED_LOCK_ENABLED=true
 `task_execution_mode` 默认值 `inline` → `queue`，并补注释说明两种模式语义：
 
 ```python
-# "queue"  = 任务入持久化队列，由独立 Worker 进程消费（默认，C-169）
+# "queue"  = 任务入持久化队列，由独立 Worker 进程消费（默认，C-170）
 # "inline" = 在 API 进程内直接执行（保留作回退与单机调试路径）
 task_execution_mode: str = "queue"
 ```
@@ -327,7 +327,7 @@ task_execution_mode: str = "queue"
 - **AC3（默认模式）**：不设置 `TASK_EXECUTION_MODE` 环境变量时，`get_settings().task_execution_mode == "queue"`；设置 `TASK_EXECUTION_MODE=inline` 时为 `"inline"`（FR6 双向可验）。
 - **AC4（队列被真正消费）**：向会话发送一条 `@Agent` 消息后，查询 `task_queue_items` 表：① 出现对应 `task_id` 的记录；② 执行期间观察到 `status='leased'` 且 `lease_token IS NOT NULL`、`lease_expires_at IS NOT NULL`；③ 任务完成后该记录 `status='completed'` 且 `lease_token IS NULL`。全程 `attempt_count` 不因重复消费而异常累加（同一任务一次执行 `attempt_count` 只 +1）。
 - **AC5（执行结果等价）**：queue 模式下 `tasks.status` 依次经过 `pending → running → completed`（或 `failed`），且 `task_steps` / `model_calls` 记录数量与 inline 模式**等价**；任务详情页的步骤、模型调用、轨迹三块内容均正常渲染。
-- **AC6（回退有效）**：设置 `TASK_EXECUTION_MODE=inline` 且不启动 Worker 的情况下，发送 `@Agent` 消息后任务能被正常执行完成，`task_queue_items` 中不出现 `leased` 状态记录；功能表现与 C-169 改动前一致。
+- **AC6（回退有效）**：设置 `TASK_EXECUTION_MODE=inline` 且不启动 Worker 的情况下，发送 `@Agent` 消息后任务能被正常执行完成，`task_queue_items` 中不出现 `leased` 状态记录；功能表现与 C-170 改动前一致。
 - **AC7（单实例推送不回退）**：单 backend 实例 + `EVENT_BUS_ENABLED=true` 时，WS 客户端仍能收到 `task.status_changed`、`task.step_changed`、`task.trace_updated`、`agent.status_changed`、`message.created` 五类事件；前端控制台/群聊/任务详情页实时更新无可见回退。
 - **AC8（跨实例广播）**：`docker compose up -d --scale backend=2` 起两个 backend 实例，对同一 workspace 建立两个 WS 连接并分别落到不同实例（可通过多次重连或日志 `instance_id` 确认落点）；由实例 A 触发的事件，实例 B 上的 WS 客户端**能收到**；同时客户端收到的同一事件**不重复**（信封 `origin_id == 自身 instance_id` 被丢弃）。
 - **AC9（关闭总线无回归）**：`EVENT_BUS_ENABLED=false` 时，本地 WS 推送正常，进程不建立 Redis Pub/Sub 连接；既有 `backend/tests/test_distributed_event_bus.py`（10 例）与 `backend/tests/test_event_relay.py`（11 例）**全部通过**。
@@ -335,7 +335,7 @@ task_execution_mode: str = "queue"
 - **AC11（本地混合模式）**：执行 `start-local.bat` 后出现名为 `Agent Console - Worker` 的独立窗口且进程存活；在该模式下发送 `@Agent` 消息，任务能被消费并正常完成（不出现"消息发出去但任务永远 pending"）。
 - **AC12（测试回归）**：全量后端测试（约 175 个测试函数 / 35 个测试文件）执行后**无新增失败**；因执行模式默认值变化而失败的用例必须在本次一并修正或显式标注。
 
-> **条件验收**：AC7 / AC8 的达成依赖 FR8。若 FR8 不在 C-169 内实施，则 AC7 / AC8 顺延至后续变更，并在变更追踪中把 `queue` 模式标注为"实时推送存在已知缺口"。
+> **条件验收**：AC7 / AC8 的达成依赖 FR8。若 FR8 不在 C-170 内实施，则 AC7 / AC8 顺延至后续变更，并在变更追踪中把 `queue` 模式标注为"实时推送存在已知缺口"。
 
 ---
 
@@ -399,7 +399,7 @@ task_execution_mode: str = "queue"
 
 **残余风险**：租约长度取 `max(lease_seconds, timeout_seconds)`，`timeout_seconds` 默认 1800s，`claim_next` 的 `lease_seconds` 默认 60s ⇒ 实际租约 30 分钟。而 `MODEL_REQUEST_TIMEOUT_SECONDS` 默认 60s，多步编排任务存在叠加超过 30 分钟的可能；一旦超时，条目会被重新抢占，**同一任务可能被并发执行两次**（Worker 侧无续租，`orchestrator` 侧另有自己的 `execution_token` 租约体系，两套互不同步）。
 
-**应对（部分已实施）**：续租三件套已在**同批的 C-170** 中落地：
+**应对（部分已实施）**：续租三件套已在**同批的 C-171** 中落地：
 
 1. `TaskService.renew(item_id, lease_token, lease_seconds)` —— 条件更新 `lease_expires_at`，租约丢失时返回 `False`；
 2. `worker._renew_lease(...)` 续租协程 —— 任务执行期间按 `WORKER_LEASE_RENEW_INTERVAL_SECONDS`（默认 30s）续期，租约丢失后自行退出，不再触碰该队列项；
@@ -443,16 +443,16 @@ Worker 在 compose 中复制了 backend 的环境变量清单，后续新增配�
 
 ## 16. 不在本次范围内（Out of Scope）
 
-以下事项均为后续变更（C-170 及之后），**明确排除以避免范围蔓延**：
+以下事项均为后续变更（C-171 及之后），**明确排除以避免范围蔓延**：
 
 | 事项 | 来源 | 归属 |
 |------|------|------|
-| `TaskService.renew()` 续租方法 + Worker 续租协程 + 定时 `recover()` sweep | 审查报告 §1.3 | ✅ **已由 C-170 同批实施**（见 §14 R4） |
+| `TaskService.renew()` 续租方法 + Worker 续租协程 + 定时 `recover()` sweep | 审查报告 §1.3 | ✅ **已由 C-171 同批实施**（见 §14 R4） |
 | 统一两套租约体系（`orchestrator.execution_token` vs `task_queue_items.lease_token`） | 审查报告 §1.3 / P1-2 | C-17x（架构决策，本批未解决） |
-| Antigravity 适配器（全仓 0 行代码） | 审查报告 §2.1 / P2-1 | C-170+ |
-| 配额限流由内存计数改为 Redis 固定窗口 / 令牌桶 | 审查报告 §2.3 / P2-2 | C-170+ |
-| CI 增加 `services: postgres:16` + `redis:7` 的 PG job、前端测试接入 CI | 审查报告 §5 / P1-4 | C-170+ |
-| 前端消费 `workspace.snapshot` 事件、断线重连后状态对账 | 审查报告 §2.2 / P1-3 | C-170+ |
+| Antigravity 适配器（全仓 0 行代码） | 审查报告 §2.1 / P2-1 | C-171+ |
+| 配额限流由内存计数改为 Redis 固定窗口 / 令牌桶 | 审查报告 §2.3 / P2-2 | C-171+ |
+| CI 增加 `services: postgres:16` + `redis:7` 的 PG job、前端测试接入 CI | 审查报告 §5 / P1-4 | C-171+ |
+| 前端消费 `workspace.snapshot` 事件、断线重连后状态对账 | 审查报告 §2.2 / P1-3 | C-171+ |
 | 事件总线的发布异常吞没 + 订阅重连退避（R2 中期方案） | §14 R2 | C-17x |
 | compose `user: "0:0"` 生产化治理（改 named volume） | 审查报告 §6 | 部署专项 |
 | 遗留 db 文件清理与 `.gitignore` | 审查报告 §6 / P2-3 | 卫生专项 |
@@ -469,6 +469,6 @@ Worker 在 compose 中复制了 backend 的环境变量清单，后续新增配�
 
 同时必须诚实：启用不等于完善。Redis 不可用时的降级（R2）、两套租约并存的架构债（R4 残余）、以及那个打开也不生效的分布式锁开关（R5），都是这次"接通"之后才暴露出来的真实边界。把它们写清楚、排进后续变更，比假装它们不存在更有价值。
 
-其中 R1（Worker 侧事件出口）与 R4（长任务续租）在复核后判定为**启用 queue 模式的阻断项与高危缺陷**，已分别由 FR8 与同批的 C-170 一并修复 —— 这不是范围蔓延，而是"接通"动作本身必须付的代价：不修，queue 模式就是个会让前端实时推送整体失效的回退。
+其中 R1（Worker 侧事件出口）与 R4（长任务续租）在复核后判定为**启用 queue 模式的阻断项与高危缺陷**，已分别由 FR8 与同批的 C-171 一并修复 —— 这不是范围蔓延，而是"接通"动作本身必须付的代价：不修，queue 模式就是个会让前端实时推送整体失效的回退。
 
 **一句话总结本次改动的判据**：`docker compose up` 之后有一个活的 Worker，`@Agent` 消息会走完 `queued → leased → completed`，两台 backend 能互相听见对方的事件 —— 而任何一个开关都能一键关回去。

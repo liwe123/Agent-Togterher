@@ -23,7 +23,7 @@ async def _renew_lease(
 ) -> None:
     """Keep a claimed queue item's lease alive until it finishes or is lost.
 
-    C-170: without this, any task running longer than its lease is re-queued
+    C-171: without this, any task running longer than its lease is re-queued
     mid-flight and executed a second time.
     """
     while True:
@@ -106,7 +106,7 @@ async def run_worker() -> None:
     async with AsyncSessionLocal() as session:
         await TaskService(session).recover()
 
-    # C-169：任务在 Worker 进程内执行，orchestrator 广播到的是本进程的
+    # C-170：任务在 Worker 进程内执行，orchestrator 广播到的是本进程的
     # websocket_manager。该进程没有任何 WS 客户端连接，若不注册分布式
     # publisher，任务事件会全部静默丢弃，前端实时推送整体失效。
     # build_event_relay 在 event_bus_enabled=False 时返回 Noop，零 Redis 依赖。
@@ -141,7 +141,7 @@ async def run_worker() -> None:
                 await asyncio.wait(active, return_when=asyncio.FIRST_COMPLETED)
             await asyncio.sleep(settings.worker_poll_interval_seconds)
 
-            # C-170: recovery used to run once at startup only, so a crashed
+            # C-171: recovery used to run once at startup only, so a crashed
             # worker's tasks stayed leased forever until the next restart.
             now = monotonic()
             if now - last_recover_at >= settings.worker_recover_interval_seconds:

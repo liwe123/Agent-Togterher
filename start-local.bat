@@ -91,7 +91,7 @@ if !ERRORLEVEL! EQU 0 (
 echo [5/7] Starting backend on host :8000 ...
 set "DATABASE_URL=%DB_URL%"
 set "MODELS_CONFIG_PATH=../config/models.yaml"
-:: C-169：与 docker-compose 对齐的默认链路——队列执行 + 事件总线 + 分布式锁
+:: C-170：与 docker-compose 对齐的默认链路——队列执行 + 事件总线 + 分布式锁
 set "TASK_EXECUTION_MODE=queue"
 set "EVENT_BUS_ENABLED=true"
 set "DISTRIBUTED_LOCK_ENABLED=true"
@@ -111,7 +111,7 @@ goto :apidone
 echo       Backend is healthy
 :apidone
 
-:: ---- [6/7] Start task worker on host (C-169) ----
+:: ---- [6/7] Start task worker on host (C-170) ----
 echo [6/7] Starting task worker on host ...
 start "Agent Console - Worker" /D backend cmd /k ""%PYTHON_BIN%" -m app.worker"
 echo       Worker window opened (consumes the persistent task queue)

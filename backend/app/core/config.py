@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     models_config_path: str = ""
     model_request_timeout_seconds: float = Field(default=60.0, gt=0)
     agent_tools_enabled: bool = True
-    # "queue"  = 任务入持久化队列，由独立 Worker 进程消费（默认，C-169）
+    # "queue"  = 任务入持久化队列，由独立 Worker 进程消费（默认，C-170）
     # "inline" = 在 API 进程内直接执行（保留作回退与单机调试路径）
     task_execution_mode: str = "queue"
     bridge_root_dir: str = "data/bridges"
@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     bridge_codex_timeout_seconds: int = Field(default=300, ge=1)
     worker_poll_interval_seconds: float = Field(default=1.0, gt=0)
     worker_concurrency: int = Field(default=2, ge=1, le=64)
-    # C-170：任务执行期间的租约续期间隔与失联回收间隔（秒）。
+    # C-171：任务执行期间的租约续期间隔与失联回收间隔（秒）。
     # 续期间隔须显著小于租约时长，否则长任务会被误判失联并重复消费。
     worker_lease_renew_interval_seconds: float = Field(default=30.0, gt=0)
     worker_recover_interval_seconds: float = Field(default=60.0, gt=0)

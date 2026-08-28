@@ -93,7 +93,7 @@ class TaskService:
         return None
 
     async def renew(self, item_id: int, lease_token: str, *, lease_seconds: int) -> bool:
-        """Extend the lease of an in-flight queue item (C-170).
+        """Extend the lease of an in-flight queue item (C-171).
 
         Workers call this periodically while a task is still running so that
         long-running executions are not mistaken for a crashed worker and

@@ -513,7 +513,7 @@ CURATED_BY_SUBJECT = {
     },
     "fix: 修复任务租约缺续租与失联回收不及时（C-170）": {
         "type": "BUG",
-        "content": "修复任务租约缺续租与失联回收不及时缺陷：TaskService 此前只有 enqueue/claim_next/complete/fail/recover，没有 renew，任何跑得比租约更久的任务都会在半途被 recover 判定为失联、重新入队并被执行第二次；且 recover 仅在 Worker 启动时调用一次，运行期不再回收，Worker 崩溃留下的过期租约会一直挂着直到下次重启。本次新增 renew 条件更新租约、Worker 执行期续租协程（租约丢失后自行退出不再触碰该队列项）、以及主循环定时失联回收；worker.py 同时落地 C-169 FR8 的 Worker 侧事件出口注册（queue 模式下缺此注册会导致任务事件全部静默丢弃、前端实时推送整体失效），故两处改动合并在本次提交",
+        "content": "修复任务租约缺续租与失联回收不及时缺陷：TaskService 此前只有 enqueue/claim_next/complete/fail/recover，没有 renew，任何跑得比租约更久的任务都会在半途被 recover 判定为失联、重新入队并被执行第二次；且 recover 仅在 Worker 启动时调用一次，运行期不再回收，Worker 崩溃留下的过期租约会一直挂着直到下次重启。本次新增 renew 条件更新租约、Worker 执行期续租协程（租约丢失后自行退出不再触碰该队列项）、以及主循环定时失联回收；worker.py 同时落地 C-170 FR8 的 Worker 侧事件出口注册（queue 模式下缺此注册会导致任务事件全部静默丢弃、前端实时推送整体失效），故两处改动合并在本次提交",
         "frontend": "无改动",
         "backend": "app/services/task_service.py 新增 renew()；app/worker.py 新增 _renew_lease 续租协程与 _sweep_expired_leases，_consume_once 执行期挂续租任务并在 finally 中取消，run_worker 主循环按间隔回收；config 新增 worker_lease_renew_interval_seconds(30) / worker_recover_interval_seconds(60)；新增 tests/test_worker_lease.py",
         "db": "否（复用 task_queue_items 既有租约字段）",
@@ -523,7 +523,7 @@ CURATED_BY_SUBJECT = {
     },
     "docs: 修正项目计划里程碑标记与表数量口径（C-171）": {
         "type": "Optimization",
-        "content": "修正项目计划里程碑标记与现状数据口径：Phase 2 标注为 C-169 起默认启用并补「可续租」；Phase 3 由「已达成」降级为「部分达成」并列出两项仍缺能力（前端未消费 workspace.snapshot、配额限流仍为单实例内存计数）；Phase 4 完成标志由 18 张表更正为实际 20 张表；新增落地状态核查说明并引用全仓库审查报告",
+        "content": "修正项目计划里程碑标记与现状数据口径：Phase 2 标注为 C-170 起默认启用并补「可续租」；Phase 3 由「已达成」降级为「部分达成」并列出两项仍缺能力（前端未消费 workspace.snapshot、配额限流仍为单实例内存计数）；Phase 4 完成标志由 18 张表更正为实际 20 张表；新增落地状态核查说明并引用全仓库审查报告",
         "frontend": "-",
         "backend": "-",
         "db": "否",
