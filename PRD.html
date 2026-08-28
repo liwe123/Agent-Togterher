@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>25</b> 份</span>
-        <span>变更记录 <b>172</b> 条</span>
-        <span>生成于 2026-08-28 21:35</span>
+        <span>变更记录 <b>173</b> 条</span>
+        <span>生成于 2026-08-28 21:40</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -3006,7 +3006,7 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否（不变更表结构）</td>
 <td>是（默认执行模式由 API 进程内 inline 改为队列 queue；未启 Worker 时任务会停在 pending。可通过 TASK_EXECUTION_MODE=inline 一键回退）</td>
 <td>后端全量 181 passed（含新增 6 例）；docker compose config --services 输出 5 服务含 worker；python -c 'import app.worker' 退出码 0；冒烟确认 get_settings() 生效 queue / event_bus_enabled=True / distributed_lock_enabled=True</td>
-<td>PRD: docs/prd/PRD-独立Worker与事件总线链路启用.md；R1（Worker 事件出口）经复核为启用 queue 的阻断项，已由 FR8 一并修复；DISTRIBUTED_LOCK_ENABLED 为预留开关，当前无消费方，不得写成「分布式锁已启用」</td>
+<td>PRD: docs/prd/PRD-独立Worker与事件总线链路启用.md；R1（Worker 事件出口）经复核为启用 queue 的阻断项，已由 FR8 一并修复；DISTRIBUTED_LOCK_ENABLED 为预留开关，当前无消费方，不得写成「分布式锁已启用」；容器实跑验证（AC1/AC4/AC8）因 Docker Desktop 守护进程未启动未执行，仅完成配置层验证（docker compose config --services 输出 5 服务含 worker）；守则验收：子 Agent 因平台限流（HTTP 429）连续派发失败，改由主 Agent 按同一清单自检通过</td>
 </tr>
 <tr>
 <td>2026-08-28 21:32</td>
@@ -3039,6 +3039,22 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否</td>
 <td>纯文档口径修正，无代码行为变化；后端全量 181 passed 不受影响</td>
 <td>纯文档口径修正，无代码行为变化；审查报告见 docs/代码与计划落地差距审查报告-20260828.md</td>
+</tr>
+<tr>
+<td>2026-08-28 21:37</td>
+<td>C-173</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/9d92867">9d92867</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、后端、部署、文档</td>
+<td>docs: 修正变更编号偏移（C-169~C-171 顺延为 C-170~C-172）并重跑生成脚本</td>
+<td>-</td>
+<td>backend/app/core；backend/app/services；backend/app/worker.py</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
 </tr>
 </tbody>
 </table></div>

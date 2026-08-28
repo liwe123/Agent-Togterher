@@ -509,7 +509,7 @@ CURATED_BY_SUBJECT = {
         "db": "否（不变更表结构）",
         "breaking": "是（默认执行模式由 API 进程内 inline 改为队列 queue；未启 Worker 时任务会停在 pending。可通过 TASK_EXECUTION_MODE=inline 一键回退）",
         "verify": "后端全量 181 passed（含新增 6 例）；docker compose config --services 输出 5 服务含 worker；python -c 'import app.worker' 退出码 0；冒烟确认 get_settings() 生效 queue / event_bus_enabled=True / distributed_lock_enabled=True",
-        "notes": "PRD: docs/prd/PRD-独立Worker与事件总线链路启用.md；R1（Worker 事件出口）经复核为启用 queue 的阻断项，已由 FR8 一并修复；DISTRIBUTED_LOCK_ENABLED 为预留开关，当前无消费方，不得写成「分布式锁已启用」",
+        "notes": "PRD: docs/prd/PRD-独立Worker与事件总线链路启用.md；R1（Worker 事件出口）经复核为启用 queue 的阻断项，已由 FR8 一并修复；DISTRIBUTED_LOCK_ENABLED 为预留开关，当前无消费方，不得写成「分布式锁已启用」；容器实跑验证（AC1/AC4/AC8）因 Docker Desktop 守护进程未启动未执行，仅完成配置层验证（docker compose config --services 输出 5 服务含 worker）；守则验收：子 Agent 因平台限流（HTTP 429）连续派发失败，改由主 Agent 按同一清单自检通过",
     },
     "fix: 修复任务租约缺续租与失联回收不及时（C-170）": {
         "type": "BUG",
