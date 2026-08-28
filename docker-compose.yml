@@ -36,7 +36,8 @@ services:
     # 桥接任务目录（data/bridges）。本地开发环境以 root 运行后端以规避该挂载权限限制。
     # 生产部署应移除此项并改用 named volume（宿主客户端改走 API 读取任务目录）。
     user: "0:0"
-    environment:
+    # 该 environment 块被 worker 服务以 YAML anchor 复用，改这里两边同步生效。
+    environment: &backend-env
       APP_NAME: ${APP_NAME:-Agent Console API}
       APP_ENV: ${APP_ENV:-development}
       API_V1_PREFIX: ${API_V1_PREFIX:-/api/v1}
@@ -45,6 +46,11 @@ services:
       AGENT_TOOLS_ENABLED: ${AGENT_TOOLS_ENABLED:-true}
       DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://agent:agent@db:5432/agent_console}
       REDIS_URL: ${COMPOSE_REDIS_URL:-redis://redis:6379/0}
+      # C-169：任务默认入持久化队列由独立 worker 消费；置 inline 可回退到 API 进程内执行
+      TASK_EXECUTION_MODE: ${TASK_EXECUTION_MODE:-queue}
+      # C-169：跨实例事件总线与分布式锁；置 false 可回退到单实例进程内广播
+      EVENT_BUS_ENABLED: ${EVENT_BUS_ENABLED:-true}
+      DISTRIBUTED_LOCK_ENABLED: ${DISTRIBUTED_LOCK_ENABLED:-true}
       LITELLM_DEFAULT_MODEL: ${LITELLM_DEFAULT_MODEL:-}
       MODELS_CONFIG_PATH: /app/config/models.yaml
       MODEL_REQUEST_TIMEOUT_SECONDS: ${MODEL_REQUEST_TIMEOUT_SECONDS:-60}
@@ -75,6 +81,25 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  # C-169：独立 Worker 进程，消费 task_queue_items 持久化队列。
+  # 此前 app/worker.py 已实现但无任何编排入口启动，Phase 2 的调度链路从未真正运行。
+  worker:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    user: "0:0"
+    environment: *backend-env
+    command: ["python", "-m", "app.worker"]
+    volumes:
+      - backend_data:/app/data
+      - ./data/bridges:/app/data/bridges
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
 
   frontend:
     build:
