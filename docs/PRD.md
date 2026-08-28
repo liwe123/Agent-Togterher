@@ -223,6 +223,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-PostgreSQL迁移与Alembic迁移治理.md](prd/PRD-PostgreSQL迁移与Alembic迁移治理.md) | PostgreSQL 迁移与 Alembic 迁移治理（Alembic 初始化、PG 事实源、下线 create_all 手写补列、数据迁移脚本、测试策略） | — | — |
 | [PRD-外部任务包元数据与状态机补齐.md](prd/PRD-外部任务包元数据与状态机补齐.md) | 外部任务包元数据（验收/路径/测试命令/预算）+ waiting_approval 状态机 + dispatch 异步化 + 取消接口 + 孤儿恢复 | — | — |
 | [PRD-ProviderKey信封加密.md](prd/PRD-ProviderKey信封加密.md) | Provider Key 信封加密（Fernet 静态加密、JWT 密钥派生主密钥、v1 前缀存量兼容、掩码解密） | — | — |
+| [PRD-独立Worker与事件总线链路启用.md](prd/PRD-独立Worker与事件总线链路启用.md) | 独立 Worker 与事件总线链路启用（compose worker 服务编排、task_execution_mode 默认 queue、Redis 事件总线与分布式锁开关注入、Worker 侧事件出口 FR8） | 0529d2c | C-169 |
 
 ---
 

@@ -501,6 +501,36 @@ CURATED_BY_SUBJECT = {
         "verify": "后端全量 115 passed；前端 build/test/lint 0 error；基线迁移 upgrade head 建出 19 张表 + alembic_version；autogenerate 无遗漏；downgrade 回退正常",
         "notes": "PRD: docs/prd/PRD-PostgreSQL迁移与Alembic迁移治理.md；子 Agent 独立验收通过",
     },
+    "feat: 启用独立 Worker 与事件总线调度链路（C-169）": {
+        "type": "Requirement",
+        "content": "启用独立 Worker 与事件总线调度链路：app/worker.py 此前已实现完整的队列消费逻辑，但全仓库无任何启动入口，Phase 2/3 的能力从未真正运行。本次新增 docker-compose worker 服务承载任务消费；task_execution_mode 默认值由 inline 改为 queue，任务经持久化队列由独立进程执行；compose 与本地脚本注入 EVENT_BUS_ENABLED / DISTRIBUTED_LOCK_ENABLED 打开 Redis 事件总线与分布式锁；Worker 进程内注册事件发布器，修复 queue 模式下任务事件静默丢弃导致前端实时推送整体失效的阻断问题",
+        "frontend": "无改动",
+        "backend": "app/core/config.py 默认 queue + 新增续租/回收间隔配置；app/worker.py run_worker 内 build_event_relay(...).start()/stop() 注册事件出口（FR8）；docker-compose.yml 新增 worker 服务并以 YAML anchor 复用 backend 环境变量；start-local.bat 新增 [6/7] Worker 窗口；.env.example 补齐开关与中文注释",
+        "db": "否（不变更表结构）",
+        "breaking": "是（默认执行模式由 API 进程内 inline 改为队列 queue；未启 Worker 时任务会停在 pending。可通过 TASK_EXECUTION_MODE=inline 一键回退）",
+        "verify": "后端全量 181 passed（含新增 6 例）；docker compose config --services 输出 5 服务含 worker；python -c 'import app.worker' 退出码 0；冒烟确认 get_settings() 生效 queue / event_bus_enabled=True / distributed_lock_enabled=True",
+        "notes": "PRD: docs/prd/PRD-独立Worker与事件总线链路启用.md；R1（Worker 事件出口）经复核为启用 queue 的阻断项，已由 FR8 一并修复；DISTRIBUTED_LOCK_ENABLED 为预留开关，当前无消费方，不得写成「分布式锁已启用」",
+    },
+    "fix: 修复任务租约缺续租与失联回收不及时（C-170）": {
+        "type": "BUG",
+        "content": "修复任务租约缺续租与失联回收不及时缺陷：TaskService 此前只有 enqueue/claim_next/complete/fail/recover，没有 renew，任何跑得比租约更久的任务都会在半途被 recover 判定为失联、重新入队并被执行第二次；且 recover 仅在 Worker 启动时调用一次，运行期不再回收，Worker 崩溃留下的过期租约会一直挂着直到下次重启。本次新增 renew 条件更新租约、Worker 执行期续租协程（租约丢失后自行退出不再触碰该队列项）、以及主循环定时失联回收；worker.py 同时落地 C-169 FR8 的 Worker 侧事件出口注册（queue 模式下缺此注册会导致任务事件全部静默丢弃、前端实时推送整体失效），故两处改动合并在本次提交",
+        "frontend": "无改动",
+        "backend": "app/services/task_service.py 新增 renew()；app/worker.py 新增 _renew_lease 续租协程与 _sweep_expired_leases，_consume_once 执行期挂续租任务并在 finally 中取消，run_worker 主循环按间隔回收；config 新增 worker_lease_renew_interval_seconds(30) / worker_recover_interval_seconds(60)；新增 tests/test_worker_lease.py",
+        "db": "否（复用 task_queue_items 既有租约字段）",
+        "breaking": "否",
+        "verify": "新增 6 个测试全部通过：test_task_queue 3 例（续租后免于回收 / 错误 token 与已完成项拒绝续租 / 未续租则被回收）与 test_worker_lease 3 例（执行期租约被延长 / 租约丢失后续租协程自行退出且只重试一次 / 定时 sweep 回收失联租约）；后端全量 181 passed，无新增失败",
+        "notes": "已知未解决：orchestrator.execution_token 与 task_queue_items.lease_token 两套租约互不同步，需架构决策统一，归入 C-17x；另新增 6 个测试（队列 3 + Worker 3）",
+    },
+    "docs: 修正项目计划里程碑标记与表数量口径（C-171）": {
+        "type": "Optimization",
+        "content": "修正项目计划里程碑标记与现状数据口径：Phase 2 标注为 C-169 起默认启用并补「可续租」；Phase 3 由「已达成」降级为「部分达成」并列出两项仍缺能力（前端未消费 workspace.snapshot、配额限流仍为单实例内存计数）；Phase 4 完成标志由 18 张表更正为实际 20 张表；新增落地状态核查说明并引用全仓库审查报告",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "纯文档口径修正，无代码行为变化；后端全量 181 passed 不受影响",
+        "notes": "纯文档口径修正，无代码行为变化；审查报告见 docs/代码与计划落地差距审查报告-20260828.md",
+    },
 }
 
 # === 35 行「改动类型」耐久修正（原 Docs → Requirement / BUG / Optimization）===
