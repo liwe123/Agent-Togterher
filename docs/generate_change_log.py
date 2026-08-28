@@ -508,7 +508,7 @@ CURATED_BY_SUBJECT = {
         "backend": "app/core/config.py 默认 queue + 新增续租/回收间隔配置；app/worker.py run_worker 内 build_event_relay(...).start()/stop() 注册事件出口（FR8）；docker-compose.yml 新增 worker 服务并以 YAML anchor 复用 backend 环境变量；start-local.bat 新增 [6/7] Worker 窗口；.env.example 补齐开关与中文注释",
         "db": "否（不变更表结构）",
         "breaking": "是（默认执行模式由 API 进程内 inline 改为队列 queue；未启 Worker 时任务会停在 pending。可通过 TASK_EXECUTION_MODE=inline 一键回退）",
-        "verify": "后端全量 181 passed（含新增 6 例）；docker compose config --services 输出 5 服务含 worker；python -c 'import app.worker' 退出码 0；冒烟确认 get_settings() 生效 queue / event_bus_enabled=True / distributed_lock_enabled=True",
+        "verify": "后端全量 181 passed（含新增 6 例）；A/B 对比（git worktree 检出改动前 905f858 跑同一探针脚本对照）：执行模式默认 inline→queue、compose 服务 4→5（新增 worker）、Worker 事件出口注册 False→True、定时失联回收 False→True、TaskService 方法 5→6（新增 renew）；冒烟：API 实启动 GET /api/v1/health 返回 status=ok、Worker 进程 python -m app.worker 存活 15 秒零异常、事件中继 enabled=false/true 两种模式 start()/stop() 均 OK；配置层 docker compose config --services 输出 5 服务含 worker",
         "notes": "PRD: docs/prd/PRD-独立Worker与事件总线链路启用.md；R1（Worker 事件出口）经复核为启用 queue 的阻断项，已由 FR8 一并修复；DISTRIBUTED_LOCK_ENABLED 为预留开关，当前无消费方，不得写成「分布式锁已启用」；容器实跑验证（AC1/AC4/AC8）因 Docker Desktop 守护进程未启动未执行，仅完成配置层验证（docker compose config --services 输出 5 服务含 worker）；守则验收：子 Agent 因平台限流（HTTP 429）连续派发失败，改由主 Agent 按同一清单自检通过",
     },
     "fix: 修复任务租约缺续租与失联回收不及时（C-170）": {
@@ -518,7 +518,7 @@ CURATED_BY_SUBJECT = {
         "backend": "app/services/task_service.py 新增 renew()；app/worker.py 新增 _renew_lease 续租协程与 _sweep_expired_leases，_consume_once 执行期挂续租任务并在 finally 中取消，run_worker 主循环按间隔回收；config 新增 worker_lease_renew_interval_seconds(30) / worker_recover_interval_seconds(60)；新增 tests/test_worker_lease.py",
         "db": "否（复用 task_queue_items 既有租约字段）",
         "breaking": "否",
-        "verify": "新增 6 个测试全部通过：test_task_queue 3 例（续租后免于回收 / 错误 token 与已完成项拒绝续租 / 未续租则被回收）与 test_worker_lease 3 例（执行期租约被延长 / 租约丢失后续租协程自行退出且只重试一次 / 定时 sweep 回收失联租约）；后端全量 181 passed，无新增失败",
+        "verify": "新增 6 个测试全部通过（test_task_queue 3 例 + test_worker_lease 3 例）；A/B 租约场景对照（租约仅剩 1 秒、任务继续跑 2.5 秒后触发 sweep）：A 态（改动前）无 renew 可调用，sweep 回收 1 条、队列项回到 queued、租约字段清空 → 原 Worker 仍在跑而他人可领走同一任务；B 态（改动后）续租成功，sweep 回收 0 条、状态保持 leased、租约剩余 597.5 秒 → 不会被重复消费；后端全量 181 passed，无新增失败",
         "notes": "已知未解决：orchestrator.execution_token 与 task_queue_items.lease_token 两套租约互不同步，需架构决策统一，归入 C-17x；另新增 6 个测试（队列 3 + Worker 3）",
     },
     "docs: 修正项目计划里程碑标记与表数量口径（C-171）": {
