@@ -139,3 +139,16 @@ class TestRedisDistributedEventBus:
             asyncio.run(bus.close())
             mock_pubsub.close.assert_called_once()
             mock_redis.aclose.assert_called_once()
+
+    def test_publish_swallows_redis_errors(self) -> None:
+        """Redis publish failures must not propagate to callers."""
+        mock_redis = MagicMock()
+        with patch("app.websocket.distributed.redis.from_url", return_value=mock_redis):
+            bus = RedisDistributedEventBus("redis://localhost", "instance-1")
+        failing_redis = MagicMock()
+        failing_redis.publish.side_effect = ConnectionError("redis down")
+        bus._redis = failing_redis
+        event = create_event("task.status_changed", {"id": 1})
+        # Should not raise
+        asyncio.run(bus.publish_workspace_event(1, event, origin_id="instance-1"))
+        failing_redis.publish.assert_called_once()

@@ -56,12 +56,17 @@ class RedisDistributedEventBus:
             "event": jsonable_encoder(event),
             "published_at": __import__("datetime").datetime.utcnow().isoformat(),
         }
-        await _maybe_await(
-            self._redis.publish(
-                self.channel_name(workspace_id),
-                json.dumps(envelope, ensure_ascii=False),
+        try:
+            await _maybe_await(
+                self._redis.publish(
+                    self.channel_name(workspace_id),
+                    json.dumps(envelope, ensure_ascii=False),
+                )
             )
-        )
+        except Exception:
+            logger.warning(
+                "Failed to publish distributed workspace event", exc_info=True
+            )
 
     async def listen(
         self,

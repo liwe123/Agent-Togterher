@@ -92,6 +92,37 @@ class TestDistributedEventRelay:
         asyncio.run(relay.stop())
         mock_bus.close.assert_called_once()
 
+    def test_relay_loop_retries_on_listen_failure(self) -> None:
+        """listen() failures should trigger backoff reconnects, then stay alive."""
+        mock_bus = MagicMock()
+        mock_bus.close = AsyncMock()
+        call_count = 0
+
+        async def flaky_listen(handler):
+            nonlocal call_count
+            call_count += 1
+            if call_count <= 2:
+                raise ConnectionError("redis down")
+            return None
+
+        mock_bus.listen = flaky_listen
+        ws_manager = WebSocketManager()
+        relay = DistributedEventRelay(
+            mock_bus, ws_manager, "test-id", retry_base_delay=0.01
+        )
+
+        async def run():
+            await relay.start()
+            # Wait for the relay task to finish (listen succeeds on 3rd call)
+            await asyncio.wait_for(relay._relay_task, timeout=5)
+
+        asyncio.run(run())
+        assert call_count == 3
+        assert relay._relay_task is not None
+        assert relay._relay_task.done()
+        # Cleanup: unregister publisher and close the bus (task already finished)
+        asyncio.run(relay.stop())
+
 
 class TestRegisterDistributedPublisher:
     def test_register_and_unregister(self) -> None:

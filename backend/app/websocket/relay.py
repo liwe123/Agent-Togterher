@@ -26,10 +26,14 @@ class DistributedEventRelay:
         bus: Any,
         websocket_manager: WebSocketManager,
         instance_id: str,
+        retry_base_delay: float = 1.0,
+        retry_max_delay: float = 30.0,
     ) -> None:
         self._bus = bus
         self._ws_manager = websocket_manager
         self._instance_id = instance_id
+        self._retry_base_delay = retry_base_delay
+        self._retry_max_delay = retry_max_delay
         self._relay_task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
@@ -38,7 +42,17 @@ class DistributedEventRelay:
         self._relay_task = asyncio.create_task(self._relay_loop())
 
     async def _relay_loop(self) -> None:
-        await self._bus.listen(self._on_distributed_event)
+        delay = self._retry_base_delay
+        while True:
+            try:
+                await self._bus.listen(self._on_distributed_event)
+                return  # listen returned normally (bus closed) — do not reconnect
+            except Exception:
+                logger.warning(
+                    "分布式事件中继断开，%.1f 秒后重连", delay, exc_info=True
+                )
+                await asyncio.sleep(delay)
+                delay = min(delay * 2, self._retry_max_delay)
 
     async def _on_distributed_event(self, envelope: DistributedEventEnvelope) -> None:
         workspace_id = envelope["workspace_id"]
