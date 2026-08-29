@@ -208,6 +208,32 @@ export function useChat() {
         return
       }
 
+      if (e.type === "workspace.snapshot") {
+        const snapshotTasks = e.payload.tasks as Array<Partial<ChatTask>>
+        setTasks((current) =>
+          snapshotTasks.reduce(
+            (acc, task) =>
+              task.conversation_id === conversationId
+                ? upsertTask(acc, task as ChatTask)
+                : acc,
+            current,
+          ),
+        )
+        const snapshotMessages = e.payload.recent_messages as Array<
+          Partial<ChatMessage>
+        >
+        setMessages((current) =>
+          snapshotMessages.reduce(
+            (acc, message) =>
+              message.conversation_id === conversationId
+                ? upsertMessage(acc, message as ChatMessage)
+                : acc,
+            current,
+          ),
+        )
+        return
+      }
+
       if (e.type === "agent.status_changed") {
         setAgents((current) =>
           current.map((agent) =>

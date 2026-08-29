@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -7,6 +9,9 @@ from app.db.session import get_db
 from app.models import Workspace
 from app.websocket.events import create_event
 from app.websocket.manager import websocket_manager
+from app.websocket.snapshot import WorkspaceSnapshotBuilder
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(tags=["websocket"])
 
@@ -47,6 +52,20 @@ async def workspace_websocket(
 
     await websocket_manager.connect(workspace_id, websocket)
     try:
+        try:
+            builder = WorkspaceSnapshotBuilder(session)
+            snapshot = await builder.build_snapshot(workspace_id)
+            await websocket_manager.send_to_client(
+                websocket,
+                builder.create_snapshot_event(workspace_id, snapshot),
+            )
+        except Exception:
+            logger.warning(
+                "Failed to build workspace snapshot for workspace %s; continuing",
+                workspace_id,
+                exc_info=True,
+            )
+
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:

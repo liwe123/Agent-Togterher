@@ -11,7 +11,11 @@ import type {
   Workspace,
 } from "@/types/task"
 import { TASK_LIST_LIMIT, TASK_REFRESH_DELAY_MS } from "@/lib/constants"
-import { mergeTraceEvent, shouldApplyTaskStatus } from "@/lib/task-utils"
+import {
+  applySnapshotTasks,
+  mergeTraceEvent,
+  shouldApplyTaskStatus,
+} from "@/lib/task-utils"
 import { useWorkspaceSocket } from "@/hooks/use-workspace-socket"
 import {
   WORKSPACE_SWITCH_EVENT,
@@ -141,6 +145,15 @@ export function useTasks() {
           ),
         )
         scheduleRefresh()
+      }
+
+      if (e.type === "workspace.snapshot") {
+        setTasks((current) =>
+          applySnapshotTasks(
+            current,
+            e.payload.tasks as Array<Partial<TaskListItem>>,
+          ),
+        )
       }
 
       if (e.type === "task.step_changed" || e.type === "model.call_finished") {

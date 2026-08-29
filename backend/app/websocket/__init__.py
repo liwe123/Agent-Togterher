@@ -11,7 +11,7 @@ from app.websocket.relay import (
     NoopEventRelay,
     build_event_relay,
 )
-from app.websocket.snapshot import WorkspaceSnapshotBuilder, build_and_broadcast_snapshot
+from app.websocket.snapshot import WorkspaceSnapshotBuilder
 
 __all__ = [
     "DistributedEventEnvelope",
@@ -23,7 +23,6 @@ __all__ = [
     "WebSocketEvent",
     "WebSocketManager",
     "WorkspaceSnapshotBuilder",
-    "build_and_broadcast_snapshot",
     "build_distributed_event_bus",
     "build_event_relay",
     "create_event",

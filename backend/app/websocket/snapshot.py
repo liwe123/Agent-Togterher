@@ -87,15 +87,3 @@ class WorkspaceSnapshotBuilder:
     def create_snapshot_event(self, workspace_id: int, snapshot: dict[str, Any]) -> dict[str, Any]:
         """Create a workspace snapshot event for broadcasting."""
         return create_event("workspace.snapshot", snapshot)
-
-
-async def build_and_broadcast_snapshot(
-    session: AsyncSession,
-    workspace_id: int,
-    broadcaster: Any,
-) -> None:
-    """Build and broadcast a workspace snapshot to all connected clients."""
-    builder = WorkspaceSnapshotBuilder(session)
-    snapshot = await builder.build_snapshot(workspace_id)
-    event = builder.create_snapshot_event(workspace_id, snapshot)
-    await broadcaster.broadcast_to_workspace(workspace_id, event)

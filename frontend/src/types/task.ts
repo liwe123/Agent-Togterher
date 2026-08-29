@@ -86,6 +86,15 @@ export type TaskWorkspaceEvent =
     }
   | { type: "error"; payload: { message: string } }
   | {
+      type: "workspace.snapshot"
+      payload: {
+        workspace_id: number
+        tasks: Array<Partial<ChatTask>>
+        agents: Array<Record<string, unknown>>
+        recent_messages: Array<Record<string, unknown>>
+      }
+    }
+  | {
       type: "message.created" | "agent.status_changed"
       payload: Record<string, unknown>
     }

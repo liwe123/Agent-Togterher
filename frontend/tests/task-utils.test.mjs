@@ -77,4 +77,40 @@ describe("task-utils", () => {
       assert.equal(result[2].source_id, 7)
     })
   })
+
+  describe("applySnapshotTasks", () => {
+    const current = [
+      { id: 1, status: "running", updated_at: "2026-01-01T00:00:00Z", title: "old title" },
+      { id: 2, status: "pending", updated_at: "2026-01-01T00:00:00Z", title: "untouched" },
+    ]
+
+    it("merges snapshot fields into an existing task by id", () => {
+      const snapshot = [
+        { id: 1, status: "completed", updated_at: "2026-01-02T00:00:00Z", title: "new title" },
+      ]
+      const result = mod.applySnapshotTasks(current, snapshot)
+      assert.equal(result.length, 2)
+      assert.equal(result[0].status, "completed")
+      assert.equal(result[0].title, "new title")
+      assert.equal(result[1].title, "untouched")
+    })
+
+    it("does not insert snapshot tasks whose id is missing from current", () => {
+      const snapshot = [
+        { id: 99, status: "completed", updated_at: "2026-01-02T00:00:00Z" },
+      ]
+      const result = mod.applySnapshotTasks(current, snapshot)
+      assert.equal(result.length, 2)
+      assert.equal(result, current)
+    })
+
+    it("rejects a stale snapshot entry via shouldApplyTaskStatus", () => {
+      const snapshot = [
+        { id: 1, status: "pending", updated_at: "2025-12-31T00:00:00Z", title: "stale" },
+      ]
+      const result = mod.applySnapshotTasks(current, snapshot)
+      assert.equal(result[0].status, "running")
+      assert.equal(result[0].title, "old title")
+    })
+  })
 })

@@ -643,6 +643,10 @@ def test_workspace_websocket_broadcasts_realtime_events(
     with api_client.websocket_connect(
         f"/ws/workspaces/{workspace['id']}"
     ) as websocket:
+        initial_snapshot = websocket.receive_json()
+        assert initial_snapshot["type"] == "workspace.snapshot"
+        assert initial_snapshot["payload"]["workspace_id"] == workspace["id"]
+
         hub_result = assert_success(
             api_client.post(
                 f"/api/conversations/{conversation['id']}/messages",

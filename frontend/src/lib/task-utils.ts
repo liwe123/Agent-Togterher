@@ -19,6 +19,21 @@ function shouldApplyTaskStatus<
   return taskStatusRank(next.status) >= taskStatusRank(current.status)
 }
 
+function applySnapshotTasks<
+  T extends { id: number; status: string; updated_at: string },
+>(current: T[], snapshotTasks: Partial<T>[]): T[] {
+  let changed = false
+  const merged = current.map((task) => {
+    const incoming = snapshotTasks.find((item) => item.id === task.id)
+    if (!incoming) return task
+    const candidate = { ...task, ...incoming } as T
+    if (!shouldApplyTaskStatus(task, candidate)) return task
+    changed = true
+    return candidate
+  })
+  return changed ? merged : current
+}
+
 interface TraceEventLike {
   source_type: string | null
   source_id: number | null
@@ -36,6 +51,7 @@ function mergeTraceEvent<T extends TraceEventLike>(current: T[], incoming: T): T
 }
 
 export {
+  applySnapshotTasks,
   mergeTraceEvent,
   shouldApplyTaskStatus,
   taskStatusRank,
