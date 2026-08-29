@@ -54,6 +54,7 @@ class WorkspaceSnapshotBuilder:
                     "title": t.title,
                     "status": t.status.value if t.status else None,
                     "priority": t.priority,
+                    "conversation_id": t.conversation_id,
                     "assigned_agent_id": t.assigned_agent_id,
                     "result": t.result,
                     "created_at": t.created_at.isoformat() if t.created_at else None,

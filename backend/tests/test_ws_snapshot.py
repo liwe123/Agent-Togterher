@@ -105,6 +105,7 @@ def test_snapshot_is_first_message_on_connect(ws_client: TestClient, settings) -
 
     assert [task["title"] for task in payload["tasks"]] == ["snapshot task"]
     assert payload["tasks"][0]["status"] == "running"
+    assert payload["tasks"][0]["conversation_id"] == 1
     assert payload["agents"][0]["name"] == "snapshot-agent"
     assert payload["recent_messages"][0]["content"] == "hello snapshot"
 
