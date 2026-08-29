@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>25</b> 份</span>
-        <span>变更记录 <b>178</b> 条</span>
-        <span>生成于 2026-08-29 11:56</span>
+        <span>变更记录 <b>181</b> 条</span>
+        <span>生成于 2026-08-29 12:59</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -3135,6 +3135,54 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否</td>
 <td>后端 test_ws_snapshot 2 passed</td>
 <td>A/B 集成审查发现的载荷字段遗漏</td>
+</tr>
+<tr>
+<td>2026-08-29 11:57</td>
+<td>C-179</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/a869f8c">a869f8c</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>文档、其他</td>
+<td>docs: 回写文档一致性欠账并登记快照/总线容错三项提交</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-29 12:54</td>
+<td>C-180</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/2567b98">2567b98</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>其他、部署</td>
+<td>修复容器模式启动崩溃：宿主 .env 的 sqlite DATABASE_URL 插值泄漏进容器旁路 postgres，双容器并发 init_db 跑 alembic 触发 table already exists。DATABASE_URL 改用 COMPOSE_DATABASE_URL（对齐 COMPOSE_REDIS_URL 惯例），新增一次性 migrate 服务独占迁移，backend/worker 等待其完成，应用内 init_db 保留为幂等空转兼容 standalone</td>
+<td>-</td>
+<td>docker-compose.yml 新增 migrate 一次性服务（service_completed_successfully 门控 backend/worker）；.env.example 补 COMPOSE_DATABASE_URL</td>
+<td>否</td>
+<td>否</td>
+<td>容器实跑：5 常驻服务全 healthy、migrate 三迁移按序完成、backend/worker 无竞争崩溃；AC1/AC2 通过</td>
+<td>2026-08-29 容器级验证（C-170 AC）发现并修复；PRD-独立Worker §9.1 已回写</td>
+</tr>
+<tr>
+<td>2026-08-29 12:54</td>
+<td>C-181</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/4ccb5a4">4ccb5a4</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端</td>
+<td>消除僵尸队列条目：claim_next 仅匹配 PENDING 任务，run_task 正常返回失败（编排器已置 FAILED）时旧逻辑重新入队产生既不可再领取亦非终态的僵尸项。TaskService.fail 新增 retry 开关，worker 终结分支 retry=False 直接落 dead，异常分支保留有界重试</td>
+<td>-</td>
+<td>services/task_service.py fail(retry=...)；worker.py _consume_once 终结分支 retry=False；tests/test_task_queue.py 补根因+修复 2 个回归测试</td>
+<td>否</td>
+<td>否（fail 默认 retry=True 行为不变）</td>
+<td>后端 187 passed；容器实跑 AC4：入队→worker 跨进程 leased（attempt=1）→dead 终态，修复前僵尸 queued 与修复后 dead 前后对照</td>
+<td>2026-08-29 容器级验证发现；与统一两套租约体系（C-17x 架构债）相关但独立修复</td>
 </tr>
 </tbody>
 </table></div>
@@ -7804,7 +7852,7 @@ CREATE UNIQUE INDEX ix_ws_plugin_unique ON workspace_plugins(workspace_id, plugi
 </ul>
 <h2 id="prd-独立worker与事件总线链路启用">PRD：独立 Worker 与事件总线链路启用</h2>
 <blockquote>
-<p>类型：技术补完（Requirement）｜状态：已完成（2026-08-28 代码落地：C-169 启用链路 + C-171 续租修复；A/B 与冒烟测试通过。容器实跑验证 AC1/AC4/AC8 受本机镜像拉取带宽限制，列为待补做项）｜编号：<strong>C-170</strong>｜日期：2026-08-28</p>
+<p>类型：技术补完（Requirement）｜状态：已完成（2026-08-28 代码落地：C-169 启用链路 + C-171 续租修复；<strong>2026-08-29 容器实跑验证 AC1/AC2/AC4/AC7/AC8 通过</strong>，过程中发现并修复两个启动/结算缺陷：compose 数据库 URL 泄漏与并发迁移竞争（2567b98）、编排器终结任务的僵尸队列条目（4ccb5a4）。仅「任务跑到 completed」因本机无 LLM 密钥未验，队列消费链路已证）｜编号：<strong>C-170</strong>｜日期：2026-08-28</p>
 <p>目标：把「<strong>代码已经写完、但从来没有真正启用</strong>」的分布式调度与事件链路接通 —— 让独立 Worker 进程真正消费持久化任务队列，让 Redis 事件总线真正承担跨实例 WebSocket 广播，从而使项目文档中 Phase 2「持久化任务队列 / 独立 Worker」与 Phase 3「事件总线 / 多实例 WebSocket 解耦」的「✅ 已达成」断言成立。</p>
 <p>来源：《代码与计划落地差距审查报告-20260828》§1.1、§1.2、§8（P0-1 / P0-2）。</p>
 </blockquote>
@@ -8146,7 +8194,7 @@ CREATE UNIQUE INDEX ix_ws_plugin_unique ON workspace_plugins(workspace_id, plugi
 <hr />
 <h3 id="prd-独立worker与事件总线链路启用-9-部署与配置">9. 部署与配置</h3>
 <h4 id="prd-独立worker与事件总线链路启用-91-容器编排docker-composeyml">9.1 容器编排（<code>docker-compose.yml</code>）</h4>
-<p>新增 <code>worker</code> 服务，服务总数由 4 个变为 5 个：</p>
+<p>新增 <code>migrate</code>（一次性）与 <code>worker</code>（常驻）服务，常驻服务由 4 个增至 5 个（另有 1 个一次性迁移任务）：</p>
 <div class="table-wrap"><table>
 <thead>
 <tr>
@@ -8173,17 +8221,24 @@ CREATE UNIQUE INDEX ix_ws_plugin_unique ON workspace_plugins(workspace_id, plugi
 <td>6379</td>
 </tr>
 <tr>
+<td><strong><code>migrate</code>（新增·一次性）</strong></td>
+<td><strong>同 backend 构建</strong></td>
+<td><strong><code>python -m alembic upgrade head</code></strong></td>
+<td><strong>db healthy</strong></td>
+<td>无（<code>restart: "no"</code>）</td>
+</tr>
+<tr>
 <td><code>backend</code></td>
 <td>build <code>backend/Dockerfile</code></td>
 <td>uvicorn（镜像默认 CMD）</td>
-<td>db/redis healthy</td>
+<td>db/redis healthy、<strong>migrate 完成</strong></td>
 <td>8000</td>
 </tr>
 <tr>
 <td><strong><code>worker</code>（新增）</strong></td>
 <td><strong>同 backend 构建</strong></td>
 <td><strong><code>python -m app.worker</code></strong></td>
-<td><strong>db/redis healthy</strong></td>
+<td><strong>db/redis healthy、migrate 完成</strong></td>
 <td>无</td>
 </tr>
 <tr>
@@ -8195,6 +8250,10 @@ CREATE UNIQUE INDEX ix_ws_plugin_unique ON workspace_plugins(workspace_id, plugi
 </tr>
 </tbody>
 </table></div>
+<blockquote>
+<p><strong>迁移独占（2026-08-29 容器实跑修正）</strong>：容器实跑发现 backend 与 worker 各自在 <code>init_db()</code> 里跑 <code>alembic upgrade head</code>，两容器并发迁移同一库触发 <code>table already exists</code> 启动崩溃。改由一次性 <code>migrate</code> 服务独占迁移，<code>backend</code>/<code>worker</code> 以 <code>service_completed_successfully</code> 等待其完成；应用内 <code>init_db()</code> 保留为幂等空转，兼容 <code>start-local.bat</code> 无 compose 的独立运行。</p>
+<p><strong>数据库 URL 隔离</strong>：compose 内容器的 <code>DATABASE_URL</code> 取自新变量 <code>COMPOSE_DATABASE_URL</code>（默认指向 <code>db</code> postgres 服务），不再复用宿主 <code>.env</code> 的 <code>DATABASE_URL</code>（本地混合模式为 sqlite），否则宿主 sqlite 路径会泄漏进容器、旁路 postgres。与既有 <code>COMPOSE_REDIS_URL</code> 同模式。</p>
+</blockquote>
 <p><code>worker</code> 服务要求：</p>
 <ul>
 <li>与 <code>backend</code> 使用<strong>同一 <code>build</code> 上下文与 Dockerfile</strong>，保证 <code>app.worker</code> 模块可被 <code>python -m</code> 加载（<code>backend/Dockerfile</code> 以 <code>/app</code> 为 <code>WORKDIR</code> 并 <code>COPY backend/app ./app</code>，<code>app/worker.py</code> 存在 ⇒ 满足）。</li>

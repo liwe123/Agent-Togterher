@@ -1,6 +1,6 @@
 # PRD：独立 Worker 与事件总线链路启用
 
-> 类型：技术补完（Requirement）｜状态：已完成（2026-08-28 代码落地：C-169 启用链路 + C-171 续租修复；A/B 与冒烟测试通过。容器实跑验证 AC1/AC4/AC8 受本机镜像拉取带宽限制，列为待补做项）｜编号：**C-170**｜日期：2026-08-28
+> 类型：技术补完（Requirement）｜状态：已完成（2026-08-28 代码落地：C-169 启用链路 + C-171 续租修复；**2026-08-29 容器实跑验证 AC1/AC2/AC4/AC7/AC8 通过**，过程中发现并修复两个启动/结算缺陷：compose 数据库 URL 泄漏与并发迁移竞争（2567b98）、编排器终结任务的僵尸队列条目（4ccb5a4）。仅「任务跑到 completed」因本机无 LLM 密钥未验，队列消费链路已证）｜编号：**C-170**｜日期：2026-08-28
 >
 > 目标：把「**代码已经写完、但从来没有真正启用**」的分布式调度与事件链路接通 —— 让独立 Worker 进程真正消费持久化任务队列，让 Redis 事件总线真正承担跨实例 WebSocket 广播，从而使项目文档中 Phase 2「持久化任务队列 / 独立 Worker」与 Phase 3「事件总线 / 多实例 WebSocket 解耦」的「✅ 已达成」断言成立。
 >
@@ -215,15 +215,20 @@ Worker 进程、Redis 事件总线、跨实例中继（`relay.py` + `distributed
 
 ### 9.1 容器编排（`docker-compose.yml`）
 
-新增 `worker` 服务，服务总数由 4 个变为 5 个：
+新增 `migrate`（一次性）与 `worker`（常驻）服务，常驻服务由 4 个增至 5 个（另有 1 个一次性迁移任务）：
 
 | 服务 | 镜像 / 构建 | 命令 | 依赖 | 端口 |
 |------|-------------|------|------|------|
 | `db` | `postgres:16-alpine` | — | — | 5432 |
 | `redis` | `redis:7-alpine` | `redis-server --appendonly yes` | — | 6379 |
-| `backend` | build `backend/Dockerfile` | uvicorn（镜像默认 CMD） | db/redis healthy | 8000 |
-| **`worker`（新增）** | **同 backend 构建** | **`python -m app.worker`** | **db/redis healthy** | 无 |
+| **`migrate`（新增·一次性）** | **同 backend 构建** | **`python -m alembic upgrade head`** | **db healthy** | 无（`restart: "no"`） |
+| `backend` | build `backend/Dockerfile` | uvicorn（镜像默认 CMD） | db/redis healthy、**migrate 完成** | 8000 |
+| **`worker`（新增）** | **同 backend 构建** | **`python -m app.worker`** | **db/redis healthy、migrate 完成** | 无 |
 | `frontend` | build `./frontend` | `npm` | backend healthy | 3000 |
+
+> **迁移独占（2026-08-29 容器实跑修正）**：容器实跑发现 backend 与 worker 各自在 `init_db()` 里跑 `alembic upgrade head`，两容器并发迁移同一库触发 `table already exists` 启动崩溃。改由一次性 `migrate` 服务独占迁移，`backend`/`worker` 以 `service_completed_successfully` 等待其完成；应用内 `init_db()` 保留为幂等空转，兼容 `start-local.bat` 无 compose 的独立运行。
+
+> **数据库 URL 隔离**：compose 内容器的 `DATABASE_URL` 取自新变量 `COMPOSE_DATABASE_URL`（默认指向 `db` postgres 服务），不再复用宿主 `.env` 的 `DATABASE_URL`（本地混合模式为 sqlite），否则宿主 sqlite 路径会泄漏进容器、旁路 postgres。与既有 `COMPOSE_REDIS_URL` 同模式。
 
 `worker` 服务要求：
 

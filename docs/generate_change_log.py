@@ -301,6 +301,24 @@ CURATED = {
         "verify": "后端 test_ws_snapshot 2 passed",
         "notes": "A/B 集成审查发现的载荷字段遗漏",
     },
+    "2567b98": {
+        "type": "BUG",
+        "content": "修复容器模式启动崩溃：宿主 .env 的 sqlite DATABASE_URL 插值泄漏进容器旁路 postgres，双容器并发 init_db 跑 alembic 触发 table already exists。DATABASE_URL 改用 COMPOSE_DATABASE_URL（对齐 COMPOSE_REDIS_URL 惯例），新增一次性 migrate 服务独占迁移，backend/worker 等待其完成，应用内 init_db 保留为幂等空转兼容 standalone",
+        "frontend": "-",
+        "backend": "docker-compose.yml 新增 migrate 一次性服务（service_completed_successfully 门控 backend/worker）；.env.example 补 COMPOSE_DATABASE_URL",
+        "db": "否", "breaking": "否",
+        "verify": "容器实跑：5 常驻服务全 healthy、migrate 三迁移按序完成、backend/worker 无竞争崩溃；AC1/AC2 通过",
+        "notes": "2026-08-29 容器级验证（C-170 AC）发现并修复；PRD-独立Worker §9.1 已回写",
+    },
+    "4ccb5a4": {
+        "type": "BUG",
+        "content": "消除僵尸队列条目：claim_next 仅匹配 PENDING 任务，run_task 正常返回失败（编排器已置 FAILED）时旧逻辑重新入队产生既不可再领取亦非终态的僵尸项。TaskService.fail 新增 retry 开关，worker 终结分支 retry=False 直接落 dead，异常分支保留有界重试",
+        "frontend": "-",
+        "backend": "services/task_service.py fail(retry=...)；worker.py _consume_once 终结分支 retry=False；tests/test_task_queue.py 补根因+修复 2 个回归测试",
+        "db": "否", "breaking": "否（fail 默认 retry=True 行为不变）",
+        "verify": "后端 187 passed；容器实跑 AC4：入队→worker 跨进程 leased（attempt=1）→dead 终态，修复前僵尸 queued 与修复后 dead 前后对照",
+        "notes": "2026-08-29 容器级验证发现；与统一两套租约体系（C-17x 架构债）相关但独立修复",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even
