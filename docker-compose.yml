@@ -44,7 +44,7 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000", "http://127.0.0.1:3000"]}
       APP_API_TOKEN: ${APP_API_TOKEN:-}
       AGENT_TOOLS_ENABLED: ${AGENT_TOOLS_ENABLED:-true}
-      DATABASE_URL: ${DATABASE_URL:-postgresql+asyncpg://agent:agent@db:5432/agent_console}
+      DATABASE_URL: ${COMPOSE_DATABASE_URL:-postgresql+asyncpg://agent:agent@db:5432/agent_console}
       REDIS_URL: ${COMPOSE_REDIS_URL:-redis://redis:6379/0}
       # C-170：任务默认入持久化队列由独立 worker 消费；置 inline 可回退到 API 进程内执行
       TASK_EXECUTION_MODE: ${TASK_EXECUTION_MODE:-queue}
@@ -70,6 +70,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -81,6 +83,22 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  # 数据库迁移由该一次性服务独占执行（置于 backend 之后以复用 *backend-env 锚点）。
+  # 此前 backend 与 worker 各自在启动时跑 alembic upgrade head，两容器并发迁移
+  # 同一库会产生 "table already exists" 竞争崩溃（2026-08-29 容器实跑发现）。
+  # backend/worker 内的 init_db 保留为幂等空转，standalone 场景（start-local.bat）仍可用。
+  migrate:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    user: "0:0"
+    environment: *backend-env
+    command: ["python", "-m", "alembic", "upgrade", "head"]
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
 
   # C-170：独立 Worker 进程，消费 task_queue_items 持久化队列。
   # 此前 app/worker.py 已实现但无任何编排入口启动，Phase 2 的调度链路从未真正运行。
@@ -99,6 +117,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   frontend:
