@@ -274,6 +274,33 @@ CURATED = {
         "verify": "浏览器 A/B 复验：用户视图回放器/成本/载荷全部隐藏；前端 31 passed + lint 0 + build 通过",
         "notes": "C-164 FR9 收尾；A/B 验证发现的展示层遗漏",
     },
+    "a95058a": {
+        "type": "Requirement",
+        "content": "WebSocket 连接即下发工作区快照，前端断线重连状态对账：后端握手成功后仅向新客户端下发 workspace.snapshot（任务/Agent/最近消息），前端按 id 修补既有列表，兑现 Phase 3「断线重连后重新同步最新任务与消息状态」验收；删除无调用方的 build_and_broadcast_snapshot 死代码",
+        "frontend": "task-utils.ts 新增 applySnapshotTasks；types/task.ts 与 types/chat.ts 增 workspace.snapshot 变体；use-tasks/use-chat 消费快照",
+        "backend": "websocket/router.py 连接后下发快照；删除 snapshot.py build_and_broadcast_snapshot 死代码；__init__.py 同步",
+        "db": "否", "breaking": "否",
+        "verify": "后端 185 passed（新增 test_ws_snapshot 2 例）；前端 34 passed + lint 0 + build 通过",
+        "notes": "补齐差距审查报告 §2.2（P1-3）；Phase 3 验收对账闭环",
+    },
+    "5a22954": {
+        "type": "BUG",
+        "content": "事件总线容错缺陷修复：发布侧 publish 失败不再冒泡击穿业务调用方（本地投递在前，仅警告吞没）；订阅侧 _relay_loop 断开后按 1s→30s 指数退避自动重连，消除「Redis 恢复后跨实例推送静默失效直到重启」缺陷",
+        "frontend": "-",
+        "backend": "distributed.py publish 包 try/except 吞没；relay.py __init__ 增 retry_base_delay/retry_max_delay，_relay_loop 改指数退避重连循环",
+        "db": "否", "breaking": "否",
+        "verify": "后端 185 passed（新增容错用例 2 个，既有 21 例总线/中继测试全绿）",
+        "notes": "修复差距审查报告 §14 R2（P1）；Redis 不可用降级语义见 PRD-独立Worker §14 R2",
+    },
+    "14a8406": {
+        "type": "BUG",
+        "content": "工作区快照任务载荷补 conversation_id：前端 use-chat 按 conversation_id 过滤快照任务，后端载荷缺该字段导致群聊侧任务对账静默失效，补齐字段并加测试断言",
+        "frontend": "-",
+        "backend": "websocket/snapshot.py 任务载荷补 conversation_id；test_ws_snapshot.py 增断言",
+        "db": "否", "breaking": "否",
+        "verify": "后端 test_ws_snapshot 2 passed",
+        "notes": "A/B 集成审查发现的载荷字段遗漏",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even

@@ -1,8 +1,8 @@
 # Agent Console 项目接力文档 (HANDOFF)
 
-> 更新时间：2026-08-27  
+> 更新时间：2026-08-29  
 > 工作目录：`E:\Agents`  
-> 当前阶段：**Phase 5（外部接入与治理深化）进行中：PostgreSQL 已上线、外部节点桥接与配额熔断已落地，欠账清理批次（C-155~C-165）收尾中。**
+> 当前阶段：**Phase 5（外部接入与治理深化）进行中：PostgreSQL 已上线、外部节点桥接与配额熔断已落地、独立 Worker 与事件总线调度链路已启用（C-169~C-174）、工作区快照断线对账与事件总线容错已补齐；剩余缺口见《代码与计划落地差距审查报告-20260828》§8（分布式限流、Antigravity 适配、CI PG job 等）。**
 
 ---
 
@@ -98,8 +98,8 @@
 
 ## 4. 质量与验证基准
 
-- **后端自动化测试**：34 个测试模块，共计 **168 tests passed**（100% 通过；SQLite 内存库跑测，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性）。
-- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 28 passed，`next build` 12+ 页面全部编译成功。
+- **后端自动化测试**：37 个测试模块，共计 **185 tests passed**（100% 通过；SQLite 内存库跑测，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性）。
+- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 34 passed，`next build` 12+ 页面全部编译成功。
 - **文档自动化体系**：14 列变更记录全量无空值，`PRD.md`、`Agent_Console_变更追踪.xlsx` 与 `PRD.html` 自动化生成并与 Git 历史完全同步。
 
 ---

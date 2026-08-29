@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>25</b> 份</span>
-        <span>变更记录 <b>174</b> 条</span>
-        <span>生成于 2026-08-28 22:11</span>
+        <span>变更记录 <b>178</b> 条</span>
+        <span>生成于 2026-08-29 11:56</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -3072,6 +3072,70 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>-</td>
 <td>-</td>
 </tr>
+<tr>
+<td>2026-08-28 22:11</td>
+<td>C-175</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/505b0bb">505b0bb</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 补登 C-170/C-171 的 A/B 对比与冒烟测试结论并重跑生成脚本</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-08-29 11:38</td>
+<td>C-176</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/5a22954">5a22954</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端</td>
+<td>事件总线容错缺陷修复：发布侧 publish 失败不再冒泡击穿业务调用方（本地投递在前，仅警告吞没）；订阅侧 _relay_loop 断开后按 1s→30s 指数退避自动重连，消除「Redis 恢复后跨实例推送静默失效直到重启」缺陷</td>
+<td>-</td>
+<td>distributed.py publish 包 try/except 吞没；relay.py <strong>init</strong> 增 retry_base_delay/retry_max_delay，_relay_loop 改指数退避重连循环</td>
+<td>否</td>
+<td>否</td>
+<td>后端 185 passed（新增容错用例 2 个，既有 21 例总线/中继测试全绿）</td>
+<td>修复差距审查报告 §14 R2（P1）；Redis 不可用降级语义见 PRD-独立Worker §14 R2</td>
+</tr>
+<tr>
+<td>2026-08-29 11:38</td>
+<td>C-177</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/a95058a">a95058a</a></td>
+<td>LI</td>
+<td>Requirement</td>
+<td>后端、前端</td>
+<td>WebSocket 连接即下发工作区快照，前端断线重连状态对账：后端握手成功后仅向新客户端下发 workspace.snapshot（任务/Agent/最近消息），前端按 id 修补既有列表，兑现 Phase 3「断线重连后重新同步最新任务与消息状态」验收；删除无调用方的 build_and_broadcast_snapshot 死代码</td>
+<td>task-utils.ts 新增 applySnapshotTasks；types/task.ts 与 types/chat.ts 增 workspace.snapshot 变体；use-tasks/use-chat 消费快照</td>
+<td>websocket/router.py 连接后下发快照；删除 snapshot.py build_and_broadcast_snapshot 死代码；<strong>init</strong>.py 同步</td>
+<td>否</td>
+<td>否</td>
+<td>后端 185 passed（新增 test_ws_snapshot 2 例）；前端 34 passed + lint 0 + build 通过</td>
+<td>补齐差距审查报告 §2.2（P1-3）；Phase 3 验收对账闭环</td>
+</tr>
+<tr>
+<td>2026-08-29 11:49</td>
+<td>C-178</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/14a8406">14a8406</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端</td>
+<td>工作区快照任务载荷补 conversation_id：前端 use-chat 按 conversation_id 过滤快照任务，后端载荷缺该字段导致群聊侧任务对账静默失效，补齐字段并加测试断言</td>
+<td>-</td>
+<td>websocket/snapshot.py 任务载荷补 conversation_id；test_ws_snapshot.py 增断言</td>
+<td>否</td>
+<td>否</td>
+<td>后端 test_ws_snapshot 2 passed</td>
+<td>A/B 集成审查发现的载荷字段遗漏</td>
+</tr>
 </tbody>
 </table></div>
 <!-- CHANGELOG:END -->
@@ -3754,7 +3818,8 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <p>本需求承接 Phase 0 的架构治理边界：API 只受理命令，<code>TaskService</code> 管理调度状态，Worker 调用执行入口，<code>AgentOrchestrator</code> 暂继续承载模型与工具执行。后续将继续拆分编排器并接入可观测性与事件总线。</p>
 <h2 id="prd-phase3分布式化">PRD：Phase 3 分布式化</h2>
 <blockquote>
-<p>类型：新需求（Requirement）｜状态：已完成｜对应《项目计划》Phase 3 分布式化。</p>
+<p>类型：新需求（Requirement）｜状态：部分达成（与《项目计划》口径对齐，2026-08-29 更正，原误标「已完成」）｜对应《项目计划》Phase 3 分布式化。</p>
+<p>达成口径：事件总线（Redis Pub/Sub）与多实例 WebSocket 解耦自 C-170 起在编排中默认启用；断线重连状态对账（<code>workspace.snapshot</code> 消费）已于 2026-08-29 补上。<strong>仍缺</strong>：配额限流为单实例内存计数，多实例下失效（待 Redis 固定窗口/令牌桶改造，见差距审查报告 §2.3）。</p>
 </blockquote>
 <hr />
 <h3 id="prd-phase3分布式化-1-目标">1. 目标</h3>
@@ -5900,7 +5965,8 @@ docker compose up --build
 </ul>
 <h2 id="prd-外部agent软件接入">PRD：外部 Agent 软件接入与调度</h2>
 <blockquote>
-<p>类型：Requirement ｜ 状态：拟实施 ｜ 目标：把 <code>Cursor</code>、<code>Codex</code>、<code>Trae</code>、<code>Antigravity</code> 等外部 Agent 软件从「静态展示卡片」升级为可注册、可心跳、可分发任务、可回传结果的执行节点，并与现有任务编排器、工作区与实时状态流打通。</p>
+<p>类型：Requirement ｜ 状态：部分完成 ｜ 目标：把 <code>Cursor</code>、<code>Codex</code>、<code>Trae</code>、<code>Antigravity</code> 等外部 Agent 软件从「静态展示卡片」升级为可注册、可心跳、可分发任务、可回传结果的执行节点，并与现有任务编排器、工作区与实时状态流打通。</p>
+<p>实施口径（2026-08-29 核对）：集成节点注册/心跳/调度基座（C-118 / C-129）、Cursor 与 Codex 桥接真实执行、群聊 <code>@</code> 外部节点派发（C-137）均已落地；<strong>Antigravity / Trae 适配器仍为零实现</strong>（桥接工厂仅注册 <code>cursor</code> / <code>codex</code>，见《代码与计划落地差距审查报告-20260828》§2.1）。</p>
 </blockquote>
 <hr />
 <h3 id="prd-外部agent软件接入-1-背景与问题">1. 背景与问题</h3>
@@ -7738,7 +7804,7 @@ CREATE UNIQUE INDEX ix_ws_plugin_unique ON workspace_plugins(workspace_id, plugi
 </ul>
 <h2 id="prd-独立worker与事件总线链路启用">PRD：独立 Worker 与事件总线链路启用</h2>
 <blockquote>
-<p>类型：技术补完（Requirement）｜状态：实施中｜编号：<strong>C-170</strong>｜日期：2026-08-28</p>
+<p>类型：技术补完（Requirement）｜状态：已完成（2026-08-28 代码落地：C-169 启用链路 + C-171 续租修复；A/B 与冒烟测试通过。容器实跑验证 AC1/AC4/AC8 受本机镜像拉取带宽限制，列为待补做项）｜编号：<strong>C-170</strong>｜日期：2026-08-28</p>
 <p>目标：把「<strong>代码已经写完、但从来没有真正启用</strong>」的分布式调度与事件链路接通 —— 让独立 Worker 进程真正消费持久化任务队列，让 Redis 事件总线真正承担跨实例 WebSocket 广播，从而使项目文档中 Phase 2「持久化任务队列 / 独立 Worker」与 Phase 3「事件总线 / 多实例 WebSocket 解耦」的「✅ 已达成」断言成立。</p>
 <p>来源：《代码与计划落地差距审查报告-20260828》§1.1、§1.2、§8（P0-1 / P0-2）。</p>
 </blockquote>
