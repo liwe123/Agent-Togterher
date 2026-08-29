@@ -129,14 +129,24 @@ class TaskService:
         error: str,
         *,
         retry_delay_seconds: int = 5,
+        retry: bool = True,
     ) -> str | None:
+        """Settle a failed execution.
+
+        ``retry=True`` re-queues until ``max_attempts`` is exhausted — use it
+        for transient crashes where the task itself is still pending. When the
+        orchestrator already finalized the task (e.g. marked FAILED), callers
+        must pass ``retry=False``: re-queueing would leave a zombie item that
+        ``claim_next`` can never match again (its candidate filter requires a
+        PENDING task).
+        """
         item = await self._session.get(TaskQueueItem, item_id)
         if item is None or item.status != "leased" or item.lease_token != lease_token:
             return None
         item.last_error = error[:4000]
         item.lease_token = None
         item.lease_expires_at = None
-        if item.attempt_count >= item.max_attempts:
+        if not retry or item.attempt_count >= item.max_attempts:
             item.status = "dead"
         else:
             item.status = "queued"

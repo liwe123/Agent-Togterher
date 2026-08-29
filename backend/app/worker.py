@@ -75,12 +75,20 @@ async def _consume_once() -> bool:
             async with AsyncSessionLocal() as session:
                 await TaskService(session).complete(item_id, lease_token)
         else:
+            # The orchestrator already finalized the task (failed/cancelled),
+            # so it is no longer claimable (claim_next needs PENDING). Do NOT
+            # re-queue or the item becomes a zombie; settle it as dead instead.
             async with AsyncSessionLocal() as session:
                 await TaskService(session).fail(
-                    item_id, lease_token, result.result or "Task execution failed"
+                    item_id,
+                    lease_token,
+                    result.result or "Task execution failed",
+                    retry=False,
                 )
     except Exception as exc:
         logger.exception("Worker task execution failed", extra={"task_id": task_id})
+        # Unexpected crash before the task was finalized: the task may still
+        # be PENDING, so allow a bounded retry.
         async with AsyncSessionLocal() as session:
             await TaskService(session).fail(item_id, lease_token, str(exc))
     finally:

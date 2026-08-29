@@ -158,3 +158,55 @@ async def test_unrenewed_lease_is_reclaimed_by_recovery(queue_session) -> None:
     assert requeued is not None
     assert requeued.status == "queued"
     assert requeued.lease_token is None
+
+
+# --- 2026-08-29 container run: zombie queue item on finalized tasks -------
+
+
+@pytest.mark.asyncio
+async def test_default_retry_after_task_finalized_would_zombie(queue_session) -> None:
+    """Root-cause documentation: re-queuing a finalized task strands the item.
+
+    ``claim_next`` only matches PENDING tasks, so an item re-queued after the
+    orchestrator already failed its task can never be claimed again — nor does
+    it reach a terminal queue state. This is why the worker must settle
+    orchestrator-finalized failures with ``retry=False`` (next test).
+    """
+    task = await create_task(queue_session)
+    service = TaskService(queue_session)
+    await service.enqueue(task, max_attempts=3)
+    claimed = await service.claim_next()
+    assert claimed is not None and claimed.lease_token is not None
+
+    task.status = TaskStatus.FAILED
+    await queue_session.commit()
+
+    assert await service.fail(
+        claimed.id, claimed.lease_token, "boom", retry_delay_seconds=0
+    ) == "queued"
+    assert await service.claim_next() is None  # zombie: unclaimable, not dead
+    item = await queue_session.get(TaskQueueItem, claimed.id)
+    assert item is not None and item.status == "queued"
+
+
+@pytest.mark.asyncio
+async def test_fail_without_retry_settles_finalized_task_as_dead(
+    queue_session,
+) -> None:
+    """The worker fix: finalized tasks settle the item as dead, not queued."""
+    task = await create_task(queue_session)
+    service = TaskService(queue_session)
+    await service.enqueue(task, max_attempts=3)
+    claimed = await service.claim_next()
+    assert claimed is not None and claimed.lease_token is not None
+
+    task.status = TaskStatus.FAILED
+    await queue_session.commit()
+
+    assert await service.fail(
+        claimed.id, claimed.lease_token, "boom", retry=False
+    ) == "dead"
+    assert await service.claim_next() is None
+    item = await queue_session.get(TaskQueueItem, claimed.id)
+    assert item is not None and item.status == "dead"
+    assert item.lease_token is None and item.last_error == "boom"
