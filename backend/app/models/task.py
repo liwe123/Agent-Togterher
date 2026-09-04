@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, String, Text
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, utc_now
@@ -89,6 +89,12 @@ class TaskStep(Base):
     finished_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # C-185: DAG 工作流引擎——步骤所属节点 id（nodes_json 内的 node["id"]）
+    node_id: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    # C-185: 前置 node_id 列表的 JSON，记录该步骤节点的 DAG 依赖
+    dependencies_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # C-185: 全局递增执行序号（按层分配，层内按节点顺序）
+    order_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     task: Mapped["Task"] = relationship(back_populates="steps")
     agent: Mapped["Agent | None"] = relationship(back_populates="task_steps")

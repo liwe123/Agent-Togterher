@@ -16,7 +16,7 @@ from app.models.refresh_token import RefreshToken
 from app.models.task import Task, TaskStep
 from app.models.task_queue import TaskQueueItem
 from app.models.user import User
-from app.models.workflow import WorkflowTemplate
+from app.models.workflow import WorkflowRun, WorkflowTemplate
 from app.models.workspace import Workspace
 
 __all__ = [
@@ -38,6 +38,7 @@ __all__ = [
     "TaskStep",
     "TaskQueueItem",
     "User",
+    "WorkflowRun",
     "WorkflowTemplate",
     "Workspace",
     "WorkspaceInvitation",

@@ -29,3 +29,23 @@ class WorkflowTemplate(Base):
     )
 
     workspace: Mapped["Workspace | None"] = relationship("Workspace")
+
+
+class WorkflowRun(Base):
+    """一次工作流模板运行的记录（C-185 DAG 工作流引擎）。"""
+
+    __tablename__ = "workflow_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    template_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("workflow_templates.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    task_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("tasks.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    status: Mapped[str] = mapped_column(String(32), default="running", nullable=False, index=True)
+    snapshot_nodes_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now, onupdate=utc_now
+    )

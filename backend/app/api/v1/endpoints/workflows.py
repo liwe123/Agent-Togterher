@@ -1,3 +1,4 @@
+import asyncio
 import json
 from typing import Any
 from fastapi import APIRouter, Depends
@@ -10,7 +11,7 @@ from app.db.session import get_db
 from app.models.enums import TaskStatus
 from app.models.membership import WorkspaceMembership
 from app.models.task import Task
-from app.models.workflow import WorkflowTemplate
+from app.models.workflow import WorkflowRun, WorkflowTemplate
 from app.models.workspace import Workspace
 from app.schemas.common import SuccessResponse
 from app.schemas.workflow import (
@@ -22,9 +23,18 @@ from app.schemas.workflow import (
     WorkflowVariable,
 )
 from app.services.audit_service import record_audit_log
+from app.services.dag_engine import (
+    build_dag_summary,
+    parse_nodes,
+    run_workflow_dag,
+    topological_sort,
+)
 from app.services.quota_service import check_workspace_quota
 
 router = APIRouter(prefix="/workspaces/{workspace_id}/workflows", tags=["workflows"])
+
+# C-185: 进程内后台 DAG 执行任务的强引用集合，防止被 GC 回收。
+_background_dag_runs: set[asyncio.Task[None]] = set()
 
 SYSTEM_PRESET_TEMPLATES = [
     {
@@ -252,7 +262,13 @@ async def run_workflow_template(
     membership: WorkspaceMembership = Depends(require_workspace_role("member")),
     db: AsyncSession = Depends(get_db),
 ):
-    """根据参数实例化工作流模板并创建 Task 调度任务。"""
+    """根据参数实例化工作流模板，按 DAG 编排创建任务并调度执行（C-185）。
+
+    节点数组经拓扑分层后由后台 DAG 引擎按层并行执行；每个节点执行
+    独立落库 task_steps（带 node_id / dependencies_json / order_index）。
+    响应契约与旧实现保持一致（task_id / workflow_id / title / status /
+    message）。
+    """
     tpl = await db.get(WorkflowTemplate, template_id)
     if tpl is None or (not tpl.is_system and tpl.workspace_id != workspace_id):
         raise AppError(status_code=404, message="工作流模板不存在")
@@ -262,24 +278,32 @@ async def run_workflow_template(
     if quota.blocked:
         raise AppError(status_code=429, message=quota.block_reason or "工作区配额已超限")
 
-    # 渲染 Prompt 文本
-    nodes_data = []
+    # 解析节点并渲染变量占位符 {{var}}
+    raw_nodes = parse_nodes(tpl.nodes_json)
+    if not raw_nodes:
+        raise AppError(status_code=422, message="工作流模板未配置任何节点，无法运行")
+    nodes_data: list[dict[str, Any]] = []
+    for node in raw_nodes:
+        rendered = dict(node)
+        prompt_t = str(node.get("prompt_template", ""))
+        for k, v in payload.variables.items():
+            prompt_t = prompt_t.replace(f"{{{{{k}}}}}", str(v))
+        rendered["prompt_template"] = prompt_t
+        nodes_data.append(rendered)
+
+    # C-185: DAG 校验（缺 id / 未知依赖 / 环）→ 422
     try:
-        nodes_data = json.loads(tpl.nodes_json)
-    except Exception:
-        pass
+        layers = topological_sort(nodes_data)
+    except ValueError as exc:
+        raise AppError(status_code=422, message=str(exc)) from exc
 
     prompt_sections = []
     for idx, node in enumerate(nodes_data, 1):
-        prompt_t = node.get("prompt_template", "")
-        # 替换变量占位符 {{var}}
-        for k, v in payload.variables.items():
-            prompt_t = prompt_t.replace(f"{{{{{k}}}}}", str(v))
         prompt_sections.append(
-            f"步骤 {idx} [{node.get('name', '未命名步骤')}] (执行角色: {node.get('agent_role', 'agent')}):\n{prompt_t}"
+            f"步骤 {idx} [{node.get('name', '未命名步骤')}] (执行角色: {node.get('agent_role', 'agent')}):\n{node.get('prompt_template', '')}"
         )
-
     full_prompt = f"【执行工作流流水线：{tpl.display_name}】\n\n" + "\n\n".join(prompt_sections)
+    full_prompt += f"\n\n【DAG 编排概览】\n{build_dag_summary(layers)}"
 
     title = payload.custom_title or f"流水线：{tpl.display_name}"
     if payload.variables:
@@ -298,6 +322,24 @@ async def run_workflow_template(
     await db.commit()
     await db.refresh(task)
 
+    # C-185: 运行记录（快照存渲染后的节点数组；终态由引擎回写）
+    workflow_run = WorkflowRun(
+        template_id=tpl.id,
+        task_id=task.id,
+        status="running",
+        snapshot_nodes_json=json.dumps(nodes_data, ensure_ascii=False),
+    )
+    db.add(workflow_run)
+    await db.commit()
+    await db.refresh(workflow_run)
+
+    # 进程内后台执行 DAG（inline 路径；不入 task_queue，PRD 已注明）
+    dag_task = asyncio.create_task(
+        run_workflow_dag(task.id, workflow_run.id, layers)
+    )
+    _background_dag_runs.add(dag_task)
+    dag_task.add_done_callback(_background_dag_runs.discard)
+
     await record_audit_log(
         db,
         workspace_id=workspace_id,
@@ -305,7 +347,14 @@ async def run_workflow_template(
         action="workflow.run",
         resource_type="task",
         resource_id=str(task.id),
-        detail={"workflow_id": template_id, "workflow_name": tpl.name, "task_id": task.id},
+        detail={
+            "workflow_id": template_id,
+            "workflow_name": tpl.name,
+            "task_id": task.id,
+            "workflow_run_id": workflow_run.id,
+            "dag_layers": len(layers),
+            "dag_nodes": len(nodes_data),
+        },
     )
 
     return SuccessResponse(
@@ -314,7 +363,7 @@ async def run_workflow_template(
             workflow_id=tpl.id,
             title=task.title,
             status="pending",
-            message=f"已基于工作流「{tpl.display_name}」成功创建任务 #{task.id}，等待调度执行",
+            message=f"已基于工作流「{tpl.display_name}」成功创建 DAG 任务 #{task.id}（共 {len(nodes_data)} 个节点 / {len(layers)} 层），等待调度执行",
         )
     )
 
