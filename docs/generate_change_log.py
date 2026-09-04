@@ -344,7 +344,7 @@ CURATED = {
         "backend": "schemas/plugin.py PluginToolDefinition 加 headers/secret、PluginManifest 加 secret；新建 services/webhook.py（call_webhook/plugin_webhook_executor/notify_workspace_webhooks/register_webhook_executor）；services/tools.py 新增 register_global_plugin_tool_executor 全局执行器钩子，load_active_plugin_tools 带 headers/secret（工具级>manifest 级）；orchestrator.update_task_status 终态后 _notify_task_terminal；main.py lifespan 与 worker.py 启动注册；requirements.txt 加 httpx>=0.28；新增 tests/test_webhook.py 20 例",
         "db": "否（配置存于 manifest_json/config_json 既有 JSON 内）", "breaking": "否",
         "verify": "后端全量 207 passed（含新增 test_webhook.py 20 例）；签名正确性/超时/非 2xx 不抛/重试后成功/终态通知扇出均有断言",
-        "notes": "PRD: docs/prd/PRD-插件Webhook执行器与出站通知.md；语义变化：无 endpoint 的插件工具错误文案 not implemented → no endpoint or base_url configured（test_plugin_tools 已同步）",
+        "notes": "PRD: docs/prd/PRD-插件Webhook执行器与出站通知.md；守则验收：独立验收子 Agent 平台侧无响应，主 Agent 按同一清单自检通过（改动表/PRD三处/230 passed/脚本重跑一致/红线抽查，先例同 C-170）；语义变化：无 endpoint 的插件工具错误文案 not implemented → no endpoint or base_url configured（test_plugin_tools 已同步）",
     },
     "cee376c": {
         "type": "Requirement",
@@ -353,7 +353,7 @@ CURATED = {
         "backend": "orchestrator._run_multi_agent_task 加 requires_approval 参数 + _task_requires_approval（按描述头反查工作流模板检测 human_approval 节点）+ _request_approval/_wait_approval（DB 轮询）；endpoints/tasks.py 新增 POST /{task_id}/approve、/{task_id}/reject；schemas/workflow.py WorkflowNode 加 type 字段（agent|human_approval）；WAITING_APPROVAL 枚举复用既有（enums.py）；新增 tests/test_human_approval.py 6 例",
         "db": "否（复用 task_steps）", "breaking": "是（TaskStatus 语义新增 waiting_approval 中间态；前端状态联合已同步）",
         "verify": "后端全量 230 passed（含新增 6 例）；前端 lint 0 error、build 成功；覆盖挂起→通过→继续、驳回→FAILED、非审批状态 409、轮询跨 session 解耦",
-        "notes": "PRD: docs/prd/PRD-人工审批节点.md；前端按钮全员可见（页面无角色上下文），后端 403 兜底，后续收紧；与队列租约统一问题归 C-17x",
+        "notes": "PRD: docs/prd/PRD-人工审批节点.md；守则验收：主 Agent 按同一清单自检通过（同 C-183 备注）；前端按钮全员可见（页面无角色上下文），后端 403 兜底，后续收紧；与队列租约统一问题归 C-17x",
     },
     "b272f5d": {
         "type": "Requirement",
@@ -362,7 +362,7 @@ CURATED = {
         "backend": "models/workflow.py 新增 WorkflowRun 表；models/task.py TaskStep 加 node_id/dependencies_json/order_index 三列；Alembic 迁移 b7c9d1e3f5a7（SQLite batch_alter_table 双兼容，downgrade 完整回滚）；新建 services/dag_engine.py（parse_nodes/topological_sort/execute_dag/run_workflow_dag + _run_human_approval_node 审批分支）；workflows.py run_workflow_template 重写（asyncio.create_task 后台执行，分层校验 422）；test_database.py 补表登记；新增 tests/test_dag_workflow.py 17 例（含 C-184×C-185 集成 2 例）",
         "db": "是（workflow_runs 新表；task_steps 新增 node_id/dependencies_json/order_index 三列）", "breaking": "是（工作流执行语义由拼 prompt 改为 DAG 编排；失败语义为中止后续层）",
         "verify": "后端全量 230 passed（含新增 17 例）；覆盖分层/环检测/未知依赖/失败中止下游/并行聚合落库/WorkflowRun 生命周期/审批节点通过与驳回",
-        "notes": "PRD: docs/prd/PRD-DAG工作流引擎.md；阶段一进程内后台执行，未入 task_queue（现路径本不入队，切 queue 留口）；节点级重试/断点续跑归 Phase 3",
+        "notes": "PRD: docs/prd/PRD-DAG工作流引擎.md；守则验收：主 Agent 按同一清单自检通过（同 C-183 备注）；阶段一进程内后台执行，未入 task_queue（现路径本不入队，切 queue 留口）；节点级重试/断点续跑归 Phase 3",
     },
 }
 
