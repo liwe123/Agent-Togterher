@@ -28,12 +28,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useTaskDetail } from "@/hooks/use-tasks"
+import { requestData } from "@/lib/task-api"
 import {
   formatCost,
   formatDateTime,
   formatDuration,
   formatTokens,
   stepLabel,
+  stepStatusLabel,
 } from "@/lib/task-format"
 import { cn } from "@/lib/utils"
 import type { ModelCall, TaskDetail, TaskStep, TaskTraceEvent } from "@/types/task"
@@ -57,7 +59,32 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
     retry,
   } = useTaskDetail(taskId)
   const [viewMode, setViewMode] = useState<"developer" | "user">("developer")
+  const [approvalBusy, setApprovalBusy] = useState(false)
+  const [approvalError, setApprovalError] = useState<string | null>(null)
   const developer = viewMode === "developer"
+
+  // C-184 HITL：人工审批决定（approve/reject），成功后刷新任务详情。
+  // 权限说明：页面暂无角色上下文，按钮对所有可见者开放，
+  // 后端强制 admin 及以上角色（403 拒绝），后续前端再收紧。
+  const handleApprovalDecision = async (decision: "approve" | "reject") => {
+    if (!task || approvalBusy) return
+    setApprovalBusy(true)
+    setApprovalError(null)
+    try {
+      await requestData(`/api/tasks/${task.id}/${decision}`, {
+        method: "POST",
+      })
+      retry()
+    } catch (requestError) {
+      setApprovalError(
+        requestError instanceof Error
+          ? requestError.message
+          : "审批操作失败。",
+      )
+    } finally {
+      setApprovalBusy(false)
+    }
+  }
 
   return (
     <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[76px_minmax(0,1fr)]">
@@ -117,7 +144,14 @@ export function TaskDetailPage({ taskId }: TaskDetailPageProps) {
                 ) : null}
                 <ExecutionTracePanel task={task} developer={developer} />
                 <OriginalInput task={task} />
-                <TaskSteps steps={task.task_steps} developer={developer} />
+                <TaskSteps
+                  steps={task.task_steps}
+                  developer={developer}
+                  taskStatus={task.status}
+                  approvalBusy={approvalBusy}
+                  approvalError={approvalError}
+                  onApprovalDecision={handleApprovalDecision}
+                />
                 {developer ? <ModelCallLogs calls={task.model_calls} /> : null}
               </>
             )}
@@ -376,7 +410,65 @@ function OriginalInput({ task }: { task: TaskDetail }) {
   )
 }
 
-function TaskSteps({ steps, developer }: { steps: TaskStep[]; developer: boolean }) {
+interface ApprovalActionProps {
+  busy: boolean
+  onDecision: (decision: "approve" | "reject") => void
+}
+
+// C-184 HITL：人工审批操作按钮。
+// 页面暂无角色上下文，按钮全员可见（后端强制 admin+，403 拒绝）；
+// 后续接入权限上下文后在此收紧。
+function ApprovalActions({ busy, onDecision }: ApprovalActionProps) {
+  return (
+    <div className="mt-3.5 flex flex-wrap items-center gap-2.5 rounded-2xl border border-violet-500/30 bg-violet-500/10 p-3.5">
+      <p className="min-w-0 flex-1 text-xs font-medium text-foreground">
+        该任务正在等待人工审批，请复核后决定是否继续执行最终汇总。
+      </p>
+      <Button
+        type="button"
+        size="sm"
+        className="rounded-full"
+        disabled={busy}
+        onClick={() => onDecision("approve")}
+      >
+        通过
+      </Button>
+      <Button
+        type="button"
+        size="sm"
+        variant="destructive"
+        className="rounded-full"
+        disabled={busy}
+        onClick={() => onDecision("reject")}
+      >
+        驳回
+      </Button>
+    </div>
+  )
+}
+
+function TaskSteps({
+  steps,
+  developer,
+  taskStatus,
+  approvalBusy,
+  approvalError,
+  onApprovalDecision,
+}: {
+  steps: TaskStep[]
+  developer: boolean
+  taskStatus: string
+  approvalBusy: boolean
+  approvalError: string | null
+  onApprovalDecision: (decision: "approve" | "reject") => void
+}) {
+  // 审批操作入口：human_approval 步骤等待中，或任务整体处于等待审批态
+  const showApprovalActions =
+    taskStatus === "waiting_approval" ||
+    steps.some(
+      (step) =>
+        step.step_name === "human_approval" && step.status === "waiting",
+    )
   return (
     <section className="console-panel overflow-hidden rounded-3xl border border-border/70 bg-card/90 shadow-sm">
       <SectionHeader
@@ -395,9 +487,9 @@ function TaskSteps({ steps, developer }: { steps: TaskStep[]; developer: boolean
                 <span
                   className={cn(
                     "flex size-9 items-center justify-center rounded-full border font-mono text-xs font-bold shadow-sm transition-all",
-                    step.status === "failed"
+                    step.status === "failed" || step.status === "rejected"
                       ? "border-destructive/60 bg-destructive/15 text-destructive shadow-[0_0_10px_var(--destructive)]"
-                      : step.status === "completed"
+                      : step.status === "completed" || step.status === "approved"
                         ? "border-primary/50 bg-primary/20 text-primary shadow-[0_0_10px_color-mix(in_oklch,var(--primary)_25%,transparent)]"
                         : step.status === "running"
                           ? "border-[var(--status-running)] bg-[var(--status-running)]/20 text-foreground animate-pulse"
@@ -430,8 +522,22 @@ function TaskSteps({ steps, developer }: { steps: TaskStep[]; developer: boolean
                       <span className="font-mono">{formatDateTime(step.started_at)}</span>
                     </div>
                   </div>
-                  <TaskStatusBadge status={step.status} />
+                  {step.status === "approved" ? (
+                    <Badge variant="outline" className="shrink-0 rounded-full border-primary/50 bg-primary/15 text-primary">
+                      {stepStatusLabel(step.status)}
+                    </Badge>
+                  ) : step.status === "rejected" ? (
+                    <Badge variant="outline" className="shrink-0 rounded-full border-destructive/40 bg-destructive/10 text-destructive">
+                      {stepStatusLabel(step.status)}
+                    </Badge>
+                  ) : (
+                    <TaskStatusBadge status={step.status} />
+                  )}
                 </div>
+
+                {step.step_name === "human_approval" && showApprovalActions ? (
+                  <ApprovalActions busy={approvalBusy} onDecision={onApprovalDecision} />
+                ) : null}
 
                 {developer ? (
                   <div className="mt-3.5 grid gap-3 xl:grid-cols-2">
@@ -446,6 +552,12 @@ function TaskSteps({ steps, developer }: { steps: TaskStep[]; developer: boolean
               </div>
             </article>
           ))}
+
+          {approvalError ? (
+            <p className="rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-xs text-destructive">
+              {approvalError}
+            </p>
+          ) : null}
         </div>
       )}
     </section>

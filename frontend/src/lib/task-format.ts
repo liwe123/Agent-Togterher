@@ -40,8 +40,17 @@ export function stepLabel(stepName: string) {
   if (stepName === "final_summary") return "Manager 最终汇总"
   if (stepName === "call_agent_model") return "Agent 模型执行"
   if (stepName === "tool_call") return "工具调用"
+  if (stepName === "human_approval") return "人工审批"
   if (stepName.startsWith("worker_execute_")) {
     return `Worker 执行 ${stepName.replace("worker_execute_", "")}`
   }
   return stepName
+}
+
+// 人工审批步骤（C-184）的状态文案映射
+export function stepStatusLabel(status: string) {
+  if (status === "waiting") return "等待审批"
+  if (status === "approved") return "审批通过"
+  if (status === "rejected") return "已驳回"
+  return status
 }

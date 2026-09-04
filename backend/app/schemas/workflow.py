@@ -8,6 +8,8 @@ class WorkflowNode(BaseModel):
     name: str
     agent_role: str
     prompt_template: str
+    # 节点类型：agent（默认，正常执行）| human_approval（人工审批挂起点，C-184）
+    type: str = "agent"
     dependencies: list[str] = Field(default_factory=list)
 
 

@@ -11,8 +11,10 @@ from app.api.rbac_compat import enforce_workspace_role
 from app.core.execution_trace import build_trace_artifact
 from app.core.orchestrator import (
     AgentOrchestrator,
+    HUMAN_APPROVAL_STEP_NAME,
     TaskNotFoundError,
     TaskNotRunnableError,
+    update_task_status,
 )
 from app.db.base import utc_now
 from app.db.session import get_db
@@ -299,3 +301,83 @@ async def update_task(
     await commit_or_conflict(session)
     await session.refresh(task)
     return SuccessResponse(data=task)
+
+
+async def _resolve_human_approval(
+    task_id: int,
+    request: Request,
+    session: AsyncSession,
+    *,
+    decision: str,
+) -> SuccessResponse[TaskRead]:
+    """C-184: 处理 WAITING_APPROVAL 任务的人工审批决定（approved/rejected）。"""
+    task = await session.get(Task, task_id)
+    if task is None:
+        raise AppError(404, "Task not found")
+    if task.status != TaskStatus.WAITING_APPROVAL:
+        raise AppError(
+            409,
+            f"Task is not waiting for approval (status '{task.status.value}')",
+        )
+    membership = await enforce_workspace_role(
+        request, session, workspace_id=task.workspace_id, min_role="admin"
+    )
+
+    step = await session.scalar(
+        select(TaskStep)
+        .where(
+            TaskStep.task_id == task.id,
+            TaskStep.step_name == HUMAN_APPROVAL_STEP_NAME,
+            TaskStep.status == "waiting",
+        )
+        .order_by(TaskStep.id.desc())
+        .limit(1)
+    )
+    if step is None:
+        raise AppError(409, "No pending human approval step found")
+
+    step.status = decision
+    step.finished_at = utc_now()
+    await commit_or_conflict(session)
+
+    if decision == "approved":
+        await update_task_status(session, task, TaskStatus.RUNNING)
+    else:
+        await update_task_status(
+            session, task, TaskStatus.FAILED, result="人工驳回"
+        )
+
+    await record_audit_log(
+        session,
+        workspace_id=task.workspace_id,
+        user_id=membership.user_id if membership else None,
+        action=f"task.approval.{decision}",
+        resource_type="task",
+        resource_id=str(task.id),
+        detail={"step_id": step.id, "decision": decision},
+    )
+    return SuccessResponse(data=task)
+
+
+@router.post("/{task_id}/approve", response_model=SuccessResponse[TaskRead])
+async def approve_task(
+    task_id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> SuccessResponse[TaskRead]:
+    """通过人工审批：最近一条 waiting 的 human_approval 步骤置 approved。"""
+    return await _resolve_human_approval(
+        task_id, request, session, decision="approved"
+    )
+
+
+@router.post("/{task_id}/reject", response_model=SuccessResponse[TaskRead])
+async def reject_task(
+    task_id: int,
+    request: Request,
+    session: AsyncSession = Depends(get_db),
+) -> SuccessResponse[TaskRead]:
+    """驳回人工审批：任务置 FAILED（result=人工驳回）并广播。"""
+    return await _resolve_human_approval(
+        task_id, request, session, decision="rejected"
+    )

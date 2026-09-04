@@ -10,7 +10,7 @@ from uuid import uuid4
 from decimal import Decimal
 from typing import Final
 
-from sqlalchemy import inspect as sqlalchemy_inspect, select, update
+from sqlalchemy import inspect as sqlalchemy_inspect, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
@@ -34,6 +34,7 @@ from app.models import (
     Task,
     TaskStatus,
     TaskStep,
+    WorkflowTemplate,
 )
 from app.schemas import AgentStatusRead, MessageRead, TaskRead, TaskStepEventPayload
 from app.services import litellm_service
@@ -62,6 +63,11 @@ WORKER_ROLES: Final = {
     "知识库管理员": "knowledge_manager",
     "运维": "operations_engineer",
 }
+HUMAN_APPROVAL_STEP_NAME: Final = "human_approval"
+# C-184 HITL：审批挂起轮询间隔与总超时（秒）。等待方用独立短事务轮询
+# TaskStep.status（跨进程 DB 解耦，不引入 Redis）；超时按驳回处理。
+APPROVAL_POLL_INTERVAL_SECONDS: Final = 2.0
+APPROVAL_TIMEOUT_SECONDS: Final = 3600
 
 
 class OrchestratorError(Exception):
@@ -89,10 +95,12 @@ class AgentOrchestrator:
         session: AsyncSession,
         broadcaster: WebSocketManager = websocket_manager,
         failure_session_factory: async_sessionmaker[AsyncSession] | None = None,
+        approval_session_factory: async_sessionmaker[AsyncSession] | None = None,
     ) -> None:
         self._session = session
         self._broadcaster = broadcaster
         self._failure_session_factory = failure_session_factory or AsyncSessionLocal
+        self._approval_session_factory = approval_session_factory or AsyncSessionLocal
 
     @staticmethod
     def _clip_text(value: str | None, limit: int = 800) -> str | None:
@@ -138,7 +146,11 @@ class AgentOrchestrator:
             )
 
             if agent is not None and self._is_manager(agent):
-                return await self._run_multi_agent_task(task, agent)
+                return await self._run_multi_agent_task(
+                    task,
+                    agent,
+                    requires_approval=await self._task_requires_approval(task),
+                )
             return await self._run_single_agent_task(task, agent)
         finally:
             renewer.cancel()
@@ -288,8 +300,19 @@ class AgentOrchestrator:
                 error_message,
             )
 
-    async def _run_multi_agent_task(self, task: Task, manager: Agent) -> TaskRead:
-        """Run Manager -> Worker(s) -> Review -> Final for a manager task."""
+    async def _run_multi_agent_task(
+        self,
+        task: Task,
+        manager: Agent,
+        *,
+        requires_approval: bool = False,
+    ) -> TaskRead:
+        """Run Manager -> Worker(s) -> Review -> Final for a manager task.
+
+        C-184: when ``requires_approval`` is True the task suspends on the
+        WAITING_APPROVAL state between review and final until a human
+        reviewer approves or rejects it.
+        """
         active_agent: Agent | None = manager
         step: TaskStep | None = None
         step_name = "manager_plan"
@@ -509,6 +532,10 @@ class AgentOrchestrator:
             )
             await self.update_agent_status(active_agent, "idle")
 
+            # C-184 HITL：review 完成后、final 之前插入人工审批挂起点。
+            if requires_approval and not await self._request_approval(task):
+                return TaskRead.model_validate(task)
+
             step = None
             step_name = "final_summary"
             active_agent = manager
@@ -579,6 +606,123 @@ class AgentOrchestrator:
                 error_message,
                 step_name=step_name,
             )
+
+    async def _task_requires_approval(self, task: Task) -> bool:
+        """C-184: 判断任务是否来自含 human_approval 节点的工作流模板。
+
+        Task 模型未持久化 workflow 关联，这里按 workflows.py 渲染出的
+        描述头「【执行工作流流水线：<display_name>】」反查同工作区同名
+        模板（系统模板 workspace_id 可为 NULL），解析 nodes_json 检查
+        是否存在 type == "human_approval" 的节点。任何解析失败或模板
+        不存在都返回 False，绝不阻塞普通任务。
+        """
+        header = "【执行工作流流水线："
+        start = task.description.find(header)
+        if start == -1:
+            return False
+        start += len(header)
+        end = task.description.find("】", start)
+        if end == -1:
+            return False
+        display_name = task.description[start:end]
+        template = await self._session.scalar(
+            select(WorkflowTemplate).where(
+                WorkflowTemplate.display_name == display_name,
+                or_(
+                    WorkflowTemplate.workspace_id == task.workspace_id,
+                    WorkflowTemplate.workspace_id.is_(None),
+                ),
+            )
+        )
+        if template is None:
+            return False
+        try:
+            nodes = json.loads(template.nodes_json)
+        except (TypeError, ValueError):
+            logger.warning(
+                "Workflow template %s has unparsable nodes_json; "
+                "skipping human approval detection",
+                template.id,
+            )
+            return False
+        return any(
+            isinstance(node, dict) and node.get("type") == "human_approval"
+            for node in nodes
+        )
+
+    async def _request_approval(self, task: Task) -> bool:
+        """C-184 HITL：挂起任务等待人工审批，返回是否通过。
+
+        落 human_approval/waiting 步骤并把任务置 WAITING_APPROVAL 后，
+        用独立 session 轮询该步骤的最新 status（跨进程 DB 解耦，等待
+        期间不持有未 commit 的事务），直到 approved / rejected 或超时
+        （超时按 rejected 处理并记日志）。
+        """
+        step = await self.save_task_step(
+            task,
+            None,
+            step_name=HUMAN_APPROVAL_STEP_NAME,
+            status="waiting",
+            input_text=task.description,
+        )
+        await self.update_task_status(task, TaskStatus.WAITING_APPROVAL)
+        logger.info(
+            "Task %s suspended for human approval (step %s)", task.id, step.id
+        )
+
+        final_status = await self._wait_approval(step.id)
+        if final_status == "approved":
+            step.finished_at = utc_now()
+            await self.save_task_step(task, None, step=step, status="approved")
+            await self.update_task_status(task, TaskStatus.RUNNING)
+            logger.info("Task %s approved by human reviewer", task.id)
+            return True
+
+        note = (
+            f"审批等待超时（{APPROVAL_TIMEOUT_SECONDS} 秒），按驳回处理"
+            if final_status == "timeout"
+            else "人工驳回"
+        )
+        logger.warning("Task %s human approval rejected: %s", task.id, note)
+        step.finished_at = utc_now()
+        await self.save_task_step(
+            task,
+            None,
+            step=step,
+            status="rejected",
+            output=note,
+        )
+        await self.update_task_status(
+            task,
+            TaskStatus.FAILED,
+            result=f"人工驳回：{note}",
+        )
+        return False
+
+    async def _wait_approval(self, step_id: int) -> str:
+        """轮询等待 human_approval 步骤被审批，返回 approved/rejected/timeout。
+
+        每次轮询都打开一个全新的短事务（async with），查完即关，绝不
+        持有未 commit 的事务，避免阻塞其他进程写入；总等待时长不超过
+        APPROVAL_TIMEOUT_SECONDS 秒。
+        """
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + APPROVAL_TIMEOUT_SECONDS
+        while True:
+            async with self._approval_session_factory() as session:
+                status = await session.scalar(
+                    select(TaskStep.status).where(TaskStep.id == step_id)
+                )
+            if status in {"approved", "rejected"}:
+                return status
+            if loop.time() >= deadline:
+                logger.warning(
+                    "Human approval wait timed out after %s seconds (step %s)",
+                    APPROVAL_TIMEOUT_SECONDS,
+                    step_id,
+                )
+                return "timeout"
+            await asyncio.sleep(APPROVAL_POLL_INTERVAL_SECONDS)
 
     async def _claim_pending_task(self, task_id: int) -> Task:
         claim_token = str(uuid4())
