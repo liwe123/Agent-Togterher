@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>28</b> 份</span>
-        <span>变更记录 <b>186</b> 条</span>
-        <span>生成于 2026-09-04 22:14</span>
+        <span>变更记录 <b>187</b> 条</span>
+        <span>生成于 2026-09-04 22:16</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -3263,6 +3263,22 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>是（工作流执行语义由拼 prompt 改为 DAG 编排；失败语义为中止后续层）</td>
 <td>后端全量 230 passed（含新增 17 例）；覆盖分层/环检测/未知依赖/失败中止下游/并行聚合落库/WorkflowRun 生命周期/审批节点通过与驳回</td>
 <td>PRD: docs/prd/PRD-DAG工作流引擎.md；阶段一进程内后台执行，未入 task_queue（现路径本不入队，切 queue 留口）；节点级重试/断点续跑归 Phase 3</td>
+</tr>
+<tr>
+<td>2026-09-04 22:15</td>
+<td>C-187</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/6e8affe">6e8affe</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 登记 C-182~C-186（测试环境修复 + Webhook 执行器 + HITL 审批 + DAG 引擎），CURATED 补中文详情，PRD 三处同步</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
 </tr>
 </tbody>
 </table></div>
