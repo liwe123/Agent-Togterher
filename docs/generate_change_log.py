@@ -371,7 +371,7 @@ CURATED = {
         "backend": "tests/test_human_approval.py 导入区补 AsyncIterator（collections.abc）",
         "db": "否", "breaking": "否",
         "verify": "本地 CI 同参数 flake8 0 错误；test_human_approval 6 passed；全量 230 passed；修复后 CI run #65 重跑通过",
-        "notes": "教训已固化进守则 3：后端改动验收须加跑 CI 同参数 flake8（见 d088dbe 守则修订）",
+        "notes": "教训已固化进守则 3：后端改动验收须加跑 CI 同参数 flake8（见 320511e 守则修订）",
     },
 }
 

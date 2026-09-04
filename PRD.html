@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>28</b> 份</span>
-        <span>变更记录 <b>188</b> 条</span>
-        <span>生成于 2026-09-04 22:31</span>
+        <span>变更记录 <b>191</b> 条</span>
+        <span>生成于 2026-09-04 22:49</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -3289,6 +3289,54 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>Optimization</td>
 <td>其他、文档</td>
 <td>docs: 变更追踪表登记 C-182~C-186 批次提交</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-04 22:31</td>
+<td>C-189</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/94343a2">94343a2</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 变更追踪表登记验收结论（C-183~C-186 备注）</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-04 22:41</td>
+<td>C-190</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/23994c6">23994c6</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端</td>
+<td>修复 CI 挂：tests/test_human_approval.py 的 approval_env fixture 用了 AsyncIterator 类型注解但只导入 Iterator，flake8 F821（undefined name）被 CI 严格白名单（select=E9,F63,F7,F82）拦截，build-linux 32s 失败且 pytest 未执行。补全导入即可</td>
+<td>-</td>
+<td>tests/test_human_approval.py 导入区补 AsyncIterator（collections.abc）</td>
+<td>否</td>
+<td>否</td>
+<td>本地 CI 同参数 flake8 0 错误；test_human_approval 6 passed；全量 230 passed；修复后 CI run #65 重跑通过</td>
+<td>教训已固化进守则 3：后端改动验收须加跑 CI 同参数 flake8（见 320511e 守则修订）</td>
+</tr>
+<tr>
+<td>2026-09-04 22:43</td>
+<td>C-191</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/320511e">320511e</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 守则 3 补 CI 同参数 flake8 验收项（C-190 挂 CI 教训固化）</td>
 <td>-</td>
 <td>-</td>
 <td>否</td>
