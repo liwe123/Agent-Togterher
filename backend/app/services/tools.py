@@ -7,8 +7,10 @@ an error string the model can read and react to.
 Plugin tools (declarative webhook tools registered through the plugin
 registry) are merged into the Function Calling spec at runtime and dispatched
 through an extensible executor hook. See ``register_plugin_tool_executor`` for
-the execution boundary: this service does NOT perform outbound webhook calls
-itself, so a plugin whose executor is unregistered yields an honest
+the execution boundary: since C-183 a process-wide webhook executor
+(``app/services/webhook.py``) is installed at startup and performs the actual
+outbound HTTP calls; per-plugin executors registered here still take
+precedence, and without any executor a plugin tool yields an honest
 "not implemented" error string instead of a fake result.
 """
 
@@ -188,6 +190,18 @@ def unregister_plugin_tool_executor(plugin_name: str) -> None:
     _PLUGIN_TOOL_EXECUTORS.pop(plugin_name, None)
 
 
+# C-183: process-wide fallback executor. Installed once at startup (API
+# lifespan and worker) by ``webhook.register_webhook_executor``; per-plugin
+# registrations above still win, so custom executors remain possible.
+_GLOBAL_PLUGIN_TOOL_EXECUTOR: PluginToolExecutor | None = None
+
+
+def register_global_plugin_tool_executor(executor: PluginToolExecutor) -> None:
+    """Register the process-wide executor used when a plugin has no own one."""
+    global _GLOBAL_PLUGIN_TOOL_EXECUTOR
+    _GLOBAL_PLUGIN_TOOL_EXECUTOR = executor
+
+
 async def _default_plugin_tool_executor(
     *, record: dict, arguments: dict, workspace_id: int, session
 ) -> str:
@@ -276,6 +290,7 @@ async def load_active_plugin_tools(session, workspace_id: int | None) -> list[di
             except Exception:
                 config = {}
         base_url = manifest.get("base_url")
+        manifest_secret = manifest.get("secret")
         for raw_tool in manifest.get("tools", []):
             if not isinstance(raw_tool, dict):
                 continue
@@ -292,6 +307,10 @@ async def load_active_plugin_tools(session, workspace_id: int | None) -> list[di
                     "base_url": base_url,
                     "endpoint": raw_tool.get("endpoint"),
                     "method": raw_tool.get("method") or "POST",
+                    # C-183: outbound-call hardening. Secret precedence:
+                    # tool-level > manifest-level > workspace config.
+                    "headers": raw_tool.get("headers") or {},
+                    "secret": raw_tool.get("secret") or manifest_secret,
                     "config": config,
                 }
             )
@@ -345,9 +364,11 @@ async def execute_plugin_tool(
         type_error = _validate_plugin_arguments(args, record.get("parameters", {}))
         if type_error:
             return type_error
-        executor = _PLUGIN_TOOL_EXECUTORS.get(
-            record.get("plugin_name")
-        ) or _default_plugin_tool_executor
+        executor = (
+            _PLUGIN_TOOL_EXECUTORS.get(record.get("plugin_name"))
+            or _GLOBAL_PLUGIN_TOOL_EXECUTOR
+            or _default_plugin_tool_executor
+        )
         return await executor(
             record=record,
             arguments=args,
@@ -401,6 +422,7 @@ __all__ = [
     "get_tools_spec",
     "get_workspace_tools_spec",
     "load_active_plugin_tools",
+    "register_global_plugin_tool_executor",
     "register_plugin_tool_executor",
     "safe_eval_expression",
     "unregister_plugin_tool_executor",

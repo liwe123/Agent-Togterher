@@ -16,6 +16,9 @@ class PluginToolDefinition(BaseModel):
     parameters: dict[str, Any] = Field(default_factory=dict)
     endpoint: str | None = None
     method: str = "POST"
+    # C-183: outbound-call hardening — per-tool auth headers and HMAC secret.
+    headers: dict[str, str] = Field(default_factory=dict)
+    secret: str | None = None
 
 
 class PluginManifest(BaseModel):
@@ -26,6 +29,8 @@ class PluginManifest(BaseModel):
     icon: str | None = None
     author: str | None = None
     base_url: str | None = None
+    # C-183: manifest-level default HMAC secret; tool-level secret wins.
+    secret: str | None = None
     tools: list[PluginToolDefinition] = Field(default_factory=list)
 
 

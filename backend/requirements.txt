@@ -10,3 +10,4 @@ litellm>=1.60,<2.0
 PyYAML>=6.0,<7.0
 PyJWT>=2.8,<3.0
 cryptography>=43,<50
+httpx>=0.28,<1.0

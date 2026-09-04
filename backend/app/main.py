@@ -21,6 +21,10 @@ _event_relay = build_event_relay(websocket_manager, settings.worker_instance_id,
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await init_db()
+    # C-183: install the real plugin webhook executor (idempotent).
+    from app.services.webhook import register_webhook_executor
+
+    register_webhook_executor()
     from app.db.seed import seed_defaults
     from app.db.session import AsyncSessionLocal
     from app.core.message_hub import recover_unfinished_tasks

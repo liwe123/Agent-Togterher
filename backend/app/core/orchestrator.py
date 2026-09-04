@@ -704,7 +704,35 @@ class AgentOrchestrator:
             task.workspace_id,
             create_event("task.status_changed", task_data),
         )
+        # C-183: outbound terminal notification. Runs strictly after the
+        # commit + broadcast; a webhook failure must never affect the status
+        # transition itself (notify_workspace_webhooks never raises).
+        if status in {TaskStatus.COMPLETED, TaskStatus.FAILED}:
+            try:
+                await self._notify_task_terminal(task, status)
+            except Exception:  # noqa: BLE001 — belt and braces for the hot path
+                logger.exception(
+                    "Task terminal notification failed for task %s", task.id
+                )
         return task_data
+
+    async def _notify_task_terminal(self, task: Task, status: TaskStatus) -> None:
+        """Push a terminal-task summary to workspace plugin webhooks (C-183)."""
+        from app.services.webhook import notify_workspace_webhooks
+
+        status_value = status.value if hasattr(status, "value") else str(status)
+        await notify_workspace_webhooks(
+            self._session,
+            task.workspace_id,
+            {
+                "event": "task.terminal",
+                "task_id": task.id,
+                "title": task.title,
+                "status": status_value,
+                "result": (task.result or "")[:500],
+                "finished_at": utc_now().isoformat(),
+            },
+        )
 
     async def update_agent_status(
         self,

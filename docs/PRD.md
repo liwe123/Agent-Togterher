@@ -237,6 +237,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-外部任务包元数据与状态机补齐.md](prd/PRD-外部任务包元数据与状态机补齐.md) | 外部任务包元数据（验收/路径/测试命令/预算）+ waiting_approval 状态机 + dispatch 异步化 + 取消接口 + 孤儿恢复 | — | — |
 | [PRD-ProviderKey信封加密.md](prd/PRD-ProviderKey信封加密.md) | Provider Key 信封加密（Fernet 静态加密、JWT 密钥派生主密钥、v1 前缀存量兼容、掩码解密） | — | — |
 | [PRD-独立Worker与事件总线链路启用.md](prd/PRD-独立Worker与事件总线链路启用.md) | 独立 Worker 与事件总线链路启用（compose worker 服务编排、task_execution_mode 默认 queue、Redis 事件总线与分布式锁开关注入、Worker 侧事件出口 FR8） | 0529d2c | C-170 |
+| [PRD-插件Webhook执行器与出站通知.md](prd/PRD-插件Webhook执行器与出站通知.md) | 插件 Webhook 工具执行器与任务终态出站通知（httpx 出站 + HMAC-SHA256 签名 + 超时重试、全局执行器替换占位、工作区插件 webhook 通知） | 见追踪表 | C-183 |
 
 ---
 

@@ -436,7 +436,11 @@ async def test_plugin_tool_without_executor_returns_honest_error_and_continues(
         )
     )
     assert len(tool_steps) == 1
-    assert "not implemented" in (tool_steps[0].output or "")
+    # C-183: without a per-plugin executor the process-wide webhook executor
+    # runs instead; this tool declares no endpoint/base_url, so it still
+    # yields an honest error string (never a fabricated result) and the
+    # loop continues.
+    assert "no endpoint or base_url configured" in (tool_steps[0].output or "")
 
 
 @pytest.mark.asyncio

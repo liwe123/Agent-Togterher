@@ -111,6 +111,10 @@ async def _sweep_expired_leases() -> int:
 async def run_worker() -> None:
     settings = get_settings()
     await init_db()
+    # C-183: install the real plugin webhook executor (idempotent).
+    from app.services.webhook import register_webhook_executor
+
+    register_webhook_executor()
     async with AsyncSessionLocal() as session:
         await TaskService(session).recover()
 
