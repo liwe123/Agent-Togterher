@@ -11,7 +11,10 @@ covered separately by ``test_alembic_migrations.py``.
 from __future__ import annotations
 
 import os
+import tempfile
+import uuid
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 import pytest
 import pytest_asyncio
@@ -42,6 +45,16 @@ def pytest_configure(config: pytest.Config) -> None:
     os.environ.setdefault("EVENT_BUS_ENABLED", "false")
     os.environ.setdefault("DISTRIBUTED_LOCK_ENABLED", "false")
     os.environ.setdefault("TASK_EXECUTION_MODE", "inline")
+    # ``app.core.config`` reads ``../.env`` relative to the backend cwd, so a
+    # developer checkout leaks the real dev ``DATABASE_URL`` (data/agent_console.db)
+    # into the test process. Pin a throwaway per-run SQLite file so lifespan
+    # migrations (TestClient startup) stay hermetic, same as the three switches
+    # above. ``setdefault`` keeps an explicit override possible.
+    os.environ.setdefault(
+        "DATABASE_URL",
+        "sqlite+aiosqlite:///"
+        + (Path(tempfile.gettempdir()) / f"agent-console-pytest-{uuid.uuid4().hex}.db").as_posix(),
+    )
 
 
 @pytest_asyncio.fixture
