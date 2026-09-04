@@ -364,6 +364,15 @@ CURATED = {
         "verify": "后端全量 230 passed（含新增 17 例）；覆盖分层/环检测/未知依赖/失败中止下游/并行聚合落库/WorkflowRun 生命周期/审批节点通过与驳回",
         "notes": "PRD: docs/prd/PRD-DAG工作流引擎.md；守则验收：主 Agent 按同一清单自检通过（同 C-183 备注）；阶段一进程内后台执行，未入 task_queue（现路径本不入队，切 queue 留口）；节点级重试/断点续跑归 Phase 3",
     },
+    "23994c6": {
+        "type": "BUG",
+        "content": "修复 CI 挂：tests/test_human_approval.py 的 approval_env fixture 用了 AsyncIterator 类型注解但只导入 Iterator，flake8 F821（undefined name）被 CI 严格白名单（select=E9,F63,F7,F82）拦截，build-linux 32s 失败且 pytest 未执行。补全导入即可",
+        "frontend": "-",
+        "backend": "tests/test_human_approval.py 导入区补 AsyncIterator（collections.abc）",
+        "db": "否", "breaking": "否",
+        "verify": "本地 CI 同参数 flake8 0 错误；test_human_approval 6 passed；全量 230 passed；修复后 CI run #65 重跑通过",
+        "notes": "教训已固化进守则 3：后端改动验收须加跑 CI 同参数 flake8（见 d088dbe 守则修订）",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even

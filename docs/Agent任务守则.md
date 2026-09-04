@@ -78,6 +78,7 @@ python docs/build_prd_html.py        # 重生根目录 PRD.html（份数与条�
 - **A/B 测试 + 冒烟测试（smoke test）必做**：任何改动（含纯文档 / 配置）都至少完成冒烟验证；功能 / 视觉类改动必须做 A/B 对比并记录结论。
 - **测试命令参考**：
   - 后端改动 → 先 `pip install -r backend/requirements-dev.txt`，再 `pytest backend/tests`；
+  - 后端改动**还须跑 CI 同参数 flake8**：`cd backend && flake8 app tests --count --select=E9,F63,F7,F82 --show-source --statistics` 必须 0 错误——CI 在 pytest 之前跑这一步，F821（未定义名）等硬错误会直接挂 CI（2026-09-04 C-190 教训）；
   - 前端改动 → `npm run build` + `npm test` + lint（如 `npm run lint`）；
   - 前端视觉类 A/B 指**合并前后对比**，结论写入《改动表》「验证结果 / 备注」列。
 - **子 Agent 协同**：改动涉及多文件、跨前后端、或需要并行分析时，**可派发多个子 Agent 协作**（如：一个分析脚本结构、一个改前端、一个改后端），主 Agent 负责汇总与最终落地。
@@ -116,7 +117,7 @@ python docs/build_prd_html.py        # 重生根目录 PRD.html（份数与条�
 - [ ] 改动已上《改动表》（中文改动内容，14 列格式一致，类型用 `Requirement/BUG/Optimization`）
 - [ ] 改动类型已判定：Requirement / BUG / Optimization
 - [ ] 若为 Requirement：PRD 已写（含 目标/用户故事/FR/AC），`docs/prd/` + `PRD.html` + `PRD.md` 索引三处已同步
-- [ ] 已完成 A/B 测试与冒烟测试，结论有记录（后端 `pytest` / 前端 `build+test+lint`）
+- [ ] 已完成 A/B 测试与冒烟测试，结论有记录（后端 `pytest` + CI 同参数 `flake8` / 前端 `build+test+lint`）
 - [ ] 已派子 Agent 独立完成验收且通过，结论写入《改动表》备注
 - [ ] 已重跑 `generate_change_log.py` 与 `build_prd_html.py`，文档与 git 对齐
 - [ ] 提交信息用 Conventional Commits 风格；`git add` 仅加真实改动，排除备份 / `__pycache__` / `.workbuddy`
