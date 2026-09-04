@@ -10,7 +10,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
-from collections.abc import Iterator
+from collections.abc import AsyncIterator, Iterator
 from unittest.mock import AsyncMock, patch
 
 import pytest
