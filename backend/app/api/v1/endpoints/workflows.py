@@ -299,6 +299,14 @@ async def run_workflow_template(
 
     prompt_sections = []
     for idx, node in enumerate(nodes_data, 1):
+        # C-185/C-186 渲染层分支：human_approval 节点的 prompt_template（含内部
+        # 审批说明/哨兵文案）不能拼进 full_prompt——否则会进入 Task.description
+        # 并作为用户消息喂给后续节点模型。此处替换为固定占位文本，步骤编号保持连续。
+        if str(node.get("type") or "agent") == "human_approval":
+            prompt_sections.append(
+                f"步骤 {idx} [人工审批] (执行角色: human_approval):\n该节点为人工审批节点，执行时将挂起等待审批，无需模型生成内容。"
+            )
+            continue
         prompt_sections.append(
             f"步骤 {idx} [{node.get('name', '未命名步骤')}] (执行角色: {node.get('agent_role', 'agent')}):\n{node.get('prompt_template', '')}"
         )

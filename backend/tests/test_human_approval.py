@@ -516,3 +516,180 @@ def test_approval_api_rejects_non_waiting_task(approval_api) -> None:
     assert approve.status_code == 409
     assert reject.status_code == 409
     assert "waiting for approval" in approve.json()["error"]
+
+
+SENTINEL_HITL = "__SENTINEL_HITL_SECRET__"
+
+
+@pytest.mark.asyncio
+async def test_run_endpoint_full_prompt_skips_human_approval_prompt(
+    approval_env, monkeypatch
+) -> None:
+    """BUG-1/C3：workflow /run 端点渲染 full_prompt 时跳过 human_approval 节点。
+
+    回归守卫：
+    - 模板含 human_approval 节点且其 prompt_template 填哨兵字符串；
+    - run 端点执行后，Task.description（= full_prompt）不含哨兵，且步骤编号连续、
+      该节点替换为固定占位文案；
+    - 喂给模型的消息（含 task.description）不含哨兵，不再污染模型上下文；
+    - human_approval 节点未被砍掉：DAG 真实执行到该节点并挂起（waiting 步骤），
+      审批通过后任务推进到 COMPLETED。
+    """
+    from httpx import ASGITransport, AsyncClient
+
+    from app.services import dag_engine as dag_engine_module
+    from app.services.dag_engine import run_workflow_dag as real_run_workflow_dag
+
+    session_factory = approval_env
+    # run_workflow_dag 默认绑定进程级 AsyncSessionLocal（指向 env DATABASE_URL 的
+    # 临时库），端点以位置参数 create_task 调度，无法注入 session_factory——
+    # 这里包一层，让真实 DAG 后台任务落到本测试库，才能观察 task_steps。
+
+    async def run_dag_against_test_db(task_id: int, run_id: int, layers) -> None:
+        await real_run_workflow_dag(
+            task_id, run_id, layers, session_factory=session_factory
+        )
+
+    monkeypatch.setattr(
+        "app.api.v1.endpoints.workflows.run_workflow_dag", run_dag_against_test_db
+    )
+    # 加速审批轮询，避免按真实 2s 间隔拖慢测试
+    monkeypatch.setattr(dag_engine_module, "APPROVAL_POLL_INTERVAL_SECONDS", 0.01)
+
+    async def override_get_db():
+        async with session_factory() as session:
+            yield session
+
+    app.dependency_overrides[get_db] = override_get_db
+    mock_chat = AsyncMock(return_value=completion("示例功能已实现。", "code_model"))
+    try:
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as client:
+            reg = await client.post(
+                "/api/v1/auth/register",
+                json={
+                    "email": "run_fullprompt@example.com",
+                    "password": "Password123!",
+                    "display_name": "Full Prompt Runner",
+                },
+            )
+            assert reg.status_code == 200, reg.text
+            token = reg.json()["data"]["access_token"]
+            headers = {"Authorization": f"Bearer {token}"}
+            ws_res = await client.get("/api/v1/workspaces/my", headers=headers)
+            assert ws_res.status_code == 200, ws_res.text
+            ws_id = ws_res.json()["data"][0]["id"]
+
+            nodes = [
+                {
+                    "id": "build",
+                    "name": "编码实现",
+                    "agent_role": "coder",
+                    "prompt_template": "请实现一个示例功能并输出说明。",
+                    "type": "agent",
+                    "dependencies": [],
+                },
+                {
+                    "id": "gate",
+                    "name": "上线审批",
+                    "agent_role": "",
+                    "prompt_template": SENTINEL_HITL,
+                    "type": "human_approval",
+                    "dependencies": ["build"],
+                },
+            ]
+            async with session_factory() as session:
+                session.add(
+                    Agent(
+                        workspace_id=ws_id,
+                        name="编码Agent",
+                        role="coder",
+                        model_name="code_model",
+                        system_prompt="System prompt for coder",
+                        status="idle",
+                    )
+                )
+                session.add(
+                    WorkflowTemplate(
+                        workspace_id=ws_id,
+                        name="hitl-fullprompt",
+                        display_name="HITL 全提示回归流水线",
+                        nodes_json=json.dumps(nodes, ensure_ascii=False),
+                        is_system=False,
+                    )
+                )
+                await session.commit()
+                tpl_id = await session.scalar(
+                    select(WorkflowTemplate.id).where(
+                        WorkflowTemplate.workspace_id == ws_id,
+                        WorkflowTemplate.name == "hitl-fullprompt",
+                    )
+                )
+            assert tpl_id is not None
+
+            with patch(
+                "app.services.litellm_service.chat_completion", new=mock_chat
+            ):
+                run = await client.post(
+                    f"/api/v1/workspaces/{ws_id}/workflows/{tpl_id}/run",
+                    headers=headers,
+                    json={"variables": {}},
+                )
+                assert run.status_code == 200, run.text
+                task_id = run.json()["data"]["task_id"]
+
+                # human_approval 节点仍正常挂起：出现 waiting 步骤即证明没被砍掉
+                loop = asyncio.get_running_loop()
+                step_id = None
+                deadline = loop.time() + 5.0
+                while loop.time() < deadline:
+                    async with session_factory() as session:
+                        step = await session.scalar(
+                            select(TaskStep)
+                            .where(
+                                TaskStep.task_id == task_id,
+                                TaskStep.step_name == HUMAN_APPROVAL_STEP_NAME,
+                                TaskStep.status == "waiting",
+                            )
+                            .order_by(TaskStep.id.desc())
+                            .limit(1)
+                        )
+                    if step is not None:
+                        step_id = step.id
+                        break
+                    await asyncio.sleep(0.02)
+                assert step_id is not None, "human_approval waiting step never appeared"
+
+                async with session_factory() as session:
+                    task = await session.get(Task, task_id)
+                    description = task.description or ""
+
+                # 渲染层修复：审批节点 prompt 不进 full_prompt / Task.description
+                assert SENTINEL_HITL not in description
+                assert "步骤 1 [编码实现]" in description
+                assert "步骤 2 [人工审批]" in description
+                assert "该节点为人工审批节点" in description
+                # 喂给模型的消息（含 task.description）也不得出现哨兵
+                for call in mock_chat.call_args_list:
+                    blob = json.dumps(call.args, ensure_ascii=False) + json.dumps(
+                        call.kwargs, ensure_ascii=False
+                    )
+                    assert SENTINEL_HITL not in blob
+
+                # 审批通过后挂起方继续执行，任务推进到 COMPLETED
+                async with session_factory() as session:
+                    waiting = await session.get(TaskStep, step_id)
+                    waiting.status = "approved"
+                    await session.commit()
+                deadline = loop.time() + 5.0
+                while loop.time() < deadline:
+                    async with session_factory() as session:
+                        task_status = await session.scalar(
+                            select(Task.status).where(Task.id == task_id)
+                        )
+                    if task_status == TaskStatus.COMPLETED:
+                        break
+                    await asyncio.sleep(0.02)
+                assert task_status == TaskStatus.COMPLETED
+    finally:
+        app.dependency_overrides.clear()
