@@ -435,7 +435,7 @@ WORKER_CONCURRENCY=2
 │   └── package.json
 ├── docs/
 │   ├── prd/                     # 28 份 PRD 文档
-│   ├── PRD.md                   # 变更追踪表（265 行）
+│   ├── PRD.md                   # 变更追踪表（自动生成，由 generate_change_log.py 维护）
 │   ├── generate_change_log.py   # 从 git history 自动生成变更表
 │   └── build_prd_html.py        # 生成单页 PRD.html 阅读器
 ├── docker-compose.yml
