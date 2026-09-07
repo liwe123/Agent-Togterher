@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import AppError
+from app.api.rbac_compat import enforce_workspace_role
 from app.core.message_hub import MessageHub
 from app.db.session import get_db
 from app.models import Conversation, Message
@@ -20,12 +21,16 @@ async def _get_conversation(session: AsyncSession, conversation_id: int) -> Conv
 
 @router.get("", response_model=SuccessResponse[list[MessageRead]])
 async def list_messages(
+    request: Request,
     conversation_id: int,
     limit: int = Query(default=200, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[list[MessageRead]]:
-    await _get_conversation(session, conversation_id)
+    conversation = await _get_conversation(session, conversation_id)
+    await enforce_workspace_role(
+        request, session, workspace_id=conversation.workspace_id, min_role="viewer"
+    )
     messages = (
         await session.scalars(
             select(Message)
@@ -44,9 +49,14 @@ async def list_messages(
     status_code=status.HTTP_201_CREATED,
 )
 async def create_message(
+    request: Request,
     conversation_id: int,
     payload: MessageCreate,
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[MessageHubRead | MessageRead]:
+    conversation = await _get_conversation(session, conversation_id)
+    await enforce_workspace_role(
+        request, session, workspace_id=conversation.workspace_id, min_role="member"
+    )
     result = await MessageHub(session).receive_message(conversation_id, payload)
     return SuccessResponse(data=result)

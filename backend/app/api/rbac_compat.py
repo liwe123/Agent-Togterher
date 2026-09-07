@@ -55,13 +55,16 @@ async def enforce_workspace_role(
 ) -> WorkspaceMembership | None:
     """Require ``min_role`` in ``workspace_id`` from JWT callers.
 
-    Legacy (non-JWT) callers pass through untouched; JWT callers that are
-    not members of the workspace are rejected with 403. Returns the resolved
-    membership, or ``None`` when enforcement was skipped.
+    Legacy (non-JWT) callers pass through untouched. JWT callers must pass a
+    ``workspace_id`` (missing -> 422); callers that are not members of the
+    workspace are rejected with 403. Returns the resolved membership, or
+    ``None`` when enforcement was skipped.
     """
     user = await _jwt_user(request, session)
-    if user is None or workspace_id is None:
-        return None
+    if user is None:
+        return None  # legacy static/open 透传
+    if workspace_id is None:
+        raise AppError(status_code=422, message="workspace_id 为必填参数")
     membership = await session.scalar(
         select(WorkspaceMembership).where(
             WorkspaceMembership.user_id == user.id,
