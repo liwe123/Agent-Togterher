@@ -20,6 +20,12 @@ Agent Console 把分散的 Agent、模型与执行日志收敛成一个可观察
 - **可复盘调试**：任务执行过程支持毫秒级时序回放，支持步骤输入输出 Payload 检查及断点单步恢复。
 - **生态与自动化**：支持 JSON Manifest 插件工具热插拔与多 Agent 编排工作流模板一键实例化。
  
+## Platform Capabilities (Phase 1 Enhancements)
+
+- **HITL 人工审批节点**：工作流中可插入人工审批节点，审批通过/驳回带审计轨迹，挂起期跨进程解耦靠 DB 轮询（TaskStep.status waiting→approved/rejected）。
+- **插件 Webhook 执行器与出站通知**：HMAC-SHA256 签名的外部 Webhook 工具执行器，任务终态自动通知工作区配置的 Webhook，10s 超时 + 3 次有界重试。
+- **DAG 工作流引擎**：分层并行的 DAG 执行引擎（逐层 asyncio.gather），节点快照与运行记录持久化（workflow_runs 表），支持人工审批挂起分支。
+
 ## Brand Personality
  
 精准、有人味、连接感。桌面端应像一套成熟的集群运行台，移动端则像团队成员随时可进入的原生群聊；技术感来自真实连接状态和严谨结构，人物感来自清晰的角色肖像与自然对话。

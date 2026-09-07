@@ -212,6 +212,7 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-09-04 22:31 | C-189 | 已完成 | [94343a2](https://github.com/liwe123/Agent-Togterher/commit/94343a2) | LI | Optimization | 其他、文档 | docs: 变更追踪表登记验收结论（C-183~C-186 备注） | - | - | 否 | 否 | - | - |
 | 2026-09-04 22:41 | C-190 | 已完成 | [23994c6](https://github.com/liwe123/Agent-Togterher/commit/23994c6) | LI | BUG | 后端 | 修复 CI 挂：tests/test_human_approval.py 的 approval_env fixture 用了 AsyncIterator 类型注解但只导入 Iterator，flake8 F821（undefined name）被 CI 严格白名单（select=E9,F63,F7,F82）拦截，build-linux 32s 失败且 pytest 未执行。补全导入即可 | - | tests/test_human_approval.py 导入区补 AsyncIterator（collections.abc） | 否 | 否 | 本地 CI 同参数 flake8 0 错误；test_human_approval 6 passed；全量 230 passed；修复后 CI run #65 重跑通过 | 教训已固化进守则 3：后端改动验收须加跑 CI 同参数 flake8（见 320511e 守则修订） |
 | 2026-09-04 22:43 | C-191 | 已完成 | [320511e](https://github.com/liwe123/Agent-Togterher/commit/320511e) | LI | Optimization | 其他、文档 | docs: 守则 3 补 CI 同参数 flake8 验收项（C-190 挂 CI 教训固化） | - | - | 否 | 否 | - | - |
+| 2026-09-04 22:49 | C-192 | 已完成 | [cede318](https://github.com/liwe123/Agent-Togterher/commit/cede318) | LI | Optimization | 其他、文档 | docs: 变更追踪表登记 CI 修复（C-190）与守则修订（C-191） | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---

@@ -114,9 +114,11 @@
 
 ## 守则收尾清单（每项 + 总收尾）
 
-- [ ] 改动表 `docs/Agent_Console_变更追踪.xlsx`：14 列、表头第 2 行、H 列中文、类型字面量 `Requirement`
-- [ ] PRD 三处同步：`docs/prd/PRD-*.md` + `PRD.html` + `docs/PRD.md` 索引
-- [ ] `python docs/generate_change_log.py` + `python docs/build_prd_html.py` 重跑对齐
-- [ ] `pytest backend/tests` 全绿；前端改动 `npm run build` + lint
-- [ ] 独立验收子 Agent 通过，结论入备注
-- [ ] 提交：Conventional Commits（`feat: ...`）；`git add` 仅真实改动文件，排除 `__pycache__/`、`.workbuddy/`、`*_备份.xlsx`；`git push` 至 main
+> 状态（2026-09-07 回写）：子项 A/B/C → C-183/C-185/C-186 已全部走完守则并推送（commit 94343a2，2026-09-04）。以下清单全部勾选。
+
+- [x] 改动表 `docs/Agent_Console_变更追踪.xlsx`：14 列、表头第 2 行、H 列中文、类型字面量 `Requirement`
+- [x] PRD 三处同步：`docs/prd/PRD-*.md` + `PRD.html` + `docs/PRD.md` 索引
+- [x] `python docs/generate_change_log.py` + `python docs/build_prd_html.py` 重跑对齐
+- [x] `pytest backend/tests` 全绿；前端改动 `npm run build` + lint
+- [x] 独立验收子 Agent 通过，结论入备注
+- [x] 提交：Conventional Commits（`feat: ...`）；`git add` 仅真实改动文件，排除 `__pycache__/`、`.workbuddy/`、`*_备份.xlsx`；`git push` 至 main

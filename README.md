@@ -13,7 +13,7 @@
 | 后端 | FastAPI · Python 3.11+ · SQLAlchemy 2.0 Async |
 | 前端 | Next.js 16 (App Router) · React 19 · TypeScript |
 | 样式 | Tailwind CSS v4 (OKLCH) · shadcn/ui · Lucide |
-| 数据库 | SQLite（开发）/ PostgreSQL（生产），19 张领域表 |
+| 数据库 | SQLite（开发）/ PostgreSQL（生产），21 张领域表 |
 | 模型层 | LiteLLM 统一适配 OpenAI / Anthropic / Gemini / DeepSeek / Qwen |
 | 实时 | FastAPI WebSocket + Redis Pub/Sub |
 | 认证 | PBKDF2 + JWT + 4 级 RBAC |
@@ -69,7 +69,7 @@ flowchart LR
         direction TB
         WORKER["独立 Worker<br/>领取 · 执行 · 回写"]
         QUEUE[("task_queue_items<br/>持久化任务队列")]
-        DB[("SQLite / PostgreSQL<br/>19 张领域表")]
+        DB[("SQLite / PostgreSQL<br/>21 张领域表")]
         REDIS[("Redis<br/>Pub/Sub")]
         MODELS["模型服务<br/>OpenAI · Anthropic · Gemini<br/>DeepSeek · Qwen"]
     end
@@ -130,7 +130,7 @@ npm run dev
 
 ## 数据库表
 
-19 张表，覆盖用户、工作区、权限、任务、消息、模型、审计、配额、插件、工作流、外部节点：
+21 张表，覆盖用户、工作区、权限、任务、消息、模型、审计、配额、插件、工作流、外部节点、认证会话吊销、工作流运行记录：
 
 ```
 workspaces              workspace_memberships    workspace_invitations
@@ -139,7 +139,7 @@ messages                tasks                   task_steps
 task_queue_items        model_calls             provider_credentials
 custom_model_configs    quota_configs           audit_logs
 plugins                 workspace_plugins        workflow_templates
-integration_nodes
+integration_nodes       refresh_tokens          workflow_runs
 ```
 
 应用启动自动执行 Alembic 迁移（`alembic upgrade head`），SQLite / PostgreSQL 通用。切 PostgreSQL 只需改 `DATABASE_URL`。
@@ -191,7 +191,7 @@ python scripts/migrate_sqlite_to_pg.py             # 实际迁移
 | `/contacts` | Agent 花名册 |
 | `/tasks` | 任务列表 |
 | `/tasks/[id]` | 任务详情：执行轨迹、工具调用链、时序回放、断点恢复 |
-| `/workflows` | 工作流模板：DAG 编排，填参数一键实例化 |
+| `/workflows` | 工作流模板：参数化运行（后端 DAG 引擎执行，前端为节点链预览，可视化画布为 Phase 3 规划） |
 | `/settings` | 设置中心（成员 / 审计 / 成本 / 配额 / 插件） |
 | `/login` `/register` | 认证 |
 
@@ -390,7 +390,7 @@ npm run lint
 npm run build
 ```
 
-当前：后端 115 tests passed，前端 28 tests / lint 0 errors / build pass。
+当前：后端 230 tests passed（40 个测试文件），前端 34 tests / lint 0 errors / build pass。
 
 ---
 
@@ -418,13 +418,13 @@ WORKER_CONCURRENCY=2
 │   ├── app/
 │   │   ├── api/v1/endpoints/    # REST 路由（agents / tasks / plugins / integrations ...）
 │   │   ├── core/                # orchestrator / config / auth / permissions
-│   │   ├── models/              # 19 张 SQLAlchemy 模型
+│   │   ├── models/              # 21 张 SQLAlchemy 模型
 │   │   ├── schemas/             # Pydantic 请求与响应
 │   │   ├── services/            # litellm / tools / bridge / cursor_bridge / codex_bridge / integration_service
 │   │   ├── websocket/           # WebSocket manager / events / distributed
 │   │   └── worker.py            # 独立 Worker 入口
 │   ├── alembic/                # Alembic 迁移（env.py + versions）
-│   ├── tests/                   # 115 个测试
+│   ├── tests/                   # 40 个测试文件（230+ tests）
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -434,8 +434,8 @@ WORKER_CONCURRENCY=2
 │   │   └── app/                 # Next.js App Router 页面
 │   └── package.json
 ├── docs/
-│   ├── prd/                     # 22 份 PRD 文档
-│   ├── PRD.md                   # 变更追踪表（148 行）
+│   ├── prd/                     # 28 份 PRD 文档
+│   ├── PRD.md                   # 变更追踪表（265 行）
 │   ├── generate_change_log.py   # 从 git history 自动生成变更表
 │   └── build_prd_html.py        # 生成单页 PRD.html 阅读器
 ├── docker-compose.yml

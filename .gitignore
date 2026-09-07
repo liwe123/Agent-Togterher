@@ -5,6 +5,8 @@ node_modules/
 dist/
 *.db
 *.sqlite
+*.bak
+*.bak-*
 
 # Python / Virtualenv
 .venv/

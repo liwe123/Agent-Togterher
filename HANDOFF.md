@@ -2,7 +2,7 @@
 
 > 更新时间：2026-08-29  
 > 工作目录：`E:\Agents`  
-> 当前阶段：**Phase 5（外部接入与治理深化）进行中：PostgreSQL 已上线、外部节点桥接与配额熔断已落地、独立 Worker 与事件总线调度链路已启用（C-169~C-174）、工作区快照断线对账与事件总线容错已补齐；剩余缺口见《代码与计划落地差距审查报告-20260828》§8（分布式限流、Antigravity 适配、CI PG job 等）。**
+> 当前阶段：**Phase 5（外部接入与治理深化）进行中：PostgreSQL 已上线、外部节点桥接与配额熔断已落地、独立 Worker 与事件总线调度链路已启用（C-169~C-174）、工作区快照断线对账与事件总线容错已补齐；Phase 1 三项新能力（Webhook 插件执行器 C-183 / HITL 人工审批 C-185 / DAG 工作流引擎 C-186）已于 2026-09-04 推送（94343a2）；剩余缺口见 `docs/文档计划落地差距审查报告-20260907.md`（分布式限流 BUG-2、Antigravity 适配 REQ-A1、CI PG job OPT-2、租约统一 OPT-1、桥接 P4-P6 等）。**
 
 ---
 
@@ -48,7 +48,7 @@
                 ▼                             ▼
 ┌───────────────────────────────┐ ┌───────────────────────────┐
 │     SQLAlchemy 数据持久层     │ │    独立 Worker 消费进程   │
-│  - 20 张领域数据表            │ │  - app/worker.py          │
+│  - 21 张领域数据表            │ │  - app/worker.py          │
 │  - PostgreSQL (Alembic 治理)  │ │  - worker_concurrency 控制 │
 │  - 默认工作区与 6 个预设 Agent │ │  - 租约心跳与死信重试      │
 └───────────────────────────────┘ └───────────────────────────┘
@@ -56,7 +56,7 @@
 
 ---
 
-## 2. 数据库表清单 (共 20 张)
+## 2. 数据库表清单 (共 21 张)
 
 | 表名 | 模块 | 核心作用 |
 |---|---|---|
@@ -69,6 +69,7 @@
 | `plugins` | 插件 | 插件元数据与 Manifest 定义 (`name`, `manifest_json`, `is_public`, `version`) |
 | `workspace_plugins` | 插件 | 工作区挂载与凭证配置 (`workspace_id`, `plugin_id`, `is_enabled`, `config_json`) |
 | `workflow_templates` (✨ 新增) | 工作流 | 工作流模板与 DAG 节点 (`workspace_id`, `name`, `nodes_json`, `variables_json`, `is_system`) |
+| `workflow_runs` (✨ C-186 新增) | 工作流 | 工作流运行记录与节点快照 (`template_id`, `task_id`, `status`, `snapshot_nodes_json`) |
 | `agents` | 智能体 | 预设与自定义 Agent (`role`, `model_name`, `system_prompt`, `status`) |
 | `conversations` | 聊天 | 会话容器 |
 | `messages` | 消息 | 聊天消息事实记录 |
@@ -96,9 +97,20 @@
 
 ---
 
+## 3.5 Phase 1 增量（C-183~C-187，2026-09-04 推送 94343a2）
+
+| 工单 | 能力 | 类型 | 核心落地 |
+|---|---|---|---|
+| C-183 | 插件 Webhook 执行器与出站通知 | Requirement | `services/webhook.py` HMAC-SHA256 签名执行器 + 终态 fan-out；main/worker 双进程装载 |
+| C-185 | HITL 人工审批节点 | Requirement | `dag_engine.py` human_approval 挂起分支 + `tasks.py` approve/reject 端点 + 前端审批按钮 |
+| C-186 | DAG 工作流引擎 | Requirement | `services/dag_engine.py` 分层并行执行 + `workflow_runs` 表 + 节点快照 |
+| C-184 | 测试环境修复 | BUG | conftest DATABASE_URL 钉一次性 SQLite；C-190 修 CI 挂 |
+
+> 三项均已完成守则流程（PRD 三处同步 + 测试 + 验收 + 推送）。前端缺口（Webhook 无 UI、HITL 按钮无角色控制、DAG 线性渲染）登记在 20260907 报告 C1/C2/B1，留 Phase 3 收尾。
+
 ## 4. 质量与验证基准
 
-- **后端自动化测试**：37 个测试模块，共计 **187 tests passed**（100% 通过；SQLite 内存库跑测，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性；2026-08-29 compose 容器实跑 AC1/AC2/AC4/AC7/AC8 通过）。
+- **后端自动化测试**：40 个测试模块，共计 **230 tests passed**（100% 通过；SQLite 内存库跑测，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性；2026-08-29 compose 容器实跑 AC1/AC2/AC4/AC7/AC8 通过；2026-09-07 本机复跑 230 passed）。
 - **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 34 passed，`next build` 12+ 页面全部编译成功。
 - **文档自动化体系**：14 列变更记录全量无空值，`PRD.md`、`Agent_Console_变更追踪.xlsx` 与 `PRD.html` 自动化生成并与 Git 历史完全同步。
 
