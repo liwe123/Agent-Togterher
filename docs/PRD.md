@@ -214,6 +214,9 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-09-04 22:43 | C-191 | 已完成 | [320511e](https://github.com/liwe123/Agent-Togterher/commit/320511e) | LI | Optimization | 其他、文档 | docs: 守则 3 补 CI 同参数 flake8 验收项（C-190 挂 CI 教训固化） | - | - | 否 | 否 | - | - |
 | 2026-09-04 22:49 | C-192 | 已完成 | [cede318](https://github.com/liwe123/Agent-Togterher/commit/cede318) | LI | Optimization | 其他、文档 | docs: 变更追踪表登记 CI 修复（C-190）与守则修订（C-191） | - | - | 否 | 否 | - | - |
 | 2026-09-07 12:48 | C-193 | 已完成 | [d377c26](https://github.com/liwe123/Agent-Togterher/commit/d377c26) | LI | Optimization | 其他、文档 | docs: 纠偏文档与代码现状并补施工蓝图报告 | - | - | 否 | 否 | - | - |
+| 2026-09-07 12:49 | C-194 | 已完成 | [d4d8990](https://github.com/liwe123/Agent-Togterher/commit/d4d8990) | LI | Optimization | 其他、文档 | docs: 重生成变更表纳入 C-193 + README 去除易失行数 | - | - | 否 | 否 | - | - |
+| 2026-09-07 17:58 | C-195 | 已完成 | [abc2f7d](https://github.com/liwe123/Agent-Togterher/commit/abc2f7d) | LI | BUG | 后端 | fix: workflows 运行端点 full_prompt 渲染跳过 human_approval 节点（C3） | - | backend/app/api；backend/tests/test_human_approval.py | 否 | 否 | - | - |
+| 2026-09-07 17:58 | C-196 | 已完成 | [da61d0c](https://github.com/liwe123/Agent-Togterher/commit/da61d0c) | LI | BUG | 后端 | fix: 修复工作区隔离 IDOR 旁路（D1） | - | backend/app/api；backend/tests/test_workspace_isolation.py | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
