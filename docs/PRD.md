@@ -217,6 +217,8 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-09-07 12:49 | C-194 | 已完成 | [d4d8990](https://github.com/liwe123/Agent-Togterher/commit/d4d8990) | LI | Optimization | 其他、文档 | docs: 重生成变更表纳入 C-193 + README 去除易失行数 | - | - | 否 | 否 | - | - |
 | 2026-09-07 17:58 | C-195 | 已完成 | [abc2f7d](https://github.com/liwe123/Agent-Togterher/commit/abc2f7d) | LI | BUG | 后端 | fix: workflows 运行端点 full_prompt 渲染跳过 human_approval 节点（C3） | - | backend/app/api；backend/tests/test_human_approval.py | 否 | 否 | - | - |
 | 2026-09-07 17:58 | C-196 | 已完成 | [da61d0c](https://github.com/liwe123/Agent-Togterher/commit/da61d0c) | LI | BUG | 后端 | fix: 修复工作区隔离 IDOR 旁路（D1） | - | backend/app/api；backend/tests/test_workspace_isolation.py | 否 | 否 | - | - |
+| 2026-09-07 17:59 | C-197 | 已完成 | [984999e](https://github.com/liwe123/Agent-Togterher/commit/984999e) | LI | Optimization | 其他、文档 | docs: 变更追踪表登记 Batch 2 两个安全/渲染 fix（C-195/C-196）+ 补录 C-194 | - | - | 否 | 否 | - | - |
+| 2026-09-08 11:00 | C-198 | 已完成 | [72e2baf](https://github.com/liwe123/Agent-Togterher/commit/72e2baf) | LI | BUG | 后端 | fix: 配额限流改 Redis 固定窗口，多实例全局生效并补 POST /api/tasks 配额检查（A2） | - | backend/app/api；backend/app/services；backend/tests/test_quota_enforcement.py | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
