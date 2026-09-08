@@ -8,6 +8,7 @@ from time import monotonic
 from app.core.config import get_settings
 from app.core.orchestrator import run_task
 from app.db.session import AsyncSessionLocal, close_db, init_db
+from app.services.task_lease import recover_expired_task_leases
 from app.services.task_service import TaskService
 from app.websocket import build_event_relay, websocket_manager
 
@@ -99,10 +100,17 @@ async def _consume_once() -> bool:
 
 
 async def _sweep_expired_leases() -> int:
-    """Re-queue items whose worker died, so they can be picked up again."""
+    """Re-queue items whose worker died, and fail tasks whose lease expired.
+
+    A4 Step 3：除队列级租约（task_queue_items.lease_token，TaskService.recover
+    重新入队）外，任务级租约（Task.execution_token）过期说明执行体崩溃且无
+    续租方——将这类任务置 FAILED，避免半途任务被无主重跑产生重复副作用。
+    """
     try:
         async with AsyncSessionLocal() as session:
-            return await TaskService(session).recover()
+            recovered = await TaskService(session).recover()
+            failed = await recover_expired_task_leases(session)
+            return recovered + failed
     except Exception:
         logger.exception("Lease recovery sweep failed")
         return 0
@@ -117,6 +125,8 @@ async def run_worker() -> None:
     register_webhook_executor()
     async with AsyncSessionLocal() as session:
         await TaskService(session).recover()
+        # A4 Step 3：启动时同样收敛一次任务级过期租约。
+        await recover_expired_task_leases(session)
 
     # C-170：任务在 Worker 进程内执行，orchestrator 广播到的是本进程的
     # websocket_manager。该进程没有任何 WS 客户端连接，若不注册分布式

@@ -153,3 +153,81 @@ async def test_sweep_expired_leases_requeues_orphans(queue_factory, monkeypatch)
     item = await _read_item(queue_factory, task_id)
     assert item.status == "queued"
     assert item.lease_token is None
+
+
+# ---------------------------------------------------------------------------
+# A4 Step 3：worker 定时扫描把任务级过期租约置 FAILED
+# ---------------------------------------------------------------------------
+
+
+async def _seed_expired_running_task(
+    factory, *, status=TaskStatus.RUNNING, expires_seconds_ago: int = 10
+) -> int:
+    """造一个执行中但租约已过期的任务（模拟执行体崩溃、无续租）。"""
+    async with factory() as session:
+        workspace = Workspace(name="Expired lease ws", description="tests")
+        session.add(workspace)
+        await session.flush()
+        task = Task(
+            workspace_id=workspace.id,
+            title="Zombie task",
+            description="Executor crashed mid-flight",
+            status=status,
+            execution_token="dead-beef-token",
+            execution_token_expires_at=utc_now()
+            - timedelta(seconds=expires_seconds_ago),
+        )
+        session.add(task)
+        await session.commit()
+        return task.id
+
+
+@pytest.mark.asyncio
+async def test_sweep_fails_task_with_expired_task_lease(
+    queue_factory, monkeypatch
+) -> None:
+    """任务级租约过期（RUNNING）应被 worker sweep 收敛为 FAILED。"""
+    monkeypatch.setattr(worker_module, "AsyncSessionLocal", queue_factory)
+    task_id = await _seed_expired_running_task(queue_factory)
+
+    recovered = await worker_module._sweep_expired_leases()
+
+    assert recovered >= 1
+    async with queue_factory() as session:
+        task = await session.get(Task, task_id)
+    assert task is not None
+    assert task.status == TaskStatus.FAILED
+    assert task.execution_token is None
+    assert task.execution_token_expires_at is None
+    assert "租约过期" in (task.result or "")
+
+
+@pytest.mark.asyncio
+async def test_sweep_does_not_touch_valid_running_task(
+    queue_factory, monkeypatch
+) -> None:
+    """租约有效（未过期）的 RUNNING 任务不得被 sweep 误伤。"""
+    monkeypatch.setattr(worker_module, "AsyncSessionLocal", queue_factory)
+    async with queue_factory() as session:
+        workspace = Workspace(name="Healthy ws", description="tests")
+        session.add(workspace)
+        await session.flush()
+        task = Task(
+            workspace_id=workspace.id,
+            title="Healthy task",
+            description="Still executing with valid lease",
+            status=TaskStatus.RUNNING,
+            execution_token="still-valid-token",
+            execution_token_expires_at=utc_now() + timedelta(minutes=10),
+        )
+        session.add(task)
+        await session.commit()
+        task_id = task.id
+
+    recovered = await worker_module._sweep_expired_leases()
+
+    assert recovered == 0
+    async with queue_factory() as session:
+        task = await session.get(Task, task_id)
+    assert task is not None and task.status == TaskStatus.RUNNING
+    assert task.execution_token == "still-valid-token"

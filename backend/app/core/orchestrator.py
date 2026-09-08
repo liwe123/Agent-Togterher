@@ -5,12 +5,10 @@ import json
 import logging
 from collections.abc import Awaitable
 from contextlib import suppress
-from datetime import timedelta
-from uuid import uuid4
 from decimal import Decimal
 from typing import Final
 
-from sqlalchemy import inspect as sqlalchemy_inspect, or_, select, update
+from sqlalchemy import inspect as sqlalchemy_inspect, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
@@ -51,8 +49,6 @@ from app.websocket.manager import WebSocketManager, websocket_manager
 logger = logging.getLogger(__name__)
 
 MODEL_STEP_NAME: Final = "call_agent_model"
-TASK_LEASE_DURATION: Final = timedelta(minutes=30)
-TASK_LEASE_RENEW_INTERVAL_SECONDS: Final = 300
 MANAGER_AGENT_NAME: Final = "项目总设计师"
 REVIEW_AGENT_NAME: Final = "测试专员"
 MANAGER_ROLE: Final = "project_architect"
@@ -69,17 +65,26 @@ HUMAN_APPROVAL_STEP_NAME: Final = "human_approval"
 APPROVAL_POLL_INTERVAL_SECONDS: Final = 2.0
 APPROVAL_TIMEOUT_SECONDS: Final = 3600
 
+# A4 租约统一（Step 1）：任务级执行租约（execution_token）的 claim / renew /
+# 过期判定与异常收敛到 app.services.task_lease；此处 re-export，保持本模块
+# 内部 raise 与 dag_engine / endpoints 的 import 兼容。
+from app.services.task_lease import (  # noqa: E402,F401  # isort: skip — re-export for dag_engine / endpoints
+    TASK_LEASE_DURATION,
+    TASK_LEASE_RENEW_INTERVAL_SECONDS,
+    OrchestratorError,
+    TaskNotFoundError,
+    TaskNotRunnableError,
+    claim_task_lease,
+    release_task_lease,
+    renew_task_lease,
+)
 
-class OrchestratorError(Exception):
-    """Base error for requests that cannot be handed to the orchestrator."""
+# A4 Step 4：续租失败（租约被抢/丢失）时置 cancel_event，执行体协作取消，
+# 不再写后续 step / model call / 结果消息，避免半途任务的重复副作用。
 
 
-class TaskNotFoundError(OrchestratorError):
-    """Raised when a task id does not exist."""
-
-
-class TaskNotRunnableError(OrchestratorError):
-    """Raised when a task cannot enter the running state."""
+class _TaskLeaseLostError(OrchestratorError):
+    """Internal: task-level lease lost mid-flight; execution must stop writing."""
 
 
 class AgentOrchestrator:
@@ -101,6 +106,8 @@ class AgentOrchestrator:
         self._broadcaster = broadcaster
         self._failure_session_factory = failure_session_factory or AsyncSessionLocal
         self._approval_session_factory = approval_session_factory or AsyncSessionLocal
+        self._lease_lost_cancel_event: asyncio.Event | None = None
+
 
     @staticmethod
     def _clip_text(value: str | None, limit: int = 800) -> str | None:
@@ -135,9 +142,17 @@ class AgentOrchestrator:
         }
 
     async def run_task(self, task_id: int) -> TaskRead:
-        task = await self._claim_pending_task(task_id)
+        task = await claim_task_lease(
+            self._session, task_id, broadcaster=self._broadcaster
+        )
         lease_token = task.execution_token
-        renewer = asyncio.create_task(self._renew_task_lease(task.id, lease_token))
+        # A4 Step 4：续租失败（租约丢失/被抢）时置 cancel_event，执行体在
+        # 写入边界协作中止——不再写 step / model call / 结果消息。
+        cancel_event = asyncio.Event()
+        self._lease_lost_cancel_event = cancel_event
+        renewer = asyncio.create_task(
+            renew_task_lease(task.id, lease_token, on_lost=lambda _tid: cancel_event.set())
+        )
         try:
             agent = (
                 await self._session.get(Agent, task.assigned_agent_id)
@@ -152,33 +167,36 @@ class AgentOrchestrator:
                     requires_approval=await self._task_requires_approval(task),
                 )
             return await self._run_single_agent_task(task, agent)
+        except _TaskLeaseLostError:
+            # A4 Step 4：执行权已被抢占——回滚本执行体的未提交写入，按当前
+            # 状态只读返回；任务由新执行体 / worker 过期扫描（Step 3）收敛，
+            # 本执行体不再写任何 step / model call / FAILED。
+            logger.warning(
+                "Task execution aborted after lease loss",
+                extra={"task_id": task_id},
+            )
+            await self._session.rollback()
+            settled_task = await self._session.get(Task, task_id)
+            if settled_task is None:
+                raise TaskNotFoundError(f"Task {task_id} not found after lease loss")
+            return TaskRead.model_validate(settled_task)
         finally:
+            self._lease_lost_cancel_event = None
             renewer.cancel()
             with suppress(asyncio.CancelledError):
                 await renewer
 
-    async def _renew_task_lease(self, task_id: int, token: str | None) -> None:
-        if token is None:
-            return
-        while True:
-            await asyncio.sleep(TASK_LEASE_RENEW_INTERVAL_SECONDS)
-            async with AsyncSessionLocal() as session:
-                renewed = await session.execute(
-                    update(Task)
-                    .where(
-                        Task.id == task_id,
-                        Task.status == TaskStatus.RUNNING,
-                        Task.execution_token == token,
-                    )
-                    .values(
-                        execution_token_expires_at=utc_now() + TASK_LEASE_DURATION,
-                        updated_at=utc_now(),
-                    )
-                )
-                await session.commit()
-                if renewed.rowcount != 1:
-                    logger.warning("Task lease was lost", extra={"task_id": task_id})
-                    return
+    def _lease_lost(self) -> bool:
+        """执行期间任务级租约是否已被抢占/丢失（A4 Step 4）。"""
+        return (
+            self._lease_lost_cancel_event is not None
+            and self._lease_lost_cancel_event.is_set()
+        )
+
+    def _raise_if_lease_lost(self) -> None:
+        """写入边界守卫：租约丢失时中止，避免半途任务的重复副作用。"""
+        if self._lease_lost():
+            raise _TaskLeaseLostError()
 
     async def _run_single_agent_task(
         self,
@@ -188,6 +206,7 @@ class AgentOrchestrator:
         step: TaskStep | None = None
 
         try:
+            self._raise_if_lease_lost()
             if agent is None:
                 raise TaskNotRunnableError(
                     f"Task {task.id} does not have an available assigned agent"
@@ -283,6 +302,10 @@ class AgentOrchestrator:
                 model_calls=await self._load_task_model_calls(task.id),
             )
             return TaskRead.model_validate(task)
+        except _TaskLeaseLostError:
+            # A4 Step 4：租约已丢失/被抢——执行权已不属于本执行体，静默中止，
+            # 不写 FAILED（新执行体会接管），由 run_task 统一收敛返回。
+            raise
         except Exception as exc:
             error_message = self._error_message(exc)
             logger.warning(
@@ -588,6 +611,9 @@ class AgentOrchestrator:
                 f"【最终汇总】\n{final_completion.content}",
             )
             return TaskRead.model_validate(task)
+        except _TaskLeaseLostError:
+            # A4 Step 4：租约已丢失/被抢，静默中止不写 FAILED。
+            raise
         except Exception as exc:
             error_message = self._error_message(exc)
             logger.warning(
@@ -724,49 +750,6 @@ class AgentOrchestrator:
                 return "timeout"
             await asyncio.sleep(APPROVAL_POLL_INTERVAL_SECONDS)
 
-    async def _claim_pending_task(self, task_id: int) -> Task:
-        claim_token = str(uuid4())
-        lease_expires_at = utc_now() + TASK_LEASE_DURATION
-        claim = await self._session.execute(
-            update(Task)
-            .where(Task.id == task_id, Task.status == TaskStatus.PENDING)
-            .values(
-                status=TaskStatus.RUNNING,
-                execution_token=claim_token,
-                execution_token_expires_at=lease_expires_at,
-                updated_at=utc_now(),
-            )
-        )
-        if claim.rowcount != 1:
-            await self._session.rollback()
-            task = await self._session.get(Task, task_id)
-            if task is None:
-                raise TaskNotFoundError(f"Task {task_id} not found")
-            if task.status == TaskStatus.RUNNING and task.execution_token_expires_at is not None and task.execution_token_expires_at < utc_now():
-                task.status = TaskStatus.PENDING
-                task.execution_token = None
-                task.execution_token_expires_at = None
-                await self._session.commit()
-                task = await self._session.get(Task, task_id)
-                if task is None:
-                    raise TaskNotFoundError(f"Task {task_id} not found after claim reset")
-                return await self._claim_pending_task(task_id)
-            raise TaskNotRunnableError(
-                f"Task {task_id} is {task.status.value} and cannot be started"
-            )
-
-        await self._session.commit()
-        task = await self._session.get(Task, task_id)
-        if task is None:
-            raise TaskNotFoundError(f"Task {task_id} not found after claim")
-
-        task_data = TaskRead.model_validate(task)
-        await self._broadcaster.broadcast_to_workspace(
-            task.workspace_id,
-            create_event("task.status_changed", task_data),
-        )
-        return task
-
     async def _call_and_log(
         self,
         task: Task,
@@ -837,8 +820,7 @@ class AgentOrchestrator:
     ) -> TaskRead:
         task.status = status
         if status in {TaskStatus.COMPLETED, TaskStatus.FAILED}:
-            task.execution_token = None
-            task.execution_token_expires_at = None
+            release_task_lease(task)
         if result is not None:
             task.result = result
         await self._session.commit()
@@ -1020,6 +1002,8 @@ class AgentOrchestrator:
         output: str | None = None,
         step: TaskStep | None = None,
     ) -> TaskStep:
+        # A4 Step 4：写入边界守卫——租约丢失后不再追加 step。
+        self._raise_if_lease_lost()
         now = utc_now()
         if step is None:
             step = TaskStep(
@@ -1071,6 +1055,8 @@ class AgentOrchestrator:
         completion: ChatCompletionResult | None = None,
         error: Exception | None = None,
     ) -> ModelCall:
+        # A4 Step 4：写入边界守卫——租约丢失后不再记录 model call。
+        self._raise_if_lease_lost()
         if (completion is None) == (error is None):
             raise ValueError("Provide exactly one of completion or error")
 
@@ -1135,6 +1121,8 @@ class AgentOrchestrator:
         *,
         is_error: bool = False,
     ) -> MessageRead:
+        # A4 Step 4：写入边界守卫——租约丢失后不再写结果消息。
+        self._raise_if_lease_lost()
         if task.conversation_id is None:
             raise TaskNotRunnableError(
                 f"Task {task.id} is not attached to a conversation"

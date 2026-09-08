@@ -27,8 +27,8 @@ import asyncio
 import json
 import logging
 from collections import defaultdict
+from contextlib import suppress
 from typing import Any, Awaitable, Callable
-from uuid import uuid4
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -37,16 +37,15 @@ from app.core.orchestrator import (
     APPROVAL_POLL_INTERVAL_SECONDS,
     APPROVAL_TIMEOUT_SECONDS,
     HUMAN_APPROVAL_STEP_NAME,
-    TASK_LEASE_DURATION,
     call_agent_model,
     save_task_step,
     update_task_status,
 )
-from app.db.base import utc_now
 from app.db.session import AsyncSessionLocal
 from app.models import Agent, Task, TaskStatus
 from app.models.task import TaskStep
 from app.models.workflow import WorkflowRun
+from app.services.task_lease import claim_task_lease, renew_task_lease
 
 logger = logging.getLogger(__name__)
 
@@ -437,6 +436,7 @@ async def run_workflow_dag(
       任一节点失败 → 中止后续层、任务 FAILED、WorkflowRun failed。
     """
     task: Task | None = None
+    renewer: asyncio.Task | None = None
     try:
         async with session_factory() as session:
             task = await session.get(Task, task_id)
@@ -448,10 +448,16 @@ async def run_workflow_dag(
                 )
                 return
             if task.status == TaskStatus.PENDING:
-                task.status = TaskStatus.RUNNING
-                task.execution_token = str(uuid4())
-                task.execution_token_expires_at = utc_now() + TASK_LEASE_DURATION
+                # A4 Step 2：任务级租约认领统一走 task_lease（CAS + 过期抢回），
+                # 与 orchestrator inline 路径同一套 execution_token 语义。
+                task = await claim_task_lease(session, task_id)
             await session.commit()
+
+        lease_token = task.execution_token
+        if lease_token is not None:
+            # A4 Step 2：DAG 路径补上后台续租，长时执行 / 审批挂起期间
+            # execution_token 租约不会过期，兑现"与 worker 租约语义兼容"注释。
+            renewer = asyncio.create_task(renew_task_lease(task_id, lease_token))
 
         outputs = await execute_dag(
             layers,
@@ -508,6 +514,11 @@ async def run_workflow_dag(
                 "Failed to persist DAG workflow failure state",
                 extra={"task_id": task_id, "run_id": run_id},
             )
+    finally:
+        if renewer is not None:
+            renewer.cancel()
+            with suppress(asyncio.CancelledError):
+                await renewer
 
 
 def build_dag_summary(layers: list[list[dict]]) -> str:

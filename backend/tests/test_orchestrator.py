@@ -359,3 +359,68 @@ async def test_run_task_rejects_non_pending_task_before_model_call(
             )
 
     model_call.assert_not_awaited()
+
+
+# ---------------------------------------------------------------------------
+# A4 Step 4：续租失败（租约丢失）后执行体协作中止、不再写 step
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_run_task_stops_writing_steps_after_lease_loss(
+    orchestrator_session,
+    orchestrator_session_factory,
+) -> None:
+    """租约丢失后，orchestrator 不再写新的 step / model call / FAILED。
+
+    模拟：monkeypatch renew_task_lease，令其立即调用 on_lost（置位
+    cancel_event）。首个 model call 后写入 step 前应触发 _TaskLeaseLostError，
+    任务以 RUNNING 状态只读返回；库内不出现该任务的任何 step。
+    """
+    from app.core import orchestrator as orchestrator_module
+
+    agent, task = await create_task_graph(orchestrator_session)
+    broadcaster = RecordingBroadcaster()
+    completion = ChatCompletionResult(
+        content="should not be persisted",
+        usage=TokenUsage(prompt_tokens=3, completion_tokens=3, total_tokens=6),
+        provider="deepseek",
+        model_name="deepseek/deepseek-chat",
+        requested_model="code_model",
+        latency_ms=1,
+        fallback_used=False,
+    )
+
+    async def lease_lost_immediately(task_id, token, *, on_lost=None):
+        # 立即模拟续租失败：触发 on_lost -> run_task 的 cancel_event 置位，
+        # 执行体应在首个写入边界（save_task_step / save_model_call）中止。
+        if on_lost is not None:
+            on_lost(task_id)
+
+    with patch(
+        "app.core.orchestrator.litellm_service.chat_completion",
+        new=AsyncMock(return_value=completion),
+    ), patch.object(
+        orchestrator_module, "renew_task_lease", new=lease_lost_immediately
+    ):
+        result = await AgentOrchestrator(
+            orchestrator_session, broadcaster
+        ).run_task(task.id)
+
+    # 只读返回，任务未被置 FAILED（保持 RUNNING；由 worker 过期扫描收敛）
+    assert result.status.value == "running"
+    async with orchestrator_session as session:
+        steps = (
+            await session.scalars(
+                select(TaskStep).where(TaskStep.task_id == task.id)
+            )
+        ).all()
+        calls = (
+            await session.scalars(
+                select(ModelCall).where(ModelCall.task_id == task.id)
+            )
+        ).all()
+        task_row = await session.get(Task, task.id)
+    assert len(steps) == 0, "租约丢失后不得再写 step"
+    assert len(calls) == 0, "租约丢失后不得再记 model call"
+    assert task_row is not None and task_row.status == TaskStatus.RUNNING

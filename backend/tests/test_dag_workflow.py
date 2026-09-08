@@ -464,3 +464,59 @@ async def test_dag_human_approval_node_rejected_aborts(
     assert "人工驳回" in (steps["gate"].output or "")
     assert "final" not in steps
     assert task is not None and task.status == TaskStatus.FAILED
+
+
+# ---------------------------------------------------------------------------
+# A4 Step 2：DAG 路径任务级租约（claim + 执行中续租）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_run_workflow_dag_claims_task_lease_and_releases_on_complete(
+    db_session_factory: async_sessionmaker,
+) -> None:
+    """run_workflow_dag 经 claim_task_lease 认领：执行中 token+expires 存在、
+    RUNNING；完成后租约释放回 PENDING 语义（token 置空）。
+    """
+    import asyncio
+
+    layers = [[_node("a")]]
+    task_id, run_id = await _create_run(db_session_factory, layers)
+    started = asyncio.Event()
+
+    async def fake_executor(session: AsyncSession, task: Task, node: dict):
+        started.set()
+        await asyncio.sleep(0.05)  # 留出观察窗口
+        return None, "out-a"
+
+    runner = asyncio.create_task(
+        run_workflow_dag(
+            task_id,
+            run_id,
+            layers,
+            session_factory=db_session_factory,
+            executor=fake_executor,
+        )
+    )
+    await started.wait()
+    # 执行中：任务 RUNNING 且租约已写（execution_token 非空、expires 在未来）
+    async with db_session_factory() as session:
+        task = await session.get(Task, task_id)
+        assert task is not None and task.status == TaskStatus.RUNNING
+        assert task.execution_token is not None
+        assert task.execution_token_expires_at is not None
+        # SQLite 返回 naive datetime；租约跨度应接近 TASK_LEASE_DURATION(1800s)
+        remaining = (
+            task.execution_token_expires_at - task.updated_at
+        ).total_seconds()
+        assert 1500 < remaining <= 1900
+
+    await runner
+    # 完成后：租约释放（token 清空）
+    async with db_session_factory() as session:
+        task = await session.get(Task, task_id)
+        run = await session.get(WorkflowRun, run_id)
+    assert task is not None and task.status == TaskStatus.COMPLETED
+    assert task.execution_token is None
+    assert task.execution_token_expires_at is None
+    assert run is not None and run.status == "completed"

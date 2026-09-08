@@ -26,6 +26,7 @@ from app.models import (
 )
 from app.schemas import AgentRead, MessageCreate, MessageRead, TaskRead
 from app.services.quota_service import check_workspace_quota
+from app.services.task_lease import release_task_lease
 from app.services.task_service import TaskService
 from app.websocket import WebSocketManager, create_event, websocket_manager
 
@@ -128,8 +129,8 @@ async def recover_unfinished_tasks(
 
     for task in expired_running_tasks:
         task.status = TaskStatus.PENDING
-        task.execution_token = None
-        task.execution_token_expires_at = None
+        # A4：任务级租约释放统一走 task_lease（execution_token 写点收敛）。
+        release_task_lease(task)
 
     await commit_or_conflict(session)
 
