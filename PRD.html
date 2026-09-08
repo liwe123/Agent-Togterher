@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>28</b> 份</span>
-        <span>变更记录 <b>198</b> 条</span>
-        <span>生成于 2026-09-08 11:01</span>
+        <span>变更记录 <b>201</b> 条</span>
+        <span>生成于 2026-09-08 17:23</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -3451,6 +3451,54 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>fix: 配额限流改 Redis 固定窗口，多实例全局生效并补 POST /api/tasks 配额检查（A2）</td>
 <td>-</td>
 <td>backend/app/api；backend/app/services；backend/tests/test_quota_enforcement.py</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-08 11:01</td>
+<td>C-199</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/bb8af94">bb8af94</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 变更追踪表登记 Batch 3 分布式限流 fix（C-197/C-198）</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-08 17:23</td>
+<td>C-200</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/7d31056">7d31056</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>后端</td>
+<td>refactor: 统一任务级执行租约到 task_lease.py，收敛 execution_token 写点并补协作取消（A4）</td>
+<td>-</td>
+<td>backend/app/core；backend/app/services；backend/app/worker.py；backend/tests/test_dag_workflow.py；backend/tests/test_orchestrator.py；backend/tests/test_worker_lease.py</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-08 17:23</td>
+<td>C-201</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/bc2adeb">bc2adeb</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他</td>
+<td>optimize: CI 增加 PostgreSQL + Redis job 与前端 lint/test job（A3）</td>
+<td>-</td>
+<td>-</td>
 <td>否</td>
 <td>否</td>
 <td>-</td>

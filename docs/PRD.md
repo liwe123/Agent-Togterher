@@ -219,6 +219,9 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | 2026-09-07 17:58 | C-196 | 已完成 | [da61d0c](https://github.com/liwe123/Agent-Togterher/commit/da61d0c) | LI | BUG | 后端 | fix: 修复工作区隔离 IDOR 旁路（D1） | - | backend/app/api；backend/tests/test_workspace_isolation.py | 否 | 否 | - | - |
 | 2026-09-07 17:59 | C-197 | 已完成 | [984999e](https://github.com/liwe123/Agent-Togterher/commit/984999e) | LI | Optimization | 其他、文档 | docs: 变更追踪表登记 Batch 2 两个安全/渲染 fix（C-195/C-196）+ 补录 C-194 | - | - | 否 | 否 | - | - |
 | 2026-09-08 11:00 | C-198 | 已完成 | [72e2baf](https://github.com/liwe123/Agent-Togterher/commit/72e2baf) | LI | BUG | 后端 | fix: 配额限流改 Redis 固定窗口，多实例全局生效并补 POST /api/tasks 配额检查（A2） | - | backend/app/api；backend/app/services；backend/tests/test_quota_enforcement.py | 否 | 否 | - | - |
+| 2026-09-08 11:01 | C-199 | 已完成 | [bb8af94](https://github.com/liwe123/Agent-Togterher/commit/bb8af94) | LI | Optimization | 其他、文档 | docs: 变更追踪表登记 Batch 3 分布式限流 fix（C-197/C-198） | - | - | 否 | 否 | - | - |
+| 2026-09-08 17:23 | C-200 | 已完成 | [7d31056](https://github.com/liwe123/Agent-Togterher/commit/7d31056) | LI | Optimization | 后端 | refactor: 统一任务级执行租约到 task_lease.py，收敛 execution_token 写点并补协作取消（A4） | - | backend/app/core；backend/app/services；backend/app/worker.py；backend/tests/test_dag_workflow.py；backend/tests/test_orchestrator.py；backend/tests/test_worker_lease.py | 否 | 否 | - | - |
+| 2026-09-08 17:23 | C-201 | 已完成 | [bc2adeb](https://github.com/liwe123/Agent-Togterher/commit/bc2adeb) | LI | Optimization | 其他 | optimize: CI 增加 PostgreSQL + Redis job 与前端 lint/test job（A3） | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
