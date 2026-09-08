@@ -1,9 +1,11 @@
 import asyncio
+import re
 from collections.abc import Iterator
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
+from redis.exceptions import RedisError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
@@ -14,7 +16,11 @@ from app.db.session import get_db
 from app.main import app
 from app.models import Agent, Conversation, Task, Workspace
 from app.models.quota_config import QuotaConfig
-from app.services.quota_service import reset_rate_limit_state
+from app.services.quota_service import (
+    _check_rate_limit,
+    _check_rate_limit_memory,
+    reset_rate_limit_state,
+)
 
 
 class RecordingBroadcaster:
@@ -26,10 +32,78 @@ class RecordingBroadcaster:
 
 
 @pytest.fixture(autouse=True)
-def _reset_rate_limit():
+def _force_memory_rate_limit(monkeypatch):
+    """隔离外部 Redis：默认强制限流走进程内降级路径。
+
+    CI/本地无 Redis 时行为确定；Redis 固定窗口主路径的用例单独
+    monkeypatch 注入假 client 覆盖本默认值。
+    """
     reset_rate_limit_state()
+    monkeypatch.setattr(
+        "app.services.quota_service._get_rate_limit_redis", lambda: None
+    )
     yield
     reset_rate_limit_state()
+
+
+class RecordingRedis:
+    """假 Redis：记录单发 INCR / EXPIRE 调用，按预设序列返回计数。"""
+
+    def __init__(self, counts: list[int]) -> None:
+        self.counts = list(counts)
+        self.keys: list[str] = []
+        self.expired: list[tuple[str, int]] = []
+
+    async def incr(self, key: str) -> int:
+        self.keys.append(key)
+        return self.counts.pop(0)
+
+    async def expire(self, key: str, ttl: int) -> bool:
+        self.expired.append((key, ttl))
+        return True
+
+
+@pytest.mark.asyncio
+async def test_redis_fixed_window_uses_scoped_minute_key(monkeypatch) -> None:
+    fake = RecordingRedis([1, 2])
+    monkeypatch.setattr(
+        "app.services.quota_service._get_rate_limit_redis", lambda: fake
+    )
+
+    assert await _check_rate_limit(7, 1) is True  # count=1 <= 1
+    assert await _check_rate_limit(7, 1) is False  # count=2 > 1
+
+    assert len(fake.keys) == 2
+    assert re.match(r"^quota:rl:7:\d+$", fake.keys[0]) is not None
+    assert fake.keys[0] == fake.keys[1]  # 同一分钟窗口
+    assert fake.expired and fake.expired[0][0] == fake.keys[0]
+    assert fake.expired[0][1] == 120
+
+
+@pytest.mark.asyncio
+async def test_redis_failure_falls_back_to_memory(monkeypatch) -> None:
+    class BoomRedis:
+        async def incr(self, key: str) -> int:
+            raise RedisError("connection refused")
+
+        async def expire(self, key: str, ttl: int) -> bool:
+            return True
+
+    monkeypatch.setattr(
+        "app.services.quota_service._get_rate_limit_redis", lambda: BoomRedis()
+    )
+    reset_rate_limit_state()
+
+    # Redis 抛错 -> 降级内存桶：limit=1 第一次放行、第二次被内存桶拦截
+    assert await _check_rate_limit(9, 1) is True
+    assert await _check_rate_limit(9, 1) is False
+
+
+def test_memory_fallback_still_blocks_without_redis() -> None:
+    """进程内降级桶自身语义不回退（供无 Redis 部署单进程兜底）。"""
+    reset_rate_limit_state()
+    assert _check_rate_limit_memory(11, 1) is True
+    assert _check_rate_limit_memory(11, 1) is False
 
 
 @pytest_asyncio.fixture
@@ -255,3 +329,28 @@ def test_workflow_run_rate_limit_blocks(workflow_client: TestClient) -> None:
         json={"variables": {}},
     )
     assert second.status_code == 429
+
+
+def test_task_create_respects_quota_rate_limit(workflow_client: TestClient) -> None:
+    """20260907 BUG-2/A2：POST /api/tasks 与 hub/workflows 同走配额限流。"""
+    token, ws_id = _register_owner(workflow_client)
+    headers = {"Authorization": f"Bearer {token}"}
+
+    put_res = workflow_client.put(
+        f"/api/v1/workspaces/{ws_id}/quota",
+        json={"rate_limit_per_minute": 1},
+        headers=headers,
+    )
+    assert put_res.status_code == 200
+
+    task_payload = {
+        "workspace_id": ws_id,
+        "title": "限流测试任务",
+        "description": "create via /api/tasks",
+    }
+    first = workflow_client.post("/api/tasks", json=task_payload, headers=headers)
+    assert first.status_code == 201, first.text
+
+    second = workflow_client.post("/api/tasks", json=task_payload, headers=headers)
+    assert second.status_code == 429
+    assert second.json()["success"] is False

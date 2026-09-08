@@ -33,6 +33,7 @@ from app.schemas import (
     TaskUpdate,
 )
 from app.services.audit_service import record_audit_log
+from app.services.quota_service import check_workspace_quota
 from app.websocket import create_event, websocket_manager
 
 _TERMINAL_STATUSES = {TaskStatus.COMPLETED, TaskStatus.FAILED, TaskStatus.CANCELLED}
@@ -161,6 +162,14 @@ async def create_task(
     await enforce_workspace_role(
         request, session, workspace_id=payload.workspace_id, min_role="member"
     )
+    # 20260907 报告 BUG-2/A2：直接 POST /api/tasks 与 message_hub / workflows 运行
+    # 端点同属配额与限流管控入口，补上同一套配额校验（含 Redis 固定窗口限流）。
+    quota = await check_workspace_quota(session, payload.workspace_id)
+    if quota.blocked:
+        raise AppError(
+            status_code=429,
+            message=quota.block_reason or "工作区配额已超限",
+        )
     await _validate_references(
         session,
         payload.workspace_id,

@@ -1,15 +1,20 @@
+import logging
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
 
+import redis.asyncio as redis
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import get_settings
 from app.models.model_call import ModelCall
 from app.models.quota_config import QuotaConfig
 from app.models.task import Task
 from app.schemas.quota import QuotaConfigUpdate, QuotaUsageRead
+
+logger = logging.getLogger(__name__)
 
 
 async def get_or_create_quota_config(db: AsyncSession, workspace_id: int) -> QuotaConfig:
@@ -94,16 +99,67 @@ async def update_quota_config(
     return config
 
 
-# 进程内每分钟滑动窗口限流计数。仅覆盖单进程内的派发/建任务入口，
-# TODO: 多进程/多实例部署下需替换为 Redis 固定窗口或令牌桶限流，否则各实例各自计数。
+# 每分钟限流计数。
+# - 主路径：Redis 固定窗口（key=quota:rl:{workspace_id}:{minute}），保证 api + worker
+#   多进程部署下计数全局一致（20260907 报告 BUG-2/A2，原为进程内内存计数、多实例失效）。
+# - 降级路径：进程内滑动窗口（_rate_limit_buckets），仅在 Redis 不可用时兜底，保证本地
+#   无 Redis 开发不被打断。
+_redis_rate_limit_client: redis.Redis | None = None
 _rate_limit_buckets: dict[int, deque[float]] = defaultdict(deque)
+_last_redis_warn_ts: float = 0.0
 
 
-def _check_rate_limit(workspace_id: int, limit: int) -> bool:
-    """记录一次派发尝试，返回是否仍在每分钟限流窗口内。
+def _get_rate_limit_redis() -> redis.Redis | None:
+    """惰性单例 async Redis client（仿 websocket/distributed.py）。"""
+    global _redis_rate_limit_client
+    if _redis_rate_limit_client is None:
+        try:
+            _redis_rate_limit_client = redis.from_url(
+                get_settings().redis_url, decode_responses=True
+            )
+        except Exception as exc:  # pragma: no cover - 配置错误兜底
+            logger.warning("Failed to build Redis client for rate limiting: %s", exc)
+            _redis_rate_limit_client = None
+    return _redis_rate_limit_client
 
-    ``limit <= 0`` 表示未启用限流，恒放行。
+
+def _warn_redis_unavailable_once_per_minute() -> None:
+    """Redis 降级告警限频：每分钟至多记一次，避免刷日志。"""
+    global _last_redis_warn_ts
+    now = time.monotonic()
+    if now - _last_redis_warn_ts >= 60.0:
+        _last_redis_warn_ts = now
+        logger.warning(
+            "Redis unavailable; rate limiting degraded to in-process sliding window "
+            "(multi-instance counting disabled)"
+        )
+
+
+async def _check_rate_limit_redis(workspace_id: int, limit: int) -> bool | None:
+    """Redis 固定窗口限流：INCR + 过期；超限返回 False，Redis 故障返回 None 走降级。
+
+    每次调用计数 +1 并返回 ``count <= limit`` 是否仍放行。窗口按分钟取整，
+    key 带 TTL 120s（窗口 60s + 余量，避免上一分钟残留占用下一分钟额度）。
     """
+    client = _get_rate_limit_redis()
+    if client is None:
+        return None
+    try:
+        window = int(time.time() // 60)
+        key = f"quota:rl:{workspace_id}:{window}"
+        # INCR 计数；仅当该窗口首次计数（返回值 == 1）时才设 TTL，避免重复下发 EXPIRE。
+        count = await client.incr(key)
+        if int(count) == 1:
+            await client.expire(key, 120)
+        return int(count) <= limit
+    except redis.RedisError as exc:
+        logger.debug("Redis rate-limit error for workspace %s: %s", workspace_id, exc)
+        _warn_redis_unavailable_once_per_minute()
+        return None
+
+
+def _check_rate_limit_memory(workspace_id: int, limit: int) -> bool:
+    """进程内滑动窗口限流（Redis 不可用时的降级路径）。"""
     if limit <= 0:
         return True
     now = time.monotonic()
@@ -117,8 +173,26 @@ def _check_rate_limit(workspace_id: int, limit: int) -> bool:
     return True
 
 
+async def _check_rate_limit(workspace_id: int, limit: int) -> bool:
+    """记录一次派发尝试，返回是否仍在每分钟限流窗口内。
+
+    ``limit <= 0`` 表示未启用限流，恒放行。优先 Redis 固定窗口；Redis 不可用时
+    降级到进程内滑动窗口（与旧行为等价）。
+    """
+    if limit <= 0:
+        return True
+    redis_result = await _check_rate_limit_redis(workspace_id, limit)
+    if redis_result is not None:
+        return redis_result
+    return _check_rate_limit_memory(workspace_id, limit)
+
+
 def reset_rate_limit_state() -> None:
-    """清空进程内限流计数（供测试隔离使用）。"""
+    """清空进程内限流计数（供测试隔离使用）。
+
+    Redis 侧窗口依赖测试注入的假 client（monkeypatch _get_rate_limit_redis），
+    进程内降级桶在这里清空。
+    """
     _rate_limit_buckets.clear()
 
 
@@ -159,7 +233,8 @@ async def check_workspace_quota(
 
     - 硬熔断（G3）：当月预算或 Token 上限超额且 ``is_hard_limit`` 时 ``blocked``。
     - 软限制：未超额或 ``is_hard_limit=False`` 时放行（仅由调用方记录日志）。
-    - 限流（G4）：超过 ``rate_limit_per_minute`` 时 ``blocked``（进程内计数）。
+    - 限流（G4）：超过 ``rate_limit_per_minute`` 时 ``blocked``（Redis 固定窗口，
+      Redis 不可用时降级进程内计数）。
     """
     config = await get_or_create_quota_config(db, workspace_id)
     spent_usd, tokens_used = await _get_monthly_usage(db, workspace_id)
@@ -168,7 +243,9 @@ async def check_workspace_quota(
         spent_usd >= config.monthly_budget_usd
         or tokens_used >= config.max_monthly_tokens
     )
-    rate_limited = not _check_rate_limit(workspace_id, config.rate_limit_per_minute)
+    rate_limited = not await _check_rate_limit(
+        workspace_id, config.rate_limit_per_minute
+    )
 
     return QuotaCheckResult(
         workspace_id=workspace_id,
