@@ -13,6 +13,7 @@ import {
   Power,
   RefreshCw,
   Search,
+  Settings,
   ShieldCheck,
   Sparkles,
   Wrench,
@@ -24,7 +25,7 @@ import { usePermissions } from "@/hooks/use-permissions"
 import { useWorkspaces } from "@/hooks/use-workspaces"
 import { requestData } from "@/lib/task-api"
 import { cn } from "@/lib/utils"
-import type { PluginItem } from "@/types/plugin"
+import type { PluginItem, WorkspacePluginResponse } from "@/types/plugin"
 
 export default function PluginsSettingsPage() {
   const { activeWorkspace, currentUserRole } = useWorkspaces()
@@ -64,6 +65,13 @@ export default function PluginsSettingsPage() {
     )
   )
   const [isRegistering, setIsRegistering] = useState(false)
+
+  // Webhook config modal
+  const [configPlugin, setConfigPlugin] = useState<PluginItem | null>(null)
+  const [configUrl, setConfigUrl] = useState("")
+  const [configSecret, setConfigSecret] = useState("")
+  const [isLoadingConfig, setIsLoadingConfig] = useState(false)
+  const [isSavingConfig, setIsSavingConfig] = useState(false)
 
   const loadedWsIdRef = useRef<number | null>(null)
 
@@ -143,6 +151,61 @@ export default function PluginsSettingsPage() {
       setMessage({ type: "error", text: err instanceof Error ? err.message : "注册插件失败" })
     } finally {
       setIsRegistering(false)
+    }
+  }
+
+  const closeConfigModal = () => {
+    setConfigPlugin(null)
+    setConfigUrl("")
+    setConfigSecret("")
+  }
+
+  const handleOpenConfig = async (plugin: PluginItem) => {
+    if (!activeWorkspace || !isAdmin) return
+    setConfigPlugin(plugin)
+    setConfigUrl("")
+    setConfigSecret("")
+    setIsLoadingConfig(true)
+    setMessage(null)
+    try {
+      const data = await requestData<WorkspacePluginResponse>(
+        `/api/v1/workspaces/${activeWorkspace.id}/plugins/${plugin.id}/config`
+      )
+      const cfg = data.config ?? {}
+      setConfigUrl(typeof cfg.webhook_url === "string" ? cfg.webhook_url : "")
+      setConfigSecret(typeof cfg.webhook_secret === "string" ? cfg.webhook_secret : "")
+    } catch (err: unknown) {
+      setMessage({ type: "error", text: err instanceof Error ? err.message : "获取 Webhook 配置失败" })
+    } finally {
+      setIsLoadingConfig(false)
+    }
+  }
+
+  const handleSaveConfig = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!activeWorkspace || !configPlugin) return
+    setIsSavingConfig(true)
+    setMessage(null)
+    try {
+      await requestData<WorkspacePluginResponse>(
+        `/api/v1/workspaces/${activeWorkspace.id}/plugins/${configPlugin.id}/config`,
+        {
+          method: "PUT",
+          body: JSON.stringify({
+            config: {
+              webhook_url: configUrl.trim(),
+              webhook_secret: configSecret.trim(),
+            },
+          }),
+        }
+      )
+      setMessage({ type: "success", text: `已更新插件「${configPlugin.display_name}」Webhook 配置` })
+      closeConfigModal()
+      void loadPlugins(activeWorkspace.id)
+    } catch (err: unknown) {
+      setMessage({ type: "error", text: err instanceof Error ? err.message : "保存 Webhook 配置失败" })
+    } finally {
+      setIsSavingConfig(false)
     }
   }
 
@@ -312,30 +375,43 @@ export default function PluginsSettingsPage() {
                         查看 Manifest
                       </button>
 
-                      {isAdmin ? (
-                        <button
-                          type="button"
-                          disabled={isWorking}
-                          onClick={() => handleToggle(plugin)}
-                          className={cn(
-                            "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50",
-                            plugin.is_enabled
-                              ? "bg-destructive/15 text-destructive hover:bg-destructive/20"
-                              : "bg-primary text-primary-foreground hover:opacity-90"
-                          )}
-                        >
-                          {isWorking ? (
-                            <Loader2 className="size-3.5 animate-spin" />
-                          ) : (
-                            <Power className="size-3.5" />
-                          )}
-                          {plugin.is_enabled ? "停用插件" : "在当前工作区启用"}
-                        </button>
-                      ) : (
-                        <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                          <Lock className="size-3" /> 仅管理员可配置
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {isAdmin && plugin.is_installed && (
+                          <button
+                            type="button"
+                            onClick={() => handleOpenConfig(plugin)}
+                            className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-secondary"
+                          >
+                            <Settings className="size-3.5" />
+                            Webhook 配置
+                          </button>
+                        )}
+
+                        {isAdmin ? (
+                          <button
+                            type="button"
+                            disabled={isWorking}
+                            onClick={() => handleToggle(plugin)}
+                            className={cn(
+                              "flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors disabled:opacity-50",
+                              plugin.is_enabled
+                                ? "bg-destructive/15 text-destructive hover:bg-destructive/20"
+                                : "bg-primary text-primary-foreground hover:opacity-90"
+                            )}
+                          >
+                            {isWorking ? (
+                              <Loader2 className="size-3.5 animate-spin" />
+                            ) : (
+                              <Power className="size-3.5" />
+                            )}
+                            {plugin.is_enabled ? "停用插件" : "在当前工作区启用"}
+                          </button>
+                        ) : (
+                          <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <Lock className="size-3" /> 仅管理员可配置
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )
@@ -517,6 +593,89 @@ export default function PluginsSettingsPage() {
                   >
                     {isRegistering ? <Loader2 className="size-3.5 animate-spin" /> : <ShieldCheck className="size-3.5" />}
                     提交注册
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* Webhook Config Modal */}
+          {configPlugin && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
+              <form
+                onSubmit={handleSaveConfig}
+                className="w-full max-w-xl rounded-2xl border border-border bg-card p-6 shadow-xl space-y-4 max-h-[90vh] flex flex-col"
+              >
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <div className="flex items-center gap-2">
+                    <Settings className="size-5 text-primary" />
+                    <h2 className="text-base font-bold text-foreground">
+                      {configPlugin.display_name} · Webhook 配置
+                    </h2>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={closeConfigModal}
+                    className="rounded-lg p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  >
+                    <X className="size-5" />
+                  </button>
+                </div>
+
+                {isLoadingConfig ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground space-y-2">
+                    <Loader2 className="size-6 animate-spin text-primary" />
+                    <p className="text-sm">正在加载 Webhook 配置...</p>
+                  </div>
+                ) : (
+                  <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Webhook URL
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. https://example.com/hooks/agent"
+                        value={configUrl}
+                        onChange={(e) => setConfigUrl(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-muted-foreground">
+                        Webhook Secret
+                      </label>
+                      <input
+                        type="password"
+                        placeholder="用于回调签名校验的密钥"
+                        value={configSecret}
+                        onChange={(e) => setConfigSecret(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-end gap-2 border-t border-border pt-3">
+                  <button
+                    type="button"
+                    onClick={closeConfigModal}
+                    className="rounded-xl border border-border px-4 py-2 text-xs font-medium hover:bg-secondary"
+                  >
+                    取消
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingConfig || isLoadingConfig}
+                    className="flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground shadow-sm hover:opacity-90 disabled:opacity-50"
+                  >
+                    {isSavingConfig ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <ShieldCheck className="size-3.5" />
+                    )}
+                    保存配置
                   </button>
                 </div>
               </form>

@@ -14,12 +14,30 @@ from app.schemas.common import SuccessResponse
 from app.schemas.plugin import (
     PluginCreate,
     PluginResponse,
+    WorkspacePluginConfigUpdate,
     WorkspacePluginResponse,
     WorkspacePluginToggle,
 )
 from app.services.audit_service import record_audit_log
 
 router = APIRouter(tags=["plugins"])
+
+
+def _workspace_plugin_response(wp: WorkspacePlugin) -> WorkspacePluginResponse:
+    """Parse a WorkspacePlugin row into its API response shape."""
+    parsed_config = None
+    if wp.config_json:
+        try:
+            parsed_config = json.loads(wp.config_json)
+        except Exception:
+            parsed_config = None
+    return WorkspacePluginResponse(
+        workspace_id=wp.workspace_id,
+        plugin_id=wp.plugin_id,
+        is_enabled=wp.is_enabled,
+        config=parsed_config,
+        updated_at=wp.updated_at,
+    )
 
 
 @router.get("/plugins", response_model=SuccessResponse[list[PluginResponse]])
@@ -176,22 +194,87 @@ async def toggle_workspace_plugin(
         },
     )
 
-    parsed_config = None
-    if wp.config_json:
-        try:
-            parsed_config = json.loads(wp.config_json)
-        except Exception:
-            pass
+    return SuccessResponse(data=_workspace_plugin_response(wp))
 
-    return SuccessResponse(
-        data=WorkspacePluginResponse(
-            workspace_id=workspace_id,
-            plugin_id=plugin_id,
-            is_enabled=wp.is_enabled,
-            config=parsed_config,
-            updated_at=wp.updated_at,
+
+@router.get(
+    "/workspaces/{workspace_id}/plugins/{plugin_id}/config",
+    response_model=SuccessResponse[WorkspacePluginResponse],
+)
+async def get_workspace_plugin_config(
+    workspace_id: int,
+    plugin_id: int,
+    membership: WorkspaceMembership = Depends(require_workspace_role("admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """读取插件在当前工作区的配置（如 Webhook URL/Secret），仅 Admin 及以上。"""
+    wp = await db.scalar(
+        select(WorkspacePlugin).where(
+            WorkspacePlugin.workspace_id == workspace_id,
+            WorkspacePlugin.plugin_id == plugin_id,
         )
     )
+    if wp is None:
+        raise AppError(status_code=404, message="插件未在当前工作区挂载")
+    return SuccessResponse(data=_workspace_plugin_response(wp))
+
+
+@router.put(
+    "/workspaces/{workspace_id}/plugins/{plugin_id}/config",
+    response_model=SuccessResponse[WorkspacePluginResponse],
+)
+async def update_workspace_plugin_config(
+    workspace_id: int,
+    plugin_id: int,
+    payload: WorkspacePluginConfigUpdate,
+    membership: WorkspaceMembership = Depends(require_workspace_role("admin")),
+    db: AsyncSession = Depends(get_db),
+):
+    """更新插件在当前工作区的配置（如 Webhook URL/Secret），仅 Admin 及以上。
+
+    若插件尚未挂载则创建一条未启用的挂载记录，仅保存配置。
+    """
+    plugin = await db.get(Plugin, plugin_id)
+    if plugin is None:
+        raise AppError(status_code=404, message="插件不存在")
+
+    wp = await db.scalar(
+        select(WorkspacePlugin).where(
+            WorkspacePlugin.workspace_id == workspace_id,
+            WorkspacePlugin.plugin_id == plugin_id,
+        )
+    )
+
+    config_str = json.dumps(payload.config) if payload.config else None
+
+    if wp is None:
+        wp = WorkspacePlugin(
+            workspace_id=workspace_id,
+            plugin_id=plugin_id,
+            is_enabled=False,
+            config_json=config_str,
+        )
+        db.add(wp)
+    else:
+        wp.config_json = config_str
+
+    await db.commit()
+    await db.refresh(wp)
+
+    await record_audit_log(
+        db,
+        workspace_id=workspace_id,
+        user_id=membership.user_id,
+        action="plugin.config_update",
+        resource_type="plugin",
+        resource_id=str(plugin_id),
+        detail={
+            "plugin_name": plugin.name,
+            "keys": sorted((payload.config or {}).keys()),
+        },
+    )
+
+    return SuccessResponse(data=_workspace_plugin_response(wp))
 
 
 @router.get(

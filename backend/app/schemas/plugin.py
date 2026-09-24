@@ -67,6 +67,10 @@ class WorkspacePluginToggle(BaseModel):
     config: dict[str, Any] | None = None
 
 
+class WorkspacePluginConfigUpdate(BaseModel):
+    config: dict[str, Any] = Field(default_factory=dict)
+
+
 class WorkspacePluginResponse(BaseModel):
     workspace_id: int
     plugin_id: int

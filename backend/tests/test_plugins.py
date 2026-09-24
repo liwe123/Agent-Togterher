@@ -131,3 +131,59 @@ def test_plugin_lifecycle(plugin_client: TestClient) -> None:
     assert len(active_tools) == 2
     assert active_tools[0]["name"] == "trigger_workflow"
     assert active_tools[0]["plugin_name"] == "github-actions"
+
+
+def test_workspace_plugin_config_roundtrip(plugin_client: TestClient) -> None:
+    """C1: Webhook 配置读写端点（admin+；未挂载时 404，PUT 自动建立未启用挂载）。"""
+    reg_res = plugin_client.post(
+        "/api/v1/auth/register",
+        json={"email": "plugin_cfg@example.com", "password": "Password123!", "display_name": "Cfg Admin"},
+    )
+    assert reg_res.status_code == 200
+    token = reg_res.json()["data"]["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    ws_id = plugin_client.get("/api/v1/workspaces/my", headers=headers).json()["data"][0]["id"]
+
+    create_res = plugin_client.post(
+        "/api/v1/plugins",
+        headers=headers,
+        json={
+            "name": "webhook-notifier",
+            "display_name": "Webhook Notifier",
+            "manifest_json": json.dumps({"name": "webhook-notifier", "tools": []}),
+            "is_public": True,
+        },
+    )
+    assert create_res.status_code == 200
+    plugin_id = create_res.json()["data"]["id"]
+
+    base = f"/api/v1/workspaces/{ws_id}/plugins/{plugin_id}/config"
+
+    # 未挂载读取 → 404
+    get_before = plugin_client.get(base, headers=headers)
+    assert get_before.status_code == 404
+
+    # 写入配置（admin）→ 自动创建未启用挂载并保存
+    put_res = plugin_client.put(
+        base,
+        headers=headers,
+        json={"config": {"webhook_url": "https://example.com/hook", "webhook_secret": "s3cr3t"}},
+    )
+    assert put_res.status_code == 200
+    put_data = put_res.json()["data"]
+    assert put_data["is_enabled"] is False
+    assert put_data["config"]["webhook_url"] == "https://example.com/hook"
+
+    # 读回配置
+    get_after = plugin_client.get(base, headers=headers)
+    assert get_after.status_code == 200
+    assert get_after.json()["data"]["config"]["webhook_secret"] == "s3cr3t"
+
+    # 未注册插件 → 404
+    put_404 = plugin_client.put(
+        f"/api/v1/workspaces/{ws_id}/plugins/999999/config",
+        headers=headers,
+        json={"config": {}},
+    )
+    assert put_404.status_code == 404
