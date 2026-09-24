@@ -499,6 +499,24 @@ CURATED = {
         "verify": "重跑生成脚本无额外差异；PRD.html 由 PRD.md 重生成，索引链接可达",
         "notes": "纯文档；覆盖 20260924 审核报告 §四 的 13 处偏差（其中 PRODUCT.md 语言项经核实为误报，未改）",
     },
+    "bfe8d33": {
+        "type": "Optimization",
+        "content": "重生成变更追踪表登记 Batch 7/8 回写与 OPT-3/OPT-4（C-206~C-210）",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否", "breaking": "否",
+        "verify": "-",
+        "notes": "docs/generate_change_log.py 重跑产物",
+    },
+    "c4c8500": {
+        "type": "Optimization",
+        "content": "同步前端测试基线：OPT-3 新增用例后 node --test 由 34 增至 35，更新 README 与 HANDOFF 计数",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否", "breaking": "否",
+        "verify": "npm test 35 passed，与文档一致",
+        "notes": "独立验收子 Agent 指出后修正",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even
