@@ -23,6 +23,7 @@ function applySnapshotTasks<
   T extends { id: number; status: string; updated_at: string },
 >(current: T[], snapshotTasks: Partial<T>[]): T[] {
   let changed = false
+  const currentIds = new Set(current.map((task) => task.id))
   const merged = current.map((task) => {
     const incoming = snapshotTasks.find((item) => item.id === task.id)
     if (!incoming) return task
@@ -31,7 +32,11 @@ function applySnapshotTasks<
     changed = true
     return candidate
   })
-  return changed ? merged : current
+  const appended = snapshotTasks.filter(
+    (item): item is T => item.id !== undefined && !currentIds.has(item.id),
+  )
+  if (appended.length > 0) changed = true
+  return changed ? [...merged, ...appended] : current
 }
 
 interface TraceEventLike {

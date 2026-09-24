@@ -95,12 +95,19 @@ describe("task-utils", () => {
       assert.equal(result[1].title, "untouched")
     })
 
-    it("does not insert snapshot tasks whose id is missing from current", () => {
+    it("appends snapshot tasks whose id is missing from current", () => {
       const snapshot = [
-        { id: 99, status: "completed", updated_at: "2026-01-02T00:00:00Z" },
+        { id: 99, status: "completed", updated_at: "2026-01-02T00:00:00Z", title: "new task" },
       ]
       const result = mod.applySnapshotTasks(current, snapshot)
-      assert.equal(result.length, 2)
+      assert.equal(result.length, 3)
+      assert.equal(result[2].id, 99)
+      assert.equal(result[2].title, "new task")
+      assert.equal(result[0].title, "old title")
+    })
+
+    it("returns the same reference when the snapshot is empty", () => {
+      const result = mod.applySnapshotTasks(current, [])
       assert.equal(result, current)
     })
 
