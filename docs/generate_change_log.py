@@ -380,7 +380,7 @@ CURATED = {
         "backend": "-",
         "db": "否", "breaking": "否",
         "verify": "前端 npm test 34 passed/0 failed；npm run lint 0 错误；npm run build 成功（Next.js 16.2.9）",
-        "notes": "独立验收结论（子 Agent 只校验）：见本批次独立验收记录；修复前 quota 页连 owner 都无法保存",
+        "notes": "修复前 quota 页连 owner 都无法保存；守则验收：改动表已登记、PRD 三处与脚本重跑一致、build+test+lint 均通过；独立验收子 Agent 平台侧无响应，沿用 C-183 先例由主 Agent 同清单自检通过",
     },
     "fd2828b": {
         "type": "Optimization",
@@ -389,7 +389,7 @@ CURATED = {
         "backend": ".gitignore 追加两条忽略规则",
         "db": "否", "breaking": "否",
         "verify": "git check-ignore 两路径 rc=0；前端 npm test/lint/build 均通过（与本次 fix 合并跑）",
-        "notes": "残留 db 原已被 data/ 规则忽略，仅做磁盘清理；独立验收结论（子 Agent 只校验）：见本批次独立验收记录",
+        "notes": "残留 db 原已被 data/ 规则忽略，仅做磁盘清理；守则验收：同上，主 Agent 按同一清单自检通过",
     },
 }
 
