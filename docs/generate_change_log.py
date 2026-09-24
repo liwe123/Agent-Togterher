@@ -536,6 +536,16 @@ CURATED = {
         "verify": "test_plugins.py 2 passed；flake8 0 错误；前端 npm test 35 passed / lint 0 / build 成功",
         "notes": "PRD: docs/prd/PRD-插件Webhook配置界面.md；与 C-183 通知读取路径一致，无需迁移",
     },
+    "0e0af76": {
+        "type": "Requirement",
+        "content": "Worker 实例心跳注册与健康探针：worker_registry 早已实现但从未接线，且缺 /healthz 与实例观测端点；本次 Worker 启动注册心跳、新增 /healthz 与 /healthz/workers，为弹性扩缩容预留观测能力（B8/FR15）",
+        "frontend": "-",
+        "backend": "worker.py 接线 build_worker_registry 注册/注销心跳；endpoints/health.py 新增 /healthz 与 /healthz/workers（Redis 异常降级空列表）；main.py public_paths 放行 /healthz；test_health.py 新增用例",
+        "db": "否（实例事实源为 Redis）",
+        "breaking": "否",
+        "verify": "test_health.py + test_worker_registry.py 21 passed；flake8 0 错误",
+        "notes": "PRD: docs/prd/PRD-弹性Worker实例与健康探针.md；event_bus_enabled=False 时 Noop 降级",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even
