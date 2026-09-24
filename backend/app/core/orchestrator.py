@@ -21,6 +21,7 @@ from app.core.execution_trace import (
     call_trace_event,
     step_trace_event,
 )
+from app.core.trace_context import inherit_from_task
 from app.db.base import utc_now
 from app.db.session import AsyncSessionLocal
 from app.models import (
@@ -1015,6 +1016,7 @@ class AgentOrchestrator:
                 status=status,
                 started_at=now,
             )
+            inherit_from_task(step, task)
             self._session.add(step)
         else:
             step.status = status
@@ -1089,6 +1091,7 @@ class AgentOrchestrator:
             status=call_status,
             error_message=error_message,
         )
+        inherit_from_task(model_call, task)
         self._session.add(model_call)
         await self._session.commit()
         await self._session.refresh(model_call)
@@ -1134,6 +1137,7 @@ class AgentOrchestrator:
             content=content,
             message_type=MessageType.ERROR if is_error else MessageType.NORMAL,
         )
+        inherit_from_task(message, task)
         self._session.add(message)
         await self._session.commit()
         await self._session.refresh(message)

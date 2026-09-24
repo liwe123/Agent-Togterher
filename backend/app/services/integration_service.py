@@ -21,6 +21,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.trace_context import inherit_from_task
 from app.db.base import utc_now
 from app.models.enums import TaskStatus
 from app.models.integration_node import IntegrationNode
@@ -228,6 +229,7 @@ async def dispatch_task_to_node(
         status="running",
         started_at=started_at,
     )
+    inherit_from_task(step, task)
     session.add(step)
     await session.commit()
     await session.refresh(step)

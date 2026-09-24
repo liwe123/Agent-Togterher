@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base, utc_now
@@ -30,6 +30,11 @@ class Message(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now
     )
+    # R-05: 链路追踪标识——correlation 为用户意图级，trace 为任务执行链级。
+    correlation_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    trace_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
 
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")
     input_for_tasks: Mapped[list["Task"]] = relationship(

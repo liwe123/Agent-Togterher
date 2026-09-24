@@ -39,6 +39,8 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "content",
             "message_type",
             "created_at",
+            "correlation_id",
+            "trace_id",
         },
         "tasks": {
             "id",
@@ -55,6 +57,8 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "updated_at",
             "execution_token",
             "execution_token_expires_at",
+            "correlation_id",
+            "trace_id",
         },
         "task_queue_items": {
             "id",
@@ -84,6 +88,8 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "node_id",
             "dependencies_json",
             "order_index",
+            "trace_id",
+            "correlation_id",
         },
         "model_calls": {
             "id",
@@ -98,6 +104,8 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "status",
             "error_message",
             "created_at",
+            "trace_id",
+            "correlation_id",
         },
         "provider_credentials": {
             "id",

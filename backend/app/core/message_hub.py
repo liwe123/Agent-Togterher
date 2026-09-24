@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.errors import AppError
 from app.api.persistence import commit_or_conflict
 from app.core.config import get_settings
+from app.core.trace_context import stamp_new_message, stamp_task
 from app.db.base import utc_now
 from app.db.session import AsyncSessionLocal
 from app.models import (
@@ -230,6 +231,7 @@ class MessageHub:
             content=content,
             message_type=MessageType.NORMAL,
         )
+        stamp_new_message(message)
         self._session.add(message)
         await self._session.flush()
 
@@ -243,6 +245,7 @@ class MessageHub:
             priority="normal",
             input_message_id=message.id,
         )
+        stamp_task(task, source_message=message)
         self._session.add(task)
         await commit_or_conflict(self._session)
         await self._session.refresh(message)
@@ -339,6 +342,7 @@ class MessageHub:
             content=content,
             message_type=MessageType.NORMAL,
         )
+        stamp_new_message(message)
         self._session.add(message)
         await self._session.flush()
 
@@ -352,6 +356,7 @@ class MessageHub:
             priority="normal",
             input_message_id=message.id,
         )
+        stamp_task(task, source_message=message)
         self._session.add(task)
         await commit_or_conflict(self._session)
         await self._session.refresh(message)

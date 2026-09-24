@@ -52,6 +52,11 @@ class Task(Base):
     execution_token_expires_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True, index=True
     )
+    # R-05: 链路追踪标识——correlation 继承输入消息，trace 为任务执行链级。
+    correlation_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    trace_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
 
     workspace: Mapped["Workspace"] = relationship(back_populates="tasks")
     conversation: Mapped["Conversation | None"] = relationship(back_populates="tasks")
@@ -95,6 +100,11 @@ class TaskStep(Base):
     dependencies_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     # C-185: 全局递增执行序号（按层分配，层内按节点顺序）
     order_index: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # R-05: 执行链追踪标识，继承所属 Task。
+    trace_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    correlation_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
 
     task: Mapped["Task"] = relationship(back_populates="steps")
     agent: Mapped["Agent | None"] = relationship(back_populates="task_steps")

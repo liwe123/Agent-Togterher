@@ -35,6 +35,11 @@ class ModelCall(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now
     )
+    # R-05: 执行链追踪标识，继承所属 Task。
+    trace_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    correlation_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
 
     task: Mapped["Task"] = relationship(back_populates="model_calls")
     agent: Mapped["Agent | None"] = relationship(back_populates="model_calls")
