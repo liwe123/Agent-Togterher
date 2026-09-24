@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>28</b> 份</span>
-        <span>变更记录 <b>206</b> 条</span>
-        <span>生成于 2026-09-24 21:38</span>
+        <span>变更记录 <b>210</b> 条</span>
+        <span>生成于 2026-09-24 21:44</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -3584,6 +3584,70 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>-</td>
 <td>-</td>
 </tr>
+<tr>
+<td>2026-09-24 21:38</td>
+<td>C-207</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/41b3470">41b3470</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 回填 C-193~C-201 改动内容与验收结论并重生成变更追踪表</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-24 21:44</td>
+<td>C-208</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/3b1aa8b">3b1aa8b</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>部署</td>
+<td>docker-compose 三处硬编码 user: "0:0" 改为 ${COMPOSE_USER:-0:0}，生产可用环境变量覆盖 root 运行（20260907 报告 D5 / OPT-4）</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>docker compose config 解析通过，未设变量时仍得 user '0:0'（向后兼容）</td>
+<td>覆盖 api/worker/frontend 三服务；默认行为不变</td>
+</tr>
+<tr>
+<td>2026-09-24 21:44</td>
+<td>C-209</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/a49fa6d">a49fa6d</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>文档、其他</td>
+<td>Batch 7 文档回写：修正 README 测试数（230/40→245/41）、HANDOFF 更新时间/剩余缺口/架构图服务清单/测试基准、项目计划 Phase 3 状态与表数（20→21）及核查日期、PRD.md 链接多余 docs/ 前缀；并回写 0828/0907 两份审查报告的已完成项状态</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>重跑生成脚本无额外差异；PRD.html 由 PRD.md 重生成，索引链接可达</td>
+<td>纯文档；覆盖 20260924 审核报告 §四 的 13 处偏差（其中 PRODUCT.md 语言项经核实为误报，未改）</td>
+</tr>
+<tr>
+<td>2026-09-24 21:44</td>
+<td>C-210</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/ed43106">ed43106</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>前端</td>
+<td>applySnapshotTasks 追加快照中 current 缺失的新任务：此前仅按 id 合并已有任务、丢弃快照新增任务，重连对账时其他客户端新建的任务不下发（20260907 报告 C5 / OPT-3）</td>
+<td>lib/task-utils.ts applySnapshotTasks 新增 appended（按 id 去重过滤快照新任务后 concat）；tests/task-utils.test.mjs 反向用例改为「追加快照新任务」并补空快照引用不变用例</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>前端 npm test 35 passed/0 failed（原 34，净增 1）；npm run lint 0 错误；npm run build 成功</td>
+<td>消费方 hooks/use-tasks.ts:152 断线快照对账；返回引用不变的语义仅在快照为空时保持</td>
+</tr>
 </tbody>
 </table></div>
 <!-- CHANGELOG:END -->
@@ -3722,7 +3786,7 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>—</td>
 </tr>
 <tr>
-<td><a href="docs/prd/PRD-外部节点群聊派发与Cursor桥接.md">PRD-外部节点群聊派发与Cursor桥接.md</a></td>
+<td><a href="#prd-外部节点群聊派发与cursor桥接">PRD-外部节点群聊派发与Cursor桥接.md</a></td>
 <td>外部节点群聊派发与 Cursor 桥接（@ 路由到 integration_nodes、CursorBridge 真实执行、宿主文件系统桥接、Docker 共享挂载）</td>
 <td>—</td>
 <td>—</td>

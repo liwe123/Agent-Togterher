@@ -472,6 +472,33 @@ CURATED = {
         "verify": "工作流含 build-linux(SQLite) + test-postgres(pg16+redis7) + test-frontend(lint+test)；本机未装 gh CLI，远端运行状态未取证",
         "notes": "EVENT_BUS_ENABLED 保持 conftest 默认 false；PG 方言覆盖仍为部分（conftest db_engine 硬编码 SQLite）",
     },
+    "ed43106": {
+        "type": "Optimization",
+        "content": "applySnapshotTasks 追加快照中 current 缺失的新任务：此前仅按 id 合并已有任务、丢弃快照新增任务，重连对账时其他客户端新建的任务不下发（20260907 报告 C5 / OPT-3）",
+        "frontend": "lib/task-utils.ts applySnapshotTasks 新增 appended（按 id 去重过滤快照新任务后 concat）；tests/task-utils.test.mjs 反向用例改为「追加快照新任务」并补空快照引用不变用例",
+        "backend": "-",
+        "db": "否", "breaking": "否",
+        "verify": "前端 npm test 35 passed/0 failed（原 34，净增 1）；npm run lint 0 错误；npm run build 成功",
+        "notes": "消费方 hooks/use-tasks.ts:152 断线快照对账；返回引用不变的语义仅在快照为空时保持",
+    },
+    "3b1aa8b": {
+        "type": "Optimization",
+        "content": "docker-compose 三处硬编码 user: \"0:0\" 改为 ${COMPOSE_USER:-0:0}，生产可用环境变量覆盖 root 运行（20260907 报告 D5 / OPT-4）",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否", "breaking": "否",
+        "verify": "docker compose config 解析通过，未设变量时仍得 user '0:0'（向后兼容）",
+        "notes": "覆盖 api/worker/frontend 三服务；默认行为不变",
+    },
+    "a49fa6d": {
+        "type": "Optimization",
+        "content": "Batch 7 文档回写：修正 README 测试数（230/40→245/41）、HANDOFF 更新时间/剩余缺口/架构图服务清单/测试基准、项目计划 Phase 3 状态与表数（20→21）及核查日期、PRD.md 链接多余 docs/ 前缀；并回写 0828/0907 两份审查报告的已完成项状态",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否", "breaking": "否",
+        "verify": "重跑生成脚本无额外差异；PRD.html 由 PRD.md 重生成，索引链接可达",
+        "notes": "纯文档；覆盖 20260924 审核报告 §四 的 13 处偏差（其中 PRODUCT.md 语言项经核实为误报，未改）",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even
