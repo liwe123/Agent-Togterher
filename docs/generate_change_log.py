@@ -526,6 +526,16 @@ CURATED = {
         "verify": "前端 npm test 35 passed；npm run lint 0 错误；npm run build 成功",
         "notes": "与后端 admin+ 403 兜底一致；审批实际权限仍以后端为准",
     },
+    "fc6e55a": {
+        "type": "Requirement",
+        "content": "新增插件 Webhook 配置界面与配置读写端点：C-183 的出站通知此前只有后端能力，前端无任何配置入口且后端无独立配置读写端点，工作区管理员无法配置 webhook_url/secret；本次打通配置入口（C1）",
+        "frontend": "settings/plugins/page.tsx 新增 Webhook 配置按钮（isInstalled && isAdmin）+ 配置弹窗（URL/Secret，GET 回显 / PUT 保存）；types/plugin.ts 复用 WorkspacePluginResponse",
+        "backend": "endpoints/plugins.py 新增 GET/PUT /workspaces/{wid}/plugins/{pid}/config 与 _workspace_plugin_response 辅助；schemas/plugin.py 新增 WorkspacePluginConfigUpdate；test_plugins.py 新增 config roundtrip 用例",
+        "db": "否（复用 workspace_plugins.config_json）",
+        "breaking": "否",
+        "verify": "test_plugins.py 2 passed；flake8 0 错误；前端 npm test 35 passed / lint 0 / build 成功",
+        "notes": "PRD: docs/prd/PRD-插件Webhook配置界面.md；与 C-183 通知读取路径一致，无需迁移",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even
