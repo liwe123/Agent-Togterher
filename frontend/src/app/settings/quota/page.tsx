@@ -24,8 +24,8 @@ import { cn } from "@/lib/utils"
 import type { QuotaUsage } from "@/types/quota"
 
 export default function QuotaSettingsPage() {
-  const { activeWorkspace } = useWorkspaces()
-  const { isAdmin } = usePermissions()
+  const { activeWorkspace, currentUserRole } = useWorkspaces()
+  const { isAdmin } = usePermissions(currentUserRole)
 
   const [usage, setUsage] = useState<QuotaUsage | null>(null)
   const [budgetUsd, setBudgetUsd] = useState<number>(100)

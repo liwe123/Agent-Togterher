@@ -32,8 +32,8 @@ import type {
 
 export default function WorkflowsPage() {
   const router = useRouter()
-  const { activeWorkspace } = useWorkspaces()
-  const { isAdmin } = usePermissions()
+  const { activeWorkspace, currentUserRole } = useWorkspaces()
+  const { isAdmin } = usePermissions(currentUserRole)
 
   const [templates, setTemplates] = useState<WorkflowTemplateItem[]>([])
   const [searchQuery, setSearchQuery] = useState("")

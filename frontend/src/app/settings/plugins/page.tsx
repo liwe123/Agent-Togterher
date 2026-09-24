@@ -27,8 +27,8 @@ import { cn } from "@/lib/utils"
 import type { PluginItem } from "@/types/plugin"
 
 export default function PluginsSettingsPage() {
-  const { activeWorkspace } = useWorkspaces()
-  const { isAdmin } = usePermissions()
+  const { activeWorkspace, currentUserRole } = useWorkspaces()
+  const { isAdmin } = usePermissions(currentUserRole)
 
   const [plugins, setPlugins] = useState<PluginItem[]>([])
   const [searchQuery, setSearchQuery] = useState("")
