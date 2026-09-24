@@ -546,6 +546,16 @@ CURATED = {
         "verify": "test_health.py + test_worker_registry.py 21 passed；flake8 0 错误",
         "notes": "PRD: docs/prd/PRD-弹性Worker实例与健康探针.md；event_bus_enabled=False 时 Noop 降级",
     },
+    "0b26a04": {
+        "type": "Requirement",
+        "content": "为 Message/Task/TaskStep/ModelCall 增加 trace_id 与 correlation_id 独立字段并建立传播链：架构治理基线 R-05 定义了规范但未实现，跨消息→任务→步骤→模型调用无法用稳定标识串联（B7/R-05）",
+        "frontend": "-",
+        "backend": "新增 core/trace_context.py；models 的 message/task/model_call 四表加列；message_hub 盖 correlation 并继承到 task、orchestrator/integration_service 继承 trace/correlation；Alembic 迁移 c2d3e4f5a6b7；test_trace_context.py 新增 + test_database.py 登记",
+        "db": "是（messages/tasks/task_steps/model_calls 各加 trace_id/correlation_id 两列与索引）",
+        "breaking": "否（新列可空）",
+        "verify": "全量 252 passed；flake8 0 错误；alembic autogenerate 零 diff",
+        "notes": "PRD: docs/prd/PRD-链路追踪字段.md；结构化日志字段改造另立项",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even
