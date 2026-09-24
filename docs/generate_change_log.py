@@ -517,6 +517,15 @@ CURATED = {
         "verify": "npm test 35 passed，与文档一致",
         "notes": "独立验收子 Agent 指出后修正",
     },
+    "5e60d94": {
+        "type": "BUG",
+        "content": "HITL 人工审批按钮角色收紧：审批「通过/驳回」按钮此前对所有角色可见，非管理员点击必被后端 403；现仅 admin 及以上可操作，其余角色显示只读提示（20260907 报告 C2）",
+        "frontend": "components/tasks/task-detail-page.tsx ApprovalActions 接入 useWorkspaces/usePermissions，非 isAdmin 渲染只读提示",
+        "backend": "-",
+        "db": "否", "breaking": "否",
+        "verify": "前端 npm test 35 passed；npm run lint 0 错误；npm run build 成功",
+        "notes": "与后端 admin+ 403 兜底一致；审批实际权限仍以后端为准",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even

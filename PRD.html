@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>28</b> 份</span>
-        <span>变更记录 <b>212</b> 条</span>
-        <span>生成于 2026-09-24 21:46</span>
+        <span>变更记录 <b>214</b> 条</span>
+        <span>生成于 2026-09-24 21:47</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -3668,6 +3668,22 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>2026-09-24 21:46</td>
 <td>C-212</td>
 <td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/82f52c3">82f52c3</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 登记本批注册与前端基线修正并重生成（C-211/C-212）</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-24 21:46</td>
+<td>C-213</td>
+<td>已完成</td>
 <td><a href="https://github.com/liwe123/Agent-Togterher/commit/c4c8500">c4c8500</a></td>
 <td>LI</td>
 <td>Optimization</td>
@@ -3679,6 +3695,22 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否</td>
 <td>npm test 35 passed，与文档一致</td>
 <td>独立验收子 Agent 指出后修正</td>
+</tr>
+<tr>
+<td>2026-09-24 21:47</td>
+<td>C-214</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/5e60d94">5e60d94</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>前端</td>
+<td>HITL 人工审批按钮角色收紧：审批「通过/驳回」按钮此前对所有角色可见，非管理员点击必被后端 403；现仅 admin 及以上可操作，其余角色显示只读提示（20260907 报告 C2）</td>
+<td>components/tasks/task-detail-page.tsx ApprovalActions 接入 useWorkspaces/usePermissions，非 isAdmin 渲染只读提示</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>前端 npm test 35 passed；npm run lint 0 错误；npm run build 成功</td>
+<td>与后端 admin+ 403 兜底一致；审批实际权限仍以后端为准</td>
 </tr>
 </tbody>
 </table></div>
