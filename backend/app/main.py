@@ -61,6 +61,7 @@ async def authenticate_api_request(request: Request, call_next):
     public_paths = {
         "/", 
         f"{settings.api_v1_prefix}/health", 
+        f"{settings.api_v1_prefix}/healthz", 
         "/docs", 
         "/openapi.json",
         f"{settings.api_v1_prefix}/auth/register",

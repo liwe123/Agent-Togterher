@@ -7,6 +7,7 @@ from time import monotonic
 
 from app.core.config import get_settings
 from app.core.orchestrator import run_task
+from app.core.worker_registry import build_worker_registry
 from app.db.session import AsyncSessionLocal, close_db, init_db
 from app.services.task_lease import recover_expired_task_leases
 from app.services.task_service import TaskService
@@ -144,6 +145,21 @@ async def run_worker() -> None:
         },
     )
 
+    # FR15 弹性预留：注册本 Worker 实例心跳，供 /healthz/workers 观测存活实例，
+    # 作为后续自动扩缩容的输入；event_bus_enabled=False 时降级为 Noop，零 Redis 依赖。
+    registry = build_worker_registry(
+        settings.redis_url,
+        settings.worker_instance_id,
+        lease_timeout=settings.worker_lease_timeout,
+        enabled=settings.event_bus_enabled,
+    )
+    await registry.start(
+        extra_info={
+            "role": "worker",
+            "concurrency": settings.worker_concurrency,
+        }
+    )
+
     semaphore = asyncio.Semaphore(settings.worker_concurrency)
     active: set[asyncio.Task[None]] = set()
     last_recover_at = monotonic()
@@ -174,6 +190,7 @@ async def run_worker() -> None:
     finally:
         if active:
             await asyncio.gather(*active, return_exceptions=True)
+        await registry.stop()
         await event_relay.stop()
         await close_db()
 
