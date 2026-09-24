@@ -27,7 +27,9 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { usePermissions } from "@/hooks/use-permissions"
 import { useTaskDetail } from "@/hooks/use-tasks"
+import { useWorkspaces } from "@/hooks/use-workspaces"
 import { requestData } from "@/lib/task-api"
 import {
   formatCost,
@@ -416,9 +418,22 @@ interface ApprovalActionProps {
 }
 
 // C-184 HITL：人工审批操作按钮。
-// 页面暂无角色上下文，按钮全员可见（后端强制 admin+，403 拒绝）；
-// 后续接入权限上下文后在此收紧。
+// 角色收紧（C2）：仅 admin 及以上可见可点，与后端 403 兜底一致；
+// 非管理员显示只读提示，避免看到必然失败的按钮。
 function ApprovalActions({ busy, onDecision }: ApprovalActionProps) {
+  const { currentUserRole } = useWorkspaces()
+  const { isAdmin } = usePermissions(currentUserRole)
+
+  if (!isAdmin) {
+    return (
+      <div className="mt-3.5 rounded-2xl border border-violet-500/30 bg-violet-500/10 p-3.5">
+        <p className="text-xs font-medium text-foreground">
+          该任务正在等待人工审批，仅工作区管理员及以上可操作。
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="mt-3.5 flex flex-wrap items-center gap-2.5 rounded-2xl border border-violet-500/30 bg-violet-500/10 p-3.5">
       <p className="min-w-0 flex-1 text-xs font-medium text-foreground">
