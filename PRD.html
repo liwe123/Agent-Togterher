@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>31</b> 份</span>
-        <span>变更记录 <b>220</b> 条</span>
-        <span>生成于 2026-09-24 22:00</span>
+        <span>变更记录 <b>222</b> 条</span>
+        <span>生成于 2026-09-24 22:03</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -3808,6 +3808,38 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>全量 252 passed；flake8 0 错误；alembic autogenerate 零 diff</td>
 <td>PRD: docs/prd/PRD-链路追踪字段.md；结构化日志字段改造另立项</td>
 </tr>
+<tr>
+<td>2026-09-24 22:00</td>
+<td>C-221</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/de74c9d">de74c9d</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 登记 B7 链路追踪字段并重生成（C-217）</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-24 22:03</td>
+<td>C-222</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/6b275db">6b275db</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>文档、其他</td>
+<td>docs: 校正 C1/B8/B7 的追踪表编号为 C-217/218/220 并同步索引</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
 </tbody>
 </table></div>
 <!-- CHANGELOG:END -->
@@ -3985,19 +4017,19 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td><a href="#prd-插件webhook配置界面">PRD-插件Webhook配置界面.md</a></td>
 <td>插件 Webhook 配置界面（配置读/写端点 + 设置页弹窗，打通 C-183 出站通知配置入口）</td>
 <td>见追踪表</td>
-<td>C-215</td>
+<td>C-217</td>
 </tr>
 <tr>
 <td><a href="#prd-弹性worker实例与健康探针">PRD-弹性Worker实例与健康探针.md</a></td>
 <td>弹性 Worker 实例注册与健康探针（/healthz 存活探针、/healthz/workers 实例观测，FR15）</td>
 <td>见追踪表</td>
-<td>C-216</td>
+<td>C-218</td>
 </tr>
 <tr>
 <td><a href="#prd-链路追踪字段">PRD-链路追踪字段.md</a></td>
 <td>链路追踪字段（Message/Task/TaskStep/ModelCall 的 trace_id/correlation_id 与传播，R-05）</td>
 <td>见追踪表</td>
-<td>C-217</td>
+<td>C-220</td>
 </tr>
 <tr>
 <td><a href="#prd-dag工作流引擎">PRD-DAG工作流引擎.md</a></td>
@@ -8635,7 +8667,7 @@ CREATE INDEX ix_audit_logs_created_at ON audit_logs(created_at);
 </ul>
 <h2 id="prd-弹性worker实例与健康探针">PRD：弹性 Worker 实例注册与健康探针（FR15）</h2>
 <blockquote>
-<p>类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-216</p>
+<p>类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-218</p>
 </blockquote>
 <hr />
 <h3 id="prd-弹性worker实例与健康探针-1-背景与问题">1. 背景与问题</h3>
@@ -8769,7 +8801,7 @@ CREATE INDEX ix_audit_logs_created_at ON audit_logs(created_at);
 <tbody>
 <tr>
 <td>待填</td>
-<td>C-216</td>
+<td>C-218</td>
 <td>已完成</td>
 <td>待填</td>
 <td>LI</td>
@@ -9086,7 +9118,7 @@ CREATE INDEX ix_audit_logs_created_at ON audit_logs(created_at);
 </table></div>
 <h2 id="prd-插件webhook配置界面">PRD：插件 Webhook 配置界面</h2>
 <blockquote>
-<p>类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-215</p>
+<p>类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-217</p>
 </blockquote>
 <hr />
 <h3 id="prd-插件webhook配置界面-1-背景与问题">1. 背景与问题</h3>
@@ -9226,7 +9258,7 @@ CREATE INDEX ix_audit_logs_created_at ON audit_logs(created_at);
 <tbody>
 <tr>
 <td>待填</td>
-<td>C-215</td>
+<td>C-217</td>
 <td>已完成</td>
 <td>待填</td>
 <td>LI</td>
@@ -11064,7 +11096,7 @@ task_execution_mode: str = &quot;queue&quot;
 <p>本需求的交付使 Agent Console 从单租户原型正式跃升为支持多人多团队、安全角色分级与租户隔离的工业级协作平台，为后续批次的审计日志与配额管理奠定了坚实基石。</p>
 <h2 id="prd-链路追踪字段">PRD：链路追踪字段（Trace / Correlation，R-05）</h2>
 <blockquote>
-<p>类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-217</p>
+<p>类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-220</p>
 </blockquote>
 <hr />
 <h3 id="prd-链路追踪字段-1-背景与问题">1. 背景与问题</h3>
@@ -11212,7 +11244,7 @@ task_execution_mode: str = &quot;queue&quot;
 <tbody>
 <tr>
 <td>待填</td>
-<td>C-217</td>
+<td>C-220</td>
 <td>已完成</td>
 <td>待填</td>
 <td>LI</td>
