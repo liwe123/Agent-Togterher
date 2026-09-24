@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>28</b> 份</span>
-        <span>变更记录 <b>205</b> 条</span>
-        <span>生成于 2026-09-24 21:27</span>
+        <span>变更记录 <b>206</b> 条</span>
+        <span>生成于 2026-09-24 21:38</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -3368,13 +3368,13 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>LI</td>
 <td>Optimization</td>
 <td>其他、文档</td>
-<td>docs: 纠偏文档与代码现状并补施工蓝图报告</td>
+<td>文档纠偏并补施工蓝图：新增《文档计划落地差距审查报告-20260907》系统梳理 36 项代码/文档缺口，并同步修正 README、HANDOFF、PRODUCT、项目计划、Phase1 计划中与代码现状不符的表述</td>
 <td>-</td>
 <td>-</td>
 <td>否</td>
 <td>否</td>
-<td>-</td>
-<td>-</td>
+<td>文档类冒烟：链接可达、表格与格式无破坏；后续 Batch 1-4 据此施工</td>
+<td>纯文档改动（另补 .gitignore 两条）；后续 C-195/C-196/C-198/C-200/C-201 的施工基线</td>
 </tr>
 <tr>
 <td>2026-09-07 12:49</td>
@@ -3384,13 +3384,13 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>LI</td>
 <td>Optimization</td>
 <td>其他、文档</td>
-<td>docs: 重生成变更表纳入 C-193 + README 去除易失行数</td>
+<td>重生成变更追踪表以纳入 C-193 记录，并去除 README 中易失的人数/行数描述</td>
 <td>-</td>
 <td>-</td>
 <td>否</td>
 <td>否</td>
 <td>-</td>
-<td>-</td>
+<td>docs/generate_change_log.py 重跑产物（PRD.md + xlsx + PRD.html）</td>
 </tr>
 <tr>
 <td>2026-09-07 17:58</td>
@@ -3400,13 +3400,13 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>LI</td>
 <td>BUG</td>
 <td>后端</td>
-<td>fix: workflows 运行端点 full_prompt 渲染跳过 human_approval 节点（C3）</td>
+<td>修复工作流运行端点 full_prompt 渲染缺陷：human_approval 节点的 prompt_template（含内部审批说明与哨兵文案）此前会被拼进 full_prompt 并作为用户消息喂给后续节点模型，现改为固定占位文本、步骤编号保持连续（20260907 报告 C3）</td>
 <td>-</td>
-<td>backend/app/api；backend/tests/test_human_approval.py</td>
+<td>endpoints/workflows.py run_workflow_template 渲染循环新增 human_approval 分支 continue + 占位文本；新增 tests/test_human_approval.py</td>
 <td>否</td>
 <td>否</td>
-<td>-</td>
-<td>-</td>
+<td>test_human_approval.py 7 passed（本机复跑）；断言哨兵字符串不进入渲染结果、审批步骤仍正确挂起</td>
+<td>与 C-186 DAG 引擎集成；20260907 报告 §一 BUG-1 复核闭环</td>
 </tr>
 <tr>
 <td>2026-09-07 17:58</td>
@@ -3416,13 +3416,13 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>LI</td>
 <td>BUG</td>
 <td>后端</td>
-<td>fix: 修复工作区隔离 IDOR 旁路（D1）</td>
+<td>修复工作区隔离 IDOR 旁路：conversations/messages 的列表、创建、读取端点此前未校验调用者对目标工作区的成员身份，JWT 用户可越权读写其他工作区数据（20260907 报告 D1）</td>
 <td>-</td>
-<td>backend/app/api；backend/tests/test_workspace_isolation.py</td>
+<td>endpoints/conversations.py 与 messages.py 各端点接入 enforce_workspace_role；api/rbac_compat.py 中 JWT 调用缺 workspace_id 由静默放行改为 422；新增 tests/test_workspace_isolation.py</td>
 <td>否</td>
-<td>否</td>
-<td>-</td>
-<td>-</td>
+<td>是（JWT 调用未带 workspace_id 由静默放行改为 422）</td>
+<td>test_workspace_isolation.py 6 passed（本机复跑）；覆盖 list/create/get 越权 403 与缺参 422</td>
+<td>legacy 静态 Token/开放模式仍透传；20260907 报告 §一 BUG-3 复核闭环</td>
 </tr>
 <tr>
 <td>2026-09-07 17:59</td>
@@ -3432,13 +3432,13 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>LI</td>
 <td>Optimization</td>
 <td>其他、文档</td>
-<td>docs: 变更追踪表登记 Batch 2 两个安全/渲染 fix（C-195/C-196）+ 补录 C-194</td>
+<td>变更追踪表登记 Batch 2 的两个安全/渲染修复（C-195 工作流渲染跳过审批、C-196 工作区隔离 IDOR）并补录 C-194</td>
 <td>-</td>
 <td>-</td>
 <td>否</td>
 <td>否</td>
 <td>-</td>
-<td>-</td>
+<td>docs/generate_change_log.py 重跑产物</td>
 </tr>
 <tr>
 <td>2026-09-08 11:00</td>
@@ -3448,13 +3448,13 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>LI</td>
 <td>BUG</td>
 <td>后端</td>
-<td>fix: 配额限流改 Redis 固定窗口，多实例全局生效并补 POST /api/tasks 配额检查（A2）</td>
+<td>修复配额限流多实例失效：原为单实例内存计数，多实例部署下各实例各自计数使限流失效；改为 Redis 固定窗口（key=quota:rl:{workspace_id}:{minute}，INCR+EXPIRE），Redis 不可用时降级内存滑动窗口并每分钟告警；并在 POST /api/tasks 补配额检查返回 429（20260907 报告 A2）</td>
 <td>-</td>
-<td>backend/app/api；backend/app/services；backend/tests/test_quota_enforcement.py</td>
+<td>services/quota_service.py 新增 _check_rate_limit_redis/_check_rate_limit_memory/_check_rate_limit 与故障降级；endpoints/tasks.py POST 补配额校验；扩展 tests/test_quota_enforcement.py</td>
 <td>否</td>
 <td>否</td>
-<td>-</td>
-<td>-</td>
+<td>test_quota_enforcement.py 10 passed（本机复跑）；覆盖固定窗口计数、多实例共享、Redis 故障降级与 POST 429</td>
+<td>20260907 报告 §一 BUG-2 / Phase 3 收尾项；修复后 Phase 3 限流缺口闭合</td>
 </tr>
 <tr>
 <td>2026-09-08 11:01</td>
@@ -3464,13 +3464,13 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>LI</td>
 <td>Optimization</td>
 <td>其他、文档</td>
-<td>docs: 变更追踪表登记 Batch 3 分布式限流 fix（C-197/C-198）</td>
+<td>变更追踪表登记 Batch 3 的分布式限流修复（C-197/C-198）</td>
 <td>-</td>
 <td>-</td>
 <td>否</td>
 <td>否</td>
 <td>-</td>
-<td>-</td>
+<td>docs/generate_change_log.py 重跑产物</td>
 </tr>
 <tr>
 <td>2026-09-08 17:23</td>
@@ -3480,13 +3480,13 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>LI</td>
 <td>Optimization</td>
 <td>后端</td>
-<td>refactor: 统一任务级执行租约到 task_lease.py，收敛 execution_token 写点并补协作取消（A4）</td>
+<td>统一任务级执行租约为唯一实现 task_lease.py：收敛 execution_token 的全部写点，orchestrator 与 worker 改走 claim/renew/release，并补协作取消（on_lost 触发 cancel_event）（20260907 报告 A4 / OPT-1）</td>
 <td>-</td>
-<td>backend/app/core；backend/app/services；backend/app/worker.py；backend/tests/test_dag_workflow.py；backend/tests/test_orchestrator.py；backend/tests/test_worker_lease.py</td>
+<td>新增 services/task_lease.py；core/orchestrator.py、worker.py、services/dag_engine.py、core/message_hub.py 改用租约接口；扩展 tests/test_worker_lease.py、test_orchestrator.py、test_dag_workflow.py</td>
 <td>否</td>
 <td>否</td>
-<td>-</td>
-<td>-</td>
+<td>本机复跑 task_lease 相关 4 测试文件合计 28 passed；execution_token 写入点收敛至 task_lease.py</td>
+<td>20260907 报告 §一 OPT-1 复核闭环；两套租约问题收敛</td>
 </tr>
 <tr>
 <td>2026-09-08 17:23</td>
@@ -3496,13 +3496,13 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>LI</td>
 <td>Optimization</td>
 <td>其他</td>
-<td>optimize: CI 增加 PostgreSQL + Redis job 与前端 lint/test job（A3）</td>
+<td>CI 强化：新增 test-postgres job（PG16 + Redis7 service container 实跑后端测试，覆盖 PG 方言）与 test-frontend job（Node22 lint+test），保留原 build-linux SQLite job（20260907 报告 A3 / OPT-2）</td>
 <td>-</td>
-<td>-</td>
+<td>.github/workflows/python-package-conda.yml 新增 test-postgres、test-frontend 两个 job</td>
 <td>否</td>
 <td>否</td>
-<td>-</td>
-<td>-</td>
+<td>工作流含 build-linux(SQLite) + test-postgres(pg16+redis7) + test-frontend(lint+test)；本机未装 gh CLI，远端运行状态未取证</td>
+<td>EVENT_BUS_ENABLED 保持 conftest 默认 false；PG 方言覆盖仍为部分（conftest db_engine 硬编码 SQLite）</td>
 </tr>
 <tr>
 <td>2026-09-08 17:24</td>
@@ -3561,6 +3561,22 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>Optimization</td>
 <td>其他、文档</td>
 <td>docs: 变更追踪表登记本批权限修复与 .gitignore 优化并重生成（C-202/C-203/C-204）</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-24 21:28</td>
+<td>C-206</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/c1862c0">c1862c0</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 完善本批改动表验收备注并重生成（C-203/C-204/C-205）</td>
 <td>-</td>
 <td>-</td>
 <td>否</td>
