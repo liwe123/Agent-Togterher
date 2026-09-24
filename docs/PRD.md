@@ -277,9 +277,9 @@ SQLite + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后端自
 | [PRD-ProviderKey信封加密.md](prd/PRD-ProviderKey信封加密.md) | Provider Key 信封加密（Fernet 静态加密、JWT 密钥派生主密钥、v1 前缀存量兼容、掩码解密） | — | — |
 | [PRD-独立Worker与事件总线链路启用.md](prd/PRD-独立Worker与事件总线链路启用.md) | 独立 Worker 与事件总线链路启用（compose worker 服务编排、task_execution_mode 默认 queue、Redis 事件总线与分布式锁开关注入、Worker 侧事件出口 FR8） | 0529d2c | C-170 |
 | [PRD-插件Webhook执行器与出站通知.md](prd/PRD-插件Webhook执行器与出站通知.md) | 插件 Webhook 工具执行器与任务终态出站通知（httpx 出站 + HMAC-SHA256 签名 + 超时重试、全局执行器替换占位、工作区插件 webhook 通知） | 见追踪表 | C-183 |
-| [PRD-插件Webhook配置界面.md](prd/PRD-插件Webhook配置界面.md) | 插件 Webhook 配置界面（配置读/写端点 + 设置页弹窗，打通 C-183 出站通知配置入口） | 见追踪表 | C-215 |
-| [PRD-弹性Worker实例与健康探针.md](prd/PRD-弹性Worker实例与健康探针.md) | 弹性 Worker 实例注册与健康探针（/healthz 存活探针、/healthz/workers 实例观测，FR15） | 见追踪表 | C-216 |
-| [PRD-链路追踪字段.md](prd/PRD-链路追踪字段.md) | 链路追踪字段（Message/Task/TaskStep/ModelCall 的 trace_id/correlation_id 与传播，R-05） | 见追踪表 | C-217 |
+| [PRD-插件Webhook配置界面.md](prd/PRD-插件Webhook配置界面.md) | 插件 Webhook 配置界面（配置读/写端点 + 设置页弹窗，打通 C-183 出站通知配置入口） | 见追踪表 | C-217 |
+| [PRD-弹性Worker实例与健康探针.md](prd/PRD-弹性Worker实例与健康探针.md) | 弹性 Worker 实例注册与健康探针（/healthz 存活探针、/healthz/workers 实例观测，FR15） | 见追踪表 | C-218 |
+| [PRD-链路追踪字段.md](prd/PRD-链路追踪字段.md) | 链路追踪字段（Message/Task/TaskStep/ModelCall 的 trace_id/correlation_id 与传播，R-05） | 见追踪表 | C-220 |
 | [PRD-DAG工作流引擎.md](prd/PRD-DAG工作流引擎.md) | DAG 工作流引擎（WorkflowRun 运行记录、Kahn 拓扑分层、环检测、层内并行执行、task_steps 节点化落库） | 见追踪表 | C-186 |
 | [PRD-人工审批节点.md](prd/PRD-人工审批节点.md) | HITL 人工审批节点（WAITING_APPROVAL 状态机、approve/reject 端点、DB 轮询解耦跨进程、前端审批按钮） | 见追踪表 | C-185 |
 

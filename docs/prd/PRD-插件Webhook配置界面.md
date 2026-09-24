@@ -1,6 +1,6 @@
 # PRD：插件 Webhook 配置界面
 
-> 类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-215
+> 类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-217
 
 ---
 
@@ -75,4 +75,4 @@ C-183 已在后端落地「插件工具 Webhook 真实执行器」与「任务�
 
 | 改动时间 | ID | 状态 | Git 提交 | 作者 | 改动类型 | 影响范围 | 改动内容 | 前端技术 | 后端技术 | 是否有数据库 | 破坏性变更 | 验证结果 | 备注 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 待填 | C-215 | 已完成 | 待填 | LI | Requirement | 后端、前端 | 新增插件配置读/写端点与插件设置页 Webhook 配置弹窗，打通 C-183 出站通知的配置入口 | settings/plugins/page.tsx 配置弹窗与按钮；types/plugin.ts 复用 WorkspacePluginResponse | endpoints/plugins.py 新增 GET/PUT config + _workspace_plugin_response 辅助；schemas/plugin.py 新增 WorkspacePluginConfigUpdate；tests/test_plugins.py 新增用例 | 否 | 否 | test_plugins.py 2 passed；flake8 0；前端 lint 0 / build 成功 | PRD: docs/prd/PRD-插件Webhook配置界面.md |
+| 待填 | C-217 | 已完成 | 待填 | LI | Requirement | 后端、前端 | 新增插件配置读/写端点与插件设置页 Webhook 配置弹窗，打通 C-183 出站通知的配置入口 | settings/plugins/page.tsx 配置弹窗与按钮；types/plugin.ts 复用 WorkspacePluginResponse | endpoints/plugins.py 新增 GET/PUT config + _workspace_plugin_response 辅助；schemas/plugin.py 新增 WorkspacePluginConfigUpdate；tests/test_plugins.py 新增用例 | 否 | 否 | test_plugins.py 2 passed；flake8 0；前端 lint 0 / build 成功 | PRD: docs/prd/PRD-插件Webhook配置界面.md |

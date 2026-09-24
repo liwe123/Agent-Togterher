@@ -1,6 +1,6 @@
 # PRD：链路追踪字段（Trace / Correlation，R-05）
 
-> 类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-217
+> 类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-220
 
 ---
 
@@ -74,4 +74,4 @@
 
 | 改动时间 | ID | 状态 | Git 提交 | 作者 | 改动类型 | 影响范围 | 改动内容 | 前端技术 | 后端技术 | 是否有数据库 | 破坏性变更 | 验证结果 | 备注 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 待填 | C-217 | 已完成 | 待填 | LI | Requirement | 后端、数据库 | 为 Message/Task/TaskStep/ModelCall 增加 trace_id/correlation_id 并建立从消息到模型调用的传播链（R-05） | - | 新增 core/trace_context.py；四模型加列；MessageHub/Orchestrator/integration_service 接线；Alembic 迁移 c2d3e4f5a6b7；test_trace_context.py 新增 + test_database.py 登记 | 是（四表各加 trace_id/correlation_id 两列） | 否（新列可空） | 全量 252 passed；flake8 0；autogenerate 零 diff | PRD: docs/prd/PRD-链路追踪字段.md |
+| 待填 | C-220 | 已完成 | 待填 | LI | Requirement | 后端、数据库 | 为 Message/Task/TaskStep/ModelCall 增加 trace_id/correlation_id 并建立从消息到模型调用的传播链（R-05） | - | 新增 core/trace_context.py；四模型加列；MessageHub/Orchestrator/integration_service 接线；Alembic 迁移 c2d3e4f5a6b7；test_trace_context.py 新增 + test_database.py 登记 | 是（四表各加 trace_id/correlation_id 两列） | 否（新列可空） | 全量 252 passed；flake8 0；autogenerate 零 diff | PRD: docs/prd/PRD-链路追踪字段.md |

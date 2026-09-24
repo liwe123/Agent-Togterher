@@ -1,6 +1,6 @@
 # PRD：弹性 Worker 实例注册与健康探针（FR15）
 
-> 类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-216
+> 类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-218
 
 ---
 
@@ -73,4 +73,4 @@
 
 | 改动时间 | ID | 状态 | Git 提交 | 作者 | 改动类型 | 影响范围 | 改动内容 | 前端技术 | 后端技术 | 是否有数据库 | 破坏性变更 | 验证结果 | 备注 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 待填 | C-216 | 已完成 | 待填 | LI | Requirement | 后端 | Worker 实例心跳注册与 /healthz、/healthz/workers 健康探针，为弹性扩缩容预留观测能力 | - | worker.py 接线 WorkerRegistry；endpoints/health.py 新增探针；main.py public_paths 放行 /healthz；tests/test_health.py 新增用例 | 否 | 否 | test_health.py + test_worker_registry.py 21 passed；flake8 0 | PRD: docs/prd/PRD-弹性Worker实例与健康探针.md |
+| 待填 | C-218 | 已完成 | 待填 | LI | Requirement | 后端 | Worker 实例心跳注册与 /healthz、/healthz/workers 健康探针，为弹性扩缩容预留观测能力 | - | worker.py 接线 WorkerRegistry；endpoints/health.py 新增探针；main.py public_paths 放行 /healthz；tests/test_health.py 新增用例 | 否 | 否 | test_health.py + test_worker_registry.py 21 passed；flake8 0 | PRD: docs/prd/PRD-弹性Worker实例与健康探针.md |
