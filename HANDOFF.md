@@ -1,8 +1,8 @@
 # Agent Console 项目接力文档 (HANDOFF)
 
-> 更新时间：2026-08-29  
+> 更新时间：2026-09-24  
 > 工作目录：`E:\Agents`  
-> 当前阶段：**Phase 5（外部接入与治理深化）进行中：PostgreSQL 已上线、外部节点桥接与配额熔断已落地、独立 Worker 与事件总线调度链路已启用（C-169~C-174）、工作区快照断线对账与事件总线容错已补齐；Phase 1 三项新能力（Webhook 插件执行器 C-183 / HITL 人工审批 C-185 / DAG 工作流引擎 C-186）已于 2026-09-04 推送（94343a2）；剩余缺口见 `docs/文档计划落地差距审查报告-20260907.md`（分布式限流 BUG-2、Antigravity 适配 REQ-A1、CI PG job OPT-2、租约统一 OPT-1、桥接 P4-P6 等）。**
+> 当前阶段：**Phase 5（外部接入与治理深化）进行中：PostgreSQL 已上线、外部节点桥接与配额熔断已落地、独立 Worker 与事件总线调度链路已启用（C-169~C-174）、工作区快照断线对账与事件总线容错已补齐；Phase 1 三项新能力（Webhook 插件执行器 C-183 / HITL 人工审批 C-185 / DAG 工作流引擎 C-186）已于 2026-09-04 推送（94343a2）；2026-09-07/08 的 Batch 1-4 已闭环分布式限流（C-198）、租约统一（C-200）与 CI PG/前端 job（C-201）；剩余缺口见 `docs/文档计划落地差距审查报告-20260907.md` 与 `docs/未落地需求与改动审核报告-20260924.md`（Antigravity 适配 REQ-A1、桥接 P4-P6 等）。**
 
 ---
 
@@ -41,7 +41,12 @@
 │  - app/core/message_hub.py (@Agent 提及解析与任务生成)       │
 │  - app/core/orchestrator.py (多阶段 Agent 编排流水线)        │
 │  - app/services/task_service.py (任务状态机与租约管理)       │
+│  - app/services/task_lease.py (任务级执行租约唯一实现)       │
 │  - app/services/tools.py (Function Calling 安全工具集)       │
+│  - app/services/webhook.py (插件 Webhook 签名执行器与出站通知)│
+│  - app/services/dag_engine.py (DAG 工作流分层并行引擎)       │
+│  - app/core/worker_registry.py (Worker 心跳注册与分布式锁)   │
+│  - app/api/v1/endpoints/tasks.py (任务队列 + HITL approve/reject)│
 │  - app/websocket/distributed.py (Redis Pub/Sub 跨进程总线)   │
 └───────────────┬─────────────────────────────┬───────────────┘
                 │ AsyncSession                │ 队列轮询 / 原子 Claim
@@ -110,7 +115,7 @@
 
 ## 4. 质量与验证基准
 
-- **后端自动化测试**：40 个测试模块，共计 **230 tests passed**（100% 通过；SQLite 内存库跑测，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性；2026-08-29 compose 容器实跑 AC1/AC2/AC4/AC7/AC8 通过；2026-09-07 本机复跑 230 passed）。
+- **后端自动化测试**：41 个测试模块，共计 **245 tests passed**（100% 通过；测试用一次性 SQLite 文件库跑测，CI 另有 `test-postgres` job 覆盖 PG 方言，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性；2026-08-29 compose 容器实跑 AC1/AC2/AC4/AC7/AC8 通过；2026-09-24 本机复跑 245 passed）。
 - **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 34 passed，`next build` 12+ 页面全部编译成功。
 - **文档自动化体系**：14 列变更记录全量无空值，`PRD.md`、`Agent_Console_变更追踪.xlsx` 与 `PRD.html` 自动化生成并与 Git 历史完全同步。
 

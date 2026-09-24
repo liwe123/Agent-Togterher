@@ -390,7 +390,7 @@ npm run lint
 npm run build
 ```
 
-当前：后端 230 tests passed（40 个测试文件），前端 34 tests / lint 0 errors / build pass。
+当前：后端 245 tests passed（41 个测试文件），前端 34 tests / lint 0 errors / build pass。
 
 ---
 
@@ -424,7 +424,7 @@ WORKER_CONCURRENCY=2
 │   │   ├── websocket/           # WebSocket manager / events / distributed
 │   │   └── worker.py            # 独立 Worker 入口
 │   ├── alembic/                # Alembic 迁移（env.py + versions）
-│   ├── tests/                   # 40 个测试文件（230+ tests）
+│   ├── tests/                   # 41 个测试文件（245+ tests）
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
