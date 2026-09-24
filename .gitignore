@@ -32,3 +32,7 @@ docs/*_备份.xlsx
 data/
 bridge/.cursor_client_state.json
 bridge/*_state.json
+
+# Test & tooling artifacts
+backend/.pytest-temp/
+docs/.archify-delivery-*/
