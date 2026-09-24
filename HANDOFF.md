@@ -116,7 +116,7 @@
 ## 4. 质量与验证基准
 
 - **后端自动化测试**：41 个测试模块，共计 **245 tests passed**（100% 通过；测试用一次性 SQLite 文件库跑测，CI 另有 `test-postgres` job 覆盖 PG 方言，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性；2026-08-29 compose 容器实跑 AC1/AC2/AC4/AC7/AC8 通过；2026-09-24 本机复跑 245 passed）。
-- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 34 passed，`next build` 12+ 页面全部编译成功。
+- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 35 passed，`next build` 12+ 页面全部编译成功。
 - **文档自动化体系**：14 列变更记录全量无空值，`PRD.md`、`Agent_Console_变更追踪.xlsx` 与 `PRD.html` 自动化生成并与 Git 历史完全同步。
 
 ---

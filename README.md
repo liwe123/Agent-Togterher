@@ -390,7 +390,7 @@ npm run lint
 npm run build
 ```
 
-当前：后端 245 tests passed（41 个测试文件），前端 34 tests / lint 0 errors / build pass。
+当前：后端 245 tests passed（41 个测试文件），前端 35 tests / lint 0 errors / build pass。
 
 ---
 
