@@ -373,6 +373,24 @@ CURATED = {
         "verify": "本地 CI 同参数 flake8 0 错误；test_human_approval 6 passed；全量 230 passed；修复后 CI run #65 重跑通过",
         "notes": "教训已固化进守则 3：后端改动验收须加跑 CI 同参数 flake8（见 320511e 守则修订）",
     },
+    "0d1c54e": {
+        "type": "BUG",
+        "content": "修复管理员权限恒失效：配额、插件、工作流三个页面的 usePermissions() 未传入当前工作区角色，默认按 viewer 处理，导致 owner/admin 也无法保存配额、启停插件、新建/删除工作流模板",
+        "frontend": "settings/quota/page.tsx、settings/plugins/page.tsx、workflows/page.tsx：useWorkspaces 解构 currentUserRole 并传入 usePermissions(currentUserRole)，与 members 页既有写法对齐",
+        "backend": "-",
+        "db": "否", "breaking": "否",
+        "verify": "前端 npm test 34 passed/0 failed；npm run lint 0 错误；npm run build 成功（Next.js 16.2.9）",
+        "notes": "独立验收结论（子 Agent 只校验）：见本批次独立验收记录；修复前 quota 页连 owner 都无法保存",
+    },
+    "fd2828b": {
+        "type": "Optimization",
+        "content": "补 .gitignore 空档：backend/.pytest-temp/（pytest 临时目录）与 docs/.archify-delivery-*/（archify 工具产物）此前未被忽略，git add -A 会误收；同时清理 backend/data 下残留 smoke_p0.db 与 agent_console.db",
+        "frontend": "-",
+        "backend": ".gitignore 追加两条忽略规则",
+        "db": "否", "breaking": "否",
+        "verify": "git check-ignore 两路径 rc=0；前端 npm test/lint/build 均通过（与本次 fix 合并跑）",
+        "notes": "残留 db 原已被 data/ 规则忽略，仅做磁盘清理；独立验收结论（子 Agent 只校验）：见本批次独立验收记录",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even

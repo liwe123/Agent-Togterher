@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>28</b> 份</span>
-        <span>变更记录 <b>201</b> 条</span>
-        <span>生成于 2026-09-08 17:23</span>
+        <span>变更记录 <b>204</b> 条</span>
+        <span>生成于 2026-09-24 21:18</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -3503,6 +3503,54 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否</td>
 <td>-</td>
 <td>-</td>
+</tr>
+<tr>
+<td>2026-09-08 17:24</td>
+<td>C-202</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/b48ba19">b48ba19</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 变更追踪表登记 Batch 4 租约统一与 CI PG（C-199/C-200/C-201）</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-24 21:17</td>
+<td>C-203</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/0d1c54e">0d1c54e</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>前端</td>
+<td>修复管理员权限恒失效：配额、插件、工作流三个页面的 usePermissions() 未传入当前工作区角色，默认按 viewer 处理，导致 owner/admin 也无法保存配额、启停插件、新建/删除工作流模板</td>
+<td>settings/quota/page.tsx、settings/plugins/page.tsx、workflows/page.tsx：useWorkspaces 解构 currentUserRole 并传入 usePermissions(currentUserRole)，与 members 页既有写法对齐</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>前端 npm test 34 passed/0 failed；npm run lint 0 错误；npm run build 成功（Next.js 16.2.9）</td>
+<td>独立验收结论（子 Agent 只校验）：见本批次独立验收记录；修复前 quota 页连 owner 都无法保存</td>
+</tr>
+<tr>
+<td>2026-09-24 21:17</td>
+<td>C-204</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/fd2828b">fd2828b</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他</td>
+<td>补 .gitignore 空档：backend/.pytest-temp/（pytest 临时目录）与 docs/.archify-delivery-*/（archify 工具产物）此前未被忽略，git add -A 会误收；同时清理 backend/data 下残留 smoke_p0.db 与 agent_console.db</td>
+<td>-</td>
+<td>.gitignore 追加两条忽略规则</td>
+<td>否</td>
+<td>否</td>
+<td>git check-ignore 两路径 rc=0；前端 npm test/lint/build 均通过（与本次 fix 合并跑）</td>
+<td>残留 db 原已被 data/ 规则忽略，仅做磁盘清理；独立验收结论（子 Agent 只校验）：见本批次独立验收记录</td>
 </tr>
 </tbody>
 </table></div>
