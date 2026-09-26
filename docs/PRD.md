@@ -249,6 +249,9 @@ PostgreSQL + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后�
 | 2026-09-26 10:44 | C-226 | 已完成 | [ac48a69](https://github.com/liwe123/Agent-Togterher/commit/ac48a69) | LI | BUG | 后端 | fix: 恢复任务改为真实重新调度，回放携带错误信息并补工作区鉴权（P0-1/P0-2/P0-6） | - | backend/app/api；backend/tests/test_task_replay.py | 否 | 否 | - | - |
 | 2026-09-26 10:47 | C-227 | 已完成 | [57bf515](https://github.com/liwe123/Agent-Togterher/commit/57bf515) | LI | Optimization | 其他、文档 | docs: 登记 P0 止血三提交，收账文档（断链文件入库/数字回写/状态矛盾修正/守则补条款） | - | - | 否 | 否 | - | - |
 | 2026-09-26 11:34 | C-228 | 已完成 | [16b0d4f](https://github.com/liwe123/Agent-Togterher/commit/16b0d4f) | LI | Optimization | 后端 | optimize: 按独立验收反馈澄清 test_command 白名单残留边界（admin 等价代码执行权） | - | backend/app/services | 否 | 否 | - | - |
+| 2026-09-26 11:34 | C-229 | 已完成 | [6506f68](https://github.com/liwe123/Agent-Togterher/commit/6506f68) | LI | Optimization | 其他、文档 | docs: 重生成变更追踪表，登记 P0/P1 批次与验收反馈（C-227/C-228） | - | - | 否 | 否 | - | - |
+| 2026-09-26 21:00 | C-230 | 已完成 | [3dd649f](https://github.com/liwe123/Agent-Togterher/commit/3dd649f) | LI | BUG | 后端 | fix: 限流 Redis 客户端随事件循环重建，消除 test-postgres 跨循环 RuntimeError | - | backend/app/services；backend/tests/test_rate_limit_loop_isolation.py | 否 | 否 | - | - |
+| 2026-09-26 21:00 | C-231 | 已完成 | [4dfc433](https://github.com/liwe123/Agent-Togterher/commit/4dfc433) | LI | Optimization | 其他、后端 | optimize: CI 作业超时与 pytest 挂起看门狗，杜绝 6 小时静默挂死 | - | backend/requirements-dev.txt；backend/tests/conftest.py | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---

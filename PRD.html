@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>31</b> 份</span>
-        <span>变更记录 <b>228</b> 条</span>
-        <span>生成于 2026-09-26 11:34</span>
+        <span>变更记录 <b>231</b> 条</span>
+        <span>生成于 2026-09-26 21:00</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -3931,6 +3931,54 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>optimize: 按独立验收反馈澄清 test_command 白名单残留边界（admin 等价代码执行权）</td>
 <td>-</td>
 <td>backend/app/services</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-26 11:34</td>
+<td>C-229</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/6506f68">6506f68</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 重生成变更追踪表，登记 P0/P1 批次与验收反馈（C-227/C-228）</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-26 21:00</td>
+<td>C-230</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/3dd649f">3dd649f</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端</td>
+<td>fix: 限流 Redis 客户端随事件循环重建，消除 test-postgres 跨循环 RuntimeError</td>
+<td>-</td>
+<td>backend/app/services；backend/tests/test_rate_limit_loop_isolation.py</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-26 21:00</td>
+<td>C-231</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/4dfc433">4dfc433</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、后端</td>
+<td>optimize: CI 作业超时与 pytest 挂起看门狗，杜绝 6 小时静默挂死</td>
+<td>-</td>
+<td>backend/requirements-dev.txt；backend/tests/conftest.py</td>
 <td>否</td>
 <td>否</td>
 <td>-</td>
