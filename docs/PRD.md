@@ -252,6 +252,8 @@ PostgreSQL + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后�
 | 2026-09-26 11:34 | C-229 | 已完成 | [6506f68](https://github.com/liwe123/Agent-Togterher/commit/6506f68) | LI | Optimization | 其他、文档 | docs: 重生成变更追踪表，登记 P0/P1 批次与验收反馈（C-227/C-228） | - | - | 否 | 否 | - | - |
 | 2026-09-26 21:00 | C-230 | 已完成 | [3dd649f](https://github.com/liwe123/Agent-Togterher/commit/3dd649f) | LI | BUG | 后端 | fix: 限流 Redis 客户端随事件循环重建，消除 test-postgres 跨循环 RuntimeError | - | backend/app/services；backend/tests/test_rate_limit_loop_isolation.py | 否 | 否 | - | - |
 | 2026-09-26 21:00 | C-231 | 已完成 | [4dfc433](https://github.com/liwe123/Agent-Togterher/commit/4dfc433) | LI | Optimization | 其他、后端 | optimize: CI 作业超时与 pytest 挂起看门狗，杜绝 6 小时静默挂死 | - | backend/requirements-dev.txt；backend/tests/conftest.py | 否 | 否 | - | - |
+| 2026-09-26 21:00 | C-232 | 已完成 | [6132814](https://github.com/liwe123/Agent-Togterher/commit/6132814) | LI | Optimization | 其他、文档 | docs: 登记 CI 修复两提交并重生成（C-229~C-231） | - | - | 否 | 否 | - | - |
+| 2026-09-26 21:18 | C-233 | 已完成 | [71e6611](https://github.com/liwe123/Agent-Togterher/commit/71e6611) | LI | Optimization | 其他、后端 | optimize: CI 挂起看门狗升级为 asyncio 任务级 dump（-s 关闭捕获），定位后台任务取消卡死 | - | backend/tests/conftest.py | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
