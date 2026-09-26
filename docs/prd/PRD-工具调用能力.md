@@ -1,6 +1,6 @@
 # PRD：为 Agent 加上"手"（工具调用 / Function Calling）
 
-> 类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-023
+> 类型：新需求（Requirement） ｜ 状态：已实施 ｜ 登记：变更追踪表 C-025
 
 ---
 
@@ -83,4 +83,4 @@ Agent Console 当前所有 Agent 都是**纯 LLM 调用**：`litellm.chat_comple
 
 | 改动时间 | ID | 状态 | Git 提交 | 作者 | 改动类型 | 影响范围 | 改动内容 | 前端技术 | 后端技术 | 是否有数据库 | 破坏性变更 | 验证结果 | 备注 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 待填 | C-023 | 已完成 | 待填 | LI | Requirement | 前端、后端 | Agent 工具调用能力（FR1-FR7） | task-format.ts stepLabel | litellm_service/orchestrator/tools.py | 否 | 否 | pytest 54 + 前端 28/build pass | PRD-工具调用 |
+| 2026-08-03 20:38 | C-025 | 已完成 | [36854c8](https://github.com/liwe123/Agent-Togterher/commit/36854c8) | LI | Requirement | 前端、后端 | Agent 工具调用能力（FR1-FR7） | task-format.ts stepLabel | litellm_service/orchestrator/tools.py | 否 | 否 | pytest 54 + 前端 28/build pass | PRD-工具调用 |

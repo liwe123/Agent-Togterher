@@ -317,7 +317,7 @@ CURATED = {
         "backend": "services/task_service.py fail(retry=...)；worker.py _consume_once 终结分支 retry=False；tests/test_task_queue.py 补根因+修复 2 个回归测试",
         "db": "否", "breaking": "否（fail 默认 retry=True 行为不变）",
         "verify": "后端 187 passed；容器实跑 AC4：入队→worker 跨进程 leased（attempt=1）→dead 终态，修复前僵尸 queued 与修复后 dead 前后对照",
-        "notes": "2026-08-29 容器级验证发现；与统一两套租约体系（C-17x 架构债）相关但独立修复",
+        "notes": "2026-08-29 容器级验证发现；与统一两套租约体系架构债相关但独立修复（该债已由 C-200 / 7d31056 闭环）",
     },
     "bb87032": {
         "type": "Optimization",
@@ -326,7 +326,7 @@ CURATED = {
         "backend": "-",
         "db": "否", "breaking": "否",
         "verify": "-",
-        "notes": "docs/AB与冒烟测试记录-20260829.md 新增容器级验证结论；PRD-独立Worker §9.1 回写",
+        "notes": "docs/AB与冒烟测试记录-20260828.md 新增容器级验证结论；PRD-独立Worker §9.1 回写",
     },
     "e5f8f81": {
         "type": "Optimization",
@@ -353,7 +353,7 @@ CURATED = {
         "backend": "orchestrator._run_multi_agent_task 加 requires_approval 参数 + _task_requires_approval（按描述头反查工作流模板检测 human_approval 节点）+ _request_approval/_wait_approval（DB 轮询）；endpoints/tasks.py 新增 POST /{task_id}/approve、/{task_id}/reject；schemas/workflow.py WorkflowNode 加 type 字段（agent|human_approval）；WAITING_APPROVAL 枚举复用既有（enums.py）；新增 tests/test_human_approval.py 6 例",
         "db": "否（复用 task_steps）", "breaking": "是（TaskStatus 语义新增 waiting_approval 中间态；前端状态联合已同步）",
         "verify": "后端全量 230 passed（含新增 6 例）；前端 lint 0 error、build 成功；覆盖挂起→通过→继续、驳回→FAILED、非审批状态 409、轮询跨 session 解耦",
-        "notes": "PRD: docs/prd/PRD-人工审批节点.md；守则验收：主 Agent 按同一清单自检通过（同 C-183 备注）；前端按钮全员可见（页面无角色上下文），后端 403 兜底，后续收紧；与队列租约统一问题归 C-17x",
+        "notes": "PRD: docs/prd/PRD-人工审批节点.md；守则验收：主 Agent 按同一清单自检通过（同 C-183 备注）；前端按钮已由 C-214 按角色收紧；与队列租约统一问题已由 C-200 / 7d31056 闭环",
     },
     "b272f5d": {
         "type": "Requirement",
@@ -743,11 +743,11 @@ CURATED_BY_SUBJECT = {
         "backend": "新增 core/execution_trace.py（TraceArtifact/build_context_message/build_execution_trace/build_trace_artifact，含上下文构建+工具链路提取+两级摘要裁剪+脱敏）；orchestrator.py 模型调用前注入 build_context_message、阶段推进写入轨迹；schemas/task.py 增 TaskTraceRead/TaskDetailRead 轨迹字段；tasks.py _task_detail 实时组装 trace；前端 HTTP 轮询实现实时刷新",
         "db": "否（复用 Task/TaskStep/ModelCall 拼装，未新增表）", "breaking": "是",
         "verify": "后端 build/测试通过；前端 build pass；任务详情页轨迹视图与工具链路可正常展示",
-        "notes": "详见 docs/prd/PRD-单任务上下文连续性与执行过程可视化.md（2026-08-10 由两份 PRD 合并而来）；FR8 WebSocket 推送、FR9 双层视图暂未落地（P1 级），AC6 由 HTTP 轮询达成",
+        "notes": "详见 docs/prd/PRD-单任务上下文连续性与执行过程可视化.md（2026-08-10 由两份 PRD 合并而来）；FR8 WebSocket 推送、FR9 双层视图均已由后续批次落地（WS 实时推送 C-170/C-171、轨迹双层视图 execution_trace/context_snapshot），2026-09-25 回写",
     },
     "docs: merge PRD-单任务上下文连续性保障 and PRD-任务执行过程可视化 into unified PRD": {
         "type": "Optimization",
-        "content": "合并两份重叠 PRD（单任务上下文连续性保障 70e53ee/C-075 与 任务执行过程可视化与工具调用追踪 8e22c25/C-076）为统一版 PRD-单任务上下文连续性与执行过程可视化.md：背景缺口合并为 4 项、核心概念整合 5 个、FR 统一为 10 条、数据模型决策与实施状态（FR1-FR7/FR10 已落地，FR8/FR9 未落地）写入文档",
+        "content": "合并两份重叠 PRD（单任务上下文连续性保障 70e53ee/C-075 与 任务执行过程可视化与工具调用追踪 8e22c25/C-076）为统一版 PRD-单任务上下文连续性与执行过程可视化.md：背景缺口合并为 4 项、核心概念整合 5 个、FR 统一为 10 条、数据模型决策与实施状态写入文档（FR1-FR10 现均已落地）",
         "frontend": "docs/prd/ 目录 10→9 份（删除 2 份旧 PRD，新增 1 份合并版）；docs/PRD.md 索引同步 10→9 行",
         "backend": "generate_change_log.py：补登记 70e53ee（C-075 升级为完整 Requirement）、C-075/C-076 备注指向合并版、is_excluded 改为 all() 语义（仅纯生成物提交跳过，合并提交保留）",
         "db": "否", "breaking": "否", "verify": "重跑生成脚本 77 行；Excel 无乱码；HTML 阅读器 9 PRDs",
@@ -801,7 +801,7 @@ CURATED_BY_SUBJECT = {
         "db": "否（复用 task_queue_items 既有租约字段）",
         "breaking": "否",
         "verify": "新增 6 个测试全部通过（test_task_queue 3 例 + test_worker_lease 3 例）；A/B 租约场景对照（租约仅剩 1 秒、任务继续跑 2.5 秒后触发 sweep）：A 态（改动前）无 renew 可调用，sweep 回收 1 条、队列项回到 queued、租约字段清空 → 原 Worker 仍在跑而他人可领走同一任务；B 态（改动后）续租成功，sweep 回收 0 条、状态保持 leased、租约剩余 597.5 秒 → 不会被重复消费；后端全量 181 passed，无新增失败",
-        "notes": "已知未解决：orchestrator.execution_token 与 task_queue_items.lease_token 两套租约互不同步，需架构决策统一，归入 C-17x；另新增 6 个测试（队列 3 + Worker 3）",
+        "notes": "两套租约互不同步问题已由 C-200 / 7d31056 统一收敛（execution_token 写点经 task_lease）；另新增 6 个测试（队列 3 + Worker 3）",
     },
     "docs: 修正项目计划里程碑标记与表数量口径（C-171）": {
         "type": "Optimization",

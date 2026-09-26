@@ -1,8 +1,8 @@
 # Agent Console 项目接力文档 (HANDOFF)
 
-> 更新时间：2026-09-24  
+> 更新时间：2026-09-25  
 > 工作目录：`E:\Agents`  
-> 当前阶段：**Phase 5（外部接入与治理深化）进行中：PostgreSQL 已上线、外部节点桥接与配额熔断已落地、独立 Worker 与事件总线调度链路已启用（C-169~C-174）、工作区快照断线对账与事件总线容错已补齐；Phase 1 三项新能力（Webhook 插件执行器 C-183 / HITL 人工审批 C-185 / DAG 工作流引擎 C-186）已于 2026-09-04 推送（94343a2）；2026-09-07/08 的 Batch 1-4 已闭环分布式限流（C-198）、租约统一（C-200）与 CI PG/前端 job（C-201）；剩余缺口见 `docs/文档计划落地差距审查报告-20260907.md` 与 `docs/未落地需求与改动审核报告-20260924.md`（Antigravity 适配 REQ-A1、桥接 P4-P6 等）。**
+> 当前阶段：**Phase 5（外部接入与治理深化）进行中：PostgreSQL 已上线、外部节点桥接与配额熔断已落地、独立 Worker 与事件总线调度链路已启用（C-169~C-174）、工作区快照断线对账与事件总线容错已补齐；Phase 1 三项新能力（Webhook 插件执行器 C-183 / HITL 人工审批 C-185 / DAG 工作流引擎 C-186）已于 2026-09-04 推送（94343a2）；Batch 9+ 已落地 C2 审批收紧（C-214）、C1 Webhook 配置界面（C-217）、B8 Worker 健康探针（C-218）、B7 链路追踪字段（C-220）；2026-09-25 P0 止血批次已修恢复任务假调度、回放错误信息缺失与鉴权、test_command RCE、生产 fail-closed、DAG 孤儿运行收敛。剩余缺口以 `docs/深度审查与推进计划报告-20260925.md` 为最新基线：15 项未落地需求（REQ-A1/A5/A6/A7、B1/B2/B3/B4/B5/B6/B9、D2/D3/D4/D6）+ OPT-5 + 验收补课 E1/E2/E3。**
 
 ---
 
@@ -111,11 +111,11 @@
 | C-186 | DAG 工作流引擎 | Requirement | `services/dag_engine.py` 分层并行执行 + `workflow_runs` 表 + 节点快照 |
 | C-184 | 测试环境修复 | BUG | conftest DATABASE_URL 钉一次性 SQLite；C-190 修 CI 挂 |
 
-> 三项均已完成守则流程（PRD 三处同步 + 测试 + 验收 + 推送）。前端缺口（Webhook 无 UI、HITL 按钮无角色控制、DAG 线性渲染）登记在 20260907 报告 C1/C2/B1，留 Phase 3 收尾。
+> 三项均已完成守则流程（PRD 三处同步 + 测试 + 验收 + 推送）。前端缺口登记在 20260907 报告 C1/C2/B1：C1（Webhook 配置 UI）已由 C-217 落地、C2（HITL 按钮角色控制）已由 C-214 落地，仅剩 B1（DAG 线性渲染）留 Phase 3 收尾。
 
 ## 4. 质量与验证基准
 
-- **后端自动化测试**：41 个测试模块，共计 **245 tests passed**（100% 通过；测试用一次性 SQLite 文件库跑测，CI 另有 `test-postgres` job 覆盖 PG 方言，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性；2026-08-29 compose 容器实跑 AC1/AC2/AC4/AC7/AC8 通过；2026-09-24 本机复跑 245 passed）。
+- **后端自动化测试**：43 个测试模块，共计 **267 tests passed**（100% 通过；测试用一次性 SQLite 文件库跑测，CI 另有 `test-postgres` job 覆盖 PG 方言，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性；2026-08-29 compose 容器实跑 AC1/AC2/AC4/AC7/AC8 通过；2026-09-25 本机复跑 267 passed，含 P0 止血批次新增 14 例）。
 - **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 35 passed，`next build` 12+ 页面全部编译成功。
 - **文档自动化体系**：14 列变更记录全量无空值，`PRD.md`、`Agent_Console_变更追踪.xlsx` 与 `PRD.html` 自动化生成并与 Git 历史完全同步。
 

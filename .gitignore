@@ -36,3 +36,10 @@ bridge/*_state.json
 # Test & tooling artifacts
 backend/.pytest-temp/
 docs/.archify-delivery-*/
+
+# Archify architecture diagram generated artifacts (visual-check / spec / html)
+# 说明：工具产物可再生；docs/architecture-dark.png/svg 为已入库的正式架构图。
+docs/agent-console-architecture.*
+
+# Personal materials (personal resume, not project docs)
+docs/简历-*.md

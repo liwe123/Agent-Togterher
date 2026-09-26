@@ -390,7 +390,7 @@ npm run lint
 npm run build
 ```
 
-当前：后端 245 tests passed（41 个测试文件），前端 35 tests / lint 0 errors / build pass。
+当前：后端 267 tests passed（43 个测试文件），前端 35 tests / lint 0 errors / build pass。
 
 ---
 
@@ -424,7 +424,7 @@ WORKER_CONCURRENCY=2
 │   │   ├── websocket/           # WebSocket manager / events / distributed
 │   │   └── worker.py            # 独立 Worker 入口
 │   ├── alembic/                # Alembic 迁移（env.py + versions）
-│   ├── tests/                   # 41 个测试文件（245+ tests）
+│   ├── tests/                   # 43 个测试文件（267+ tests）
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -434,7 +434,7 @@ WORKER_CONCURRENCY=2
 │   │   └── app/                 # Next.js App Router 页面
 │   └── package.json
 ├── docs/
-│   ├── prd/                     # 28 份 PRD 文档
+│   ├── prd/                     # 31 份 PRD 文档
 │   ├── PRD.md                   # 变更追踪表（自动生成，由 generate_change_log.py 维护）
 │   ├── generate_change_log.py   # 从 git history 自动生成变更表
 │   └── build_prd_html.py        # 生成单页 PRD.html 阅读器

@@ -308,7 +308,7 @@ task_execution_mode: str = "queue"
 
 该开关目前**只有声明、没有消费方**：全仓 `app/` 下搜索 `distributed_lock_enabled` 只命中 `config.py:22` 一处；`WorkerRegistry.acquire_lock` / `release_lock`（`worker_registry.py:125-142`）已实现，但 `build_worker_registry` 在 `app/` 下同样**没有调用方**，`build_worker_registry` 的 `enabled` 参数由调用方传入而非读该配置。
 
-因此 FR4 的价值是：**在编排层把开关显式打开并文档化，使部署口径与 Phase 3 文档一致，为后续分布式锁接入（C-17x）预留落点**；本次**不改变任何运行时行为**。这一点必须在验收时如实标注，不得声称"分布式锁已启用"。
+因此 FR4 的价值是：**在编排层把开关显式打开并文档化，使部署口径与 Phase 3 文档一致，为后续分布式锁接入预留落点**；本次**不改变任何运行时行为**。截至 2026-09-25 该开关仍无消费方（见 §14 R5），不得声称"分布式锁已启用"。
 
 ---
 
@@ -382,7 +382,7 @@ task_execution_mode: str = "queue"
 
 **应对**：
 1. 短期（本次）：在部署文档与运行手册中明确"事件总线依赖 Redis，Redis 不可用时跨实例推送失效，本实例推送仍可达"，并给出一键关闭方式 `EVENT_BUS_ENABLED=false`（关闭后为 `NoopEventRelay`，零 Redis 依赖）。
-2. 中期（C-17x，不在本次范围）：给 `publish` 加异常吞掉 + 计数日志，给 `listen` 加重连退避。
+2. 中期方案**已实施**（`5a22954`）：给 `publish` 加异常吞掉 + 计数日志，给 `listen` 加重连退避（原计划归 C-17x，已闭环）。
 
 ### R3（P1）`inline → queue` 是行为变更
 
@@ -410,7 +410,7 @@ task_execution_mode: str = "queue"
 2. `worker._renew_lease(...)` 续租协程 —— 任务执行期间按 `WORKER_LEASE_RENEW_INTERVAL_SECONDS`（默认 30s）续期，租约丢失后自行退出，不再触碰该队列项；
 3. `run_worker()` 主循环按 `WORKER_RECOVER_INTERVAL_SECONDS`（默认 60s）调用 `TaskService.recover()` 回收失联租约。
 
-**仍未解决（归入 C-17x）**：两套租约体系并存（`orchestrator.execution_token` 与 `task_queue_items.lease_token` 互不同步）。这是架构级决策，需单独评估"统一到队列租约"还是"删除 orchestrator 侧租约"，不在本批范围。
+**已解决（C-200 / `7d31056`）**：两套租约体系并存（`orchestrator.execution_token` 与 `task_queue_items.lease_token` 互不同步）已按"统一到 task_lease 收敛任务级租约、队列租约保留在 TaskService"的方案闭环；本节为历史记录。
 
 ### R5（P2）`DISTRIBUTED_LOCK_ENABLED` 打开后无实际效果
 
@@ -453,12 +453,12 @@ Worker 在 compose 中复制了 backend 的环境变量清单，后续新增配�
 | 事项 | 来源 | 归属 |
 |------|------|------|
 | `TaskService.renew()` 续租方法 + Worker 续租协程 + 定时 `recover()` sweep | 审查报告 §1.3 | ✅ **已由 C-171 同批实施**（见 §14 R4） |
-| 统一两套租约体系（`orchestrator.execution_token` vs `task_queue_items.lease_token`） | 审查报告 §1.3 / P1-2 | C-17x（架构决策，本批未解决） |
+| 统一两套租约体系（`orchestrator.execution_token` vs `task_queue_items.lease_token`） | 审查报告 §1.3 / P1-2 | ✅ 已由 C-200 / `7d31056` 闭环 |
 | Antigravity 适配器（全仓 0 行代码） | 审查报告 §2.1 / P2-1 | C-171+ |
 | 配额限流由内存计数改为 Redis 固定窗口 / 令牌桶 | 审查报告 §2.3 / P2-2 | C-171+ |
 | CI 增加 `services: postgres:16` + `redis:7` 的 PG job、前端测试接入 CI | 审查报告 §5 / P1-4 | C-171+ |
 | 前端消费 `workspace.snapshot` 事件、断线重连后状态对账 | 审查报告 §2.2 / P1-3 | C-171+ |
-| 事件总线的发布异常吞没 + 订阅重连退避（R2 中期方案） | §14 R2 | C-17x |
+| 事件总线的发布异常吞没 + 订阅重连退避（R2 中期方案） | §14 R2 | ✅ 已由 `5a22954` 闭环 |
 | compose `user: "0:0"` 生产化治理（改 named volume） | 审查报告 §6 | 部署专项 |
 | 遗留 db 文件清理与 `.gitignore` | 审查报告 §6 / P2-3 | 卫生专项 |
 | Worker 自动水平扩缩容 | §2.2 N4 | 未排期 |
