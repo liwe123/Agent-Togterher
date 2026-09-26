@@ -258,6 +258,8 @@ PostgreSQL + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后�
 | 2026-09-26 22:03 | C-235 | 已完成 | [2ba5232](https://github.com/liwe123/Agent-Togterher/commit/2ba5232) | LI | BUG | 后端 | fix: WS 端点提前释放 DB 会话且测试等待快照，消除取消期 aiosqlite 关闭竞争挂死（CI 根因） | - | backend/app/websocket；backend/tests/test_basic_startup.py | 否 | 否 | - | - |
 | 2026-09-26 22:03 | C-236 | 已完成 | [bc6d28c](https://github.com/liwe123/Agent-Togterher/commit/bc6d28c) | LI | Optimization | 其他、文档 | docs: 登记 WS 挂死修复并重生成（C-233） | - | - | 否 | 否 | - | - |
 | 2026-09-26 22:20 | C-237 | 已完成 | [35d30f5](https://github.com/liwe123/Agent-Togterher/commit/35d30f5) | LI | BUG | 后端 | fix: WS 快照与会话释放前移到握手 accept 之前，根除取消期 aiosqlite 关闭竞争（CI 根因） | - | backend/app/websocket | 否 | 否 | - | - |
+| 2026-09-26 22:20 | C-238 | 已完成 | [d325274](https://github.com/liwe123/Agent-Togterher/commit/d325274) | LI | Optimization | 其他、文档 | docs: 登记 WS 根因修复并重生成（C-234） | - | - | 否 | 否 | - | - |
+| 2026-09-26 22:32 | C-239 | 已完成 | [8536472](https://github.com/liwe123/Agent-Togterher/commit/8536472) | LI | Optimization | 文档 | docs: 回写测试基线 270/44 并记录 CI 稳定性修复结论 | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
