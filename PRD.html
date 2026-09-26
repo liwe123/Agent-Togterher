@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>31</b> 份</span>
-        <span>变更记录 <b>233</b> 条</span>
-        <span>生成于 2026-09-26 21:18</span>
+        <span>变更记录 <b>235</b> 条</span>
+        <span>生成于 2026-09-26 22:03</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -4011,6 +4011,38 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>optimize: CI 挂起看门狗升级为 asyncio 任务级 dump（-s 关闭捕获），定位后台任务取消卡死</td>
 <td>-</td>
 <td>backend/tests/conftest.py</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-26 21:18</td>
+<td>C-234</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/bbf1364">bbf1364</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 登记 CI 看门狗诊断提交并重生成（C-232）</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-09-26 22:03</td>
+<td>C-235</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/2ba5232">2ba5232</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端</td>
+<td>fix: WS 端点提前释放 DB 会话且测试等待快照，消除取消期 aiosqlite 关闭竞争挂死（CI 根因）</td>
+<td>-</td>
+<td>backend/app/websocket；backend/tests/test_basic_startup.py</td>
 <td>否</td>
 <td>否</td>
 <td>-</td>
