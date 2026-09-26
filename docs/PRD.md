@@ -256,6 +256,8 @@ PostgreSQL + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后�
 | 2026-09-26 21:18 | C-233 | 已完成 | [71e6611](https://github.com/liwe123/Agent-Togterher/commit/71e6611) | LI | Optimization | 其他、后端 | optimize: CI 挂起看门狗升级为 asyncio 任务级 dump（-s 关闭捕获），定位后台任务取消卡死 | - | backend/tests/conftest.py | 否 | 否 | - | - |
 | 2026-09-26 21:18 | C-234 | 已完成 | [bbf1364](https://github.com/liwe123/Agent-Togterher/commit/bbf1364) | LI | Optimization | 其他、文档 | docs: 登记 CI 看门狗诊断提交并重生成（C-232） | - | - | 否 | 否 | - | - |
 | 2026-09-26 22:03 | C-235 | 已完成 | [2ba5232](https://github.com/liwe123/Agent-Togterher/commit/2ba5232) | LI | BUG | 后端 | fix: WS 端点提前释放 DB 会话且测试等待快照，消除取消期 aiosqlite 关闭竞争挂死（CI 根因） | - | backend/app/websocket；backend/tests/test_basic_startup.py | 否 | 否 | - | - |
+| 2026-09-26 22:03 | C-236 | 已完成 | [bc6d28c](https://github.com/liwe123/Agent-Togterher/commit/bc6d28c) | LI | Optimization | 其他、文档 | docs: 登记 WS 挂死修复并重生成（C-233） | - | - | 否 | 否 | - | - |
+| 2026-09-26 22:20 | C-237 | 已完成 | [35d30f5](https://github.com/liwe123/Agent-Togterher/commit/35d30f5) | LI | BUG | 后端 | fix: WS 快照与会话释放前移到握手 accept 之前，根除取消期 aiosqlite 关闭竞争（CI 根因） | - | backend/app/websocket | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
