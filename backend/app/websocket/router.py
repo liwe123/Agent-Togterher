@@ -50,29 +50,31 @@ async def workspace_websocket(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
 
+    # 在接受连接前完成全部 DB 工作（快照构建 + 会话释放）：客户端在收到
+    # 握手 accept 之前不会 cancel 服务端任务，因此取消不可能落在 SQL 上。
+    # 若把 DB 操作留到 accept 之后，客户端退出时的 cancel scope 会中断正在
+    # 执行的 SQL，SQLAlchemy 将 CancelledError 当作 DBAPI 异常触发
+    # invalidate -> terminate 的 aiosqlite 优雅关闭竞争，导致事件循环取消
+    # 阶段永久挂起（CI build-linux 间歇挂死根因）。accept 之后端点只做
+    # WebSocket 收发，不再触碰数据库。
+    snapshot_event = None
+    try:
+        builder = WorkspaceSnapshotBuilder(session)
+        snapshot = await builder.build_snapshot(workspace_id)
+        snapshot_event = builder.create_snapshot_event(workspace_id, snapshot)
+    except Exception:
+        logger.warning(
+            "Failed to build workspace snapshot for workspace %s; continuing",
+            workspace_id,
+            exc_info=True,
+        )
+    finally:
+        await session.close()
+
     await websocket_manager.connect(workspace_id, websocket)
     try:
-        try:
-            builder = WorkspaceSnapshotBuilder(session)
-            snapshot = await builder.build_snapshot(workspace_id)
-            await websocket_manager.send_to_client(
-                websocket,
-                builder.create_snapshot_event(workspace_id, snapshot),
-            )
-        except Exception:
-            logger.warning(
-                "Failed to build workspace snapshot for workspace %s; continuing",
-                workspace_id,
-                exc_info=True,
-            )
-        finally:
-            # 提前释放 DB 会话：WS 长连接的后续生命周期不再持有会话。
-            # 否则客户端断开（WebSocketTestSession 会 cancel 服务端任务）时，
-            # FastAPI 依赖清理中的 session.close()/rollback 在取消上下文里
-            # 执行 DB 操作，会把 CancelledError 当作 DBAPI 异常触发
-            # invalidate -> terminate 的 aiosqlite 优雅关闭竞争，导致事件循环
-            # 取消阶段永久挂起（CI build-linux 间歇挂死根因）。
-            await session.close()
+        if snapshot_event is not None:
+            await websocket_manager.send_to_client(websocket, snapshot_event)
 
         while True:
             await websocket.receive_text()
