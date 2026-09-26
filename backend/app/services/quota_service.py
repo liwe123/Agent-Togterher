@@ -1,5 +1,7 @@
+import asyncio
 import logging
 import time
+import weakref
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -105,21 +107,45 @@ async def update_quota_config(
 # - 降级路径：进程内滑动窗口（_rate_limit_buckets），仅在 Redis 不可用时兜底，保证本地
 #   无 Redis 开发不被打断。
 _redis_rate_limit_client: redis.Redis | None = None
+_redis_rate_limit_loop: "weakref.ref[asyncio.AbstractEventLoop] | None" = None
 _rate_limit_buckets: dict[int, deque[float]] = defaultdict(deque)
 _last_redis_warn_ts: float = 0.0
 
 
+def _reset_rate_limit_redis() -> None:
+    """丢弃当前限流 Redis 客户端（事件循环切换 / 连接失配时调用）。"""
+    global _redis_rate_limit_client, _redis_rate_limit_loop
+    _redis_rate_limit_client = None
+    _redis_rate_limit_loop = None
+
+
 def _get_rate_limit_redis() -> redis.Redis | None:
-    """惰性单例 async Redis client（仿 websocket/distributed.py）。"""
-    global _redis_rate_limit_client
+    """按运行中的事件循环惰性重建 async Redis client。
+
+    redis.asyncio 的连接池绑定创建它的事件循环；测试中多个 ``TestClient``
+    各自新建并关闭事件循环（``uvicorn --reload`` 开发同理），跨循环复用会抛
+    ``RuntimeError: got Future attached to a different loop``。这里记录创建时的
+    循环并在循环变化时重建，避免把连接池带到已关闭的循环上。
+    """
+    global _redis_rate_limit_client, _redis_rate_limit_loop
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return None
+    cached_loop = (
+        _redis_rate_limit_loop() if _redis_rate_limit_loop is not None else None
+    )
+    if _redis_rate_limit_client is not None and cached_loop is not loop:
+        _reset_rate_limit_redis()
     if _redis_rate_limit_client is None:
         try:
             _redis_rate_limit_client = redis.from_url(
                 get_settings().redis_url, decode_responses=True
             )
+            _redis_rate_limit_loop = weakref.ref(loop)
         except Exception as exc:  # pragma: no cover - 配置错误兜底
             logger.warning("Failed to build Redis client for rate limiting: %s", exc)
-            _redis_rate_limit_client = None
+            _reset_rate_limit_redis()
     return _redis_rate_limit_client
 
 
@@ -155,6 +181,14 @@ async def _check_rate_limit_redis(workspace_id: int, limit: int) -> bool | None:
     except redis.RedisError as exc:
         logger.debug("Redis rate-limit error for workspace %s: %s", workspace_id, exc)
         _warn_redis_unavailable_once_per_minute()
+        return None
+    except RuntimeError as exc:
+        # 事件循环切换导致连接失配（如测试中多个 TestClient 各建循环）：
+        # 重置客户端并在本次降级到进程内计数，下一次调用在新循环上重建。
+        logger.debug(
+            "Redis rate-limit client bound to a stale event loop; resetting: %s", exc
+        )
+        _reset_rate_limit_redis()
         return None
 
 
