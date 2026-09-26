@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Iterator
 from unittest.mock import AsyncMock, patch
 
@@ -10,6 +11,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
+from app.services import integration_service
 from app.services.bridge import BridgeResult
 from app.services.integration_service import dispatch_task_to_node
 
@@ -164,6 +166,55 @@ def test_dispatch_to_node_accepts_and_schedules_background(
     assert refreshed_task["status"] == "pending"
 
 
+def _register(client: TestClient, email: str, name: str) -> str:
+    response = client.post(
+        "/api/v1/auth/register",
+        json={"email": email, "password": "Password123!", "display_name": name},
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["data"]["access_token"]
+
+
+def _auth(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
+def test_dispatch_requires_admin_membership_for_jwt(
+    integration_client: TestClient,
+) -> None:
+    """P0 安全修复：JWT 调用方 dispatch 需要工作区 admin 及以上角色。"""
+    owner_token = _register(integration_client, "dispatch-owner@example.com", "Owner")
+    member_token = _register(integration_client, "dispatch-member@example.com", "Member")
+
+    workspaces = integration_client.get(
+        "/api/v1/workspaces/my", headers=_auth(owner_token)
+    ).json()["data"]
+    workspace_id = workspaces[0]["id"]
+
+    node = create_node(integration_client, workspace_id)
+    task = create_task(integration_client, workspace_id)
+
+    payload = {"task_id": task["id"], "node_id": node["id"]}
+
+    member_denied = integration_client.post(
+        "/api/v1/integrations/dispatch", json=payload, headers=_auth(member_token)
+    )
+    assert member_denied.status_code == 403
+
+    with patch("app.api.v1.endpoints.integrations.schedule_node_dispatch"):
+        owner_ok = integration_client.post(
+            "/api/v1/integrations/dispatch", json=payload, headers=_auth(owner_token)
+        )
+    assert owner_ok.status_code == 200, owner_ok.text
+
+    # open 模式（无 JWT）保持 legacy 透传，行为不变。
+    with patch("app.api.v1.endpoints.integrations.schedule_node_dispatch"):
+        legacy_ok = integration_client.post(
+            "/api/v1/integrations/dispatch", json=payload
+        )
+    assert legacy_ok.status_code == 200, legacy_ok.text
+
+
 def test_dispatch_rejects_unsupported_provider(integration_client: TestClient) -> None:
     workspace = create_workspace(integration_client)
     node = create_node(integration_client, workspace["id"], provider="trae")
@@ -175,6 +226,46 @@ def test_dispatch_rejects_unsupported_provider(integration_client: TestClient) -
     )
     assert response.status_code == 422
     assert "trae" in response.text
+
+
+def test_test_command_rejects_non_whitelisted_executable(tmp_path) -> None:
+    """P0 安全修复：test_command 可执行文件必须在白名单内。"""
+    passed, output = asyncio.run(
+        integration_service._run_test_command("curl http://evil.example", tmp_path)
+    )
+    assert passed is False
+    assert "白名单" in output
+
+
+def test_test_command_uses_exec_argv_without_shell(tmp_path) -> None:
+    """P0 安全修复：白名单命令以 argv 数组 exec 执行，不经 shell 解释。"""
+
+    class _FakeProcess:
+        returncode = 0
+
+        async def communicate(self):
+            return b"ok\n", None
+
+    with patch.object(
+        integration_service.asyncio,
+        "create_subprocess_exec",
+        new=AsyncMock(return_value=_FakeProcess()),
+    ) as exec_mock, patch.object(
+        integration_service.asyncio,
+        "create_subprocess_shell",
+        new=AsyncMock(),
+    ) as shell_mock:
+        passed, output = asyncio.run(
+            integration_service._run_test_command("pytest -q tests/", tmp_path)
+        )
+
+    assert passed is True
+    assert output == "ok"
+    exec_mock.assert_awaited_once()
+    exec_args, exec_kwargs = exec_mock.await_args
+    assert exec_args == ("pytest", "-q", "tests/")
+    assert exec_kwargs["cwd"] == str(tmp_path)
+    shell_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio

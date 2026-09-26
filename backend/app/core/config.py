@@ -30,6 +30,30 @@ class Settings(BaseSettings):
     # "queue"  = 任务入持久化队列，由独立 Worker 进程消费（默认，C-170）
     # "inline" = 在 API 进程内直接执行（保留作回退与单机调试路径）
     task_execution_mode: str = "queue"
+    # P0 安全修复：bridge test_command 的可执行文件白名单（防命令注入，
+    # 不在此列表内的可执行文件会被拒绝执行）。
+    bridge_test_command_allowlist: list[str] = [
+        "pytest",
+        "python",
+        "python3",
+        "npm",
+        "npx",
+        "pnpm",
+        "yarn",
+        "make",
+        "cargo",
+        "go",
+        "dotnet",
+        "mvn",
+        "gradle",
+        "gradlew",
+        "jest",
+        "vitest",
+        "tsc",
+        "ruff",
+        "flake8",
+        "mypy",
+    ]
     bridge_root_dir: str = "data/bridges"
     bridge_output_poll_timeout_seconds: int = Field(default=600, ge=1)
     # Codex bridge hardening (P1). --skip-git-repo-check is kept default-True

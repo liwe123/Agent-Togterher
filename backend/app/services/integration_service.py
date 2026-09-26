@@ -12,6 +12,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import shlex
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
@@ -125,10 +126,37 @@ def _parse_capabilities(raw: str | None) -> list[str]:
         return []
 
 
-async def _run_test_command(command: str, workdir: Path) -> tuple[bool, str]:
+def _parse_test_command(command: str) -> tuple[list[str] | None, str]:
+    """把 ``test_command`` 解析为 argv 并做可执行文件白名单校验。
+
+    P0 安全修复：此前使用 ``create_subprocess_shell`` 直接执行用户输入，
+    端点又无鉴权，构成未认证 RCE。改为 argv 数组（exec、无 shell 解释）
+    并限制可执行文件必须在配置白名单内，双层阻断命令注入。
+    """
     try:
-        process = await asyncio.create_subprocess_shell(
-            command,
+        argv = shlex.split(command, posix=True)
+    except ValueError as exc:
+        return None, f"test_command 解析失败: {exc}"
+    if not argv:
+        return None, "test_command 为空"
+    executable = Path(argv[0]).name.lower()
+    if executable.endswith(".exe"):
+        executable = executable[:-4]
+    allowed = {
+        name.lower() for name in get_settings().bridge_test_command_allowlist
+    }
+    if executable not in allowed:
+        return None, f"test_command 可执行文件不在白名单内: {executable}"
+    return argv, ""
+
+
+async def _run_test_command(command: str, workdir: Path) -> tuple[bool, str]:
+    argv, parse_error = _parse_test_command(command)
+    if argv is None:
+        return False, parse_error
+    try:
+        process = await asyncio.create_subprocess_exec(
+            *argv,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
             cwd=str(workdir),

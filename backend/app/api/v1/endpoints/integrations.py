@@ -1,11 +1,12 @@
 import json
 
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, Query, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.errors import AppError
 from app.api.persistence import commit_or_conflict
+from app.api.rbac_compat import enforce_workspace_role
 from app.db.base import utc_now
 from app.db.session import get_db
 from app.models.integration_node import IntegrationNode
@@ -203,11 +204,17 @@ async def heartbeat(
 )
 async def dispatch_to_node(
     payload: IntegrationDispatchRequest,
+    request: Request,
     session: AsyncSession = Depends(get_db),
 ) -> SuccessResponse[IntegrationDispatchResponse]:
     task = await session.get(Task, payload.task_id)
     if task is None:
         raise AppError(404, "Task not found")
+    # P0 安全修复：dispatch 会触发外部执行与 test_command，JWT 调用方需
+    # 具备该工作区 admin 及以上角色（legacy 静态 token / open 模式透传）。
+    await enforce_workspace_role(
+        request, session, workspace_id=task.workspace_id, min_role="admin"
+    )
     node = await session.get(IntegrationNode, payload.node_id) if payload.node_id is not None else None
     if node is None:
         if payload.node_id is None:
