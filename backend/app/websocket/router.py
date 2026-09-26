@@ -65,6 +65,14 @@ async def workspace_websocket(
                 workspace_id,
                 exc_info=True,
             )
+        finally:
+            # 提前释放 DB 会话：WS 长连接的后续生命周期不再持有会话。
+            # 否则客户端断开（WebSocketTestSession 会 cancel 服务端任务）时，
+            # FastAPI 依赖清理中的 session.close()/rollback 在取消上下文里
+            # 执行 DB 操作，会把 CancelledError 当作 DBAPI 异常触发
+            # invalidate -> terminate 的 aiosqlite 优雅关闭竞争，导致事件循环
+            # 取消阶段永久挂起（CI build-linux 间歇挂死根因）。
+            await session.close()
 
         while True:
             await websocket.receive_text()

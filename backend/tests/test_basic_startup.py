@@ -133,3 +133,10 @@ def test_websocket_connectable(basic_client: TestClient) -> None:
     with basic_client.websocket_connect(f"/ws/workspaces/{workspace_id}") as websocket:
         # If no error is thrown, the connection succeeded
         assert websocket is not None
+        # 先收取快照事件，确保服务端已完成快照构建与会话释放阶段再退出。
+        # 否则客户端退出时的 cancel scope 会中断服务端仍在执行的 DB 操作，
+        # SQLAlchemy 将 CancelledError 当作 DBAPI 异常触发 invalidate ->
+        # terminate 的 aiosqlite 优雅关闭竞争，导致事件循环取消阶段挂死
+        # （CI build-linux 间歇挂死根因；见 conftest 看门狗与 app/websocket/router.py）。
+        snapshot = websocket.receive_json()
+        assert snapshot["type"] == "workspace.snapshot"
