@@ -12,9 +12,11 @@ from __future__ import annotations
 
 import os
 import tempfile
+import time
 import uuid
 from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import Any
 
 import pytest
 import pytest_asyncio
@@ -26,6 +28,93 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from app.db.base import Base
+
+# ---------------------------------------------------------------------------
+# CI 挂起诊断（opt-in，默认关闭）
+#
+# 背景：CI build-linux job 曾间歇性在 TestClient 退出时挂死（cancellation 卡在
+# 某个后台任务上），且 pytest -q 在挂起时零输出、只能等 6 小时 job 超时。
+# 设置 PYTEST_WATCHDOG_SECONDS 后，watchdog 线程在“连续 N 秒没有任何测试进展”
+# 时 dump：1) faulthandler 全线程栈；2) 所有事件循环的 asyncio 任务栈；然后
+# 立即退出，让挂死位置直接出现在 CI 日志里。
+# ---------------------------------------------------------------------------
+
+_WATCHDOG_LAST_PROGRESS: dict[str, float] = {"ts": time.monotonic()}
+_WATCHDOG_LOOPS: "set[Any]" = set()
+
+
+def _install_progress_tracking() -> None:
+    import asyncio
+
+    original = asyncio.events._set_running_loop
+
+    def _tracking_set_running_loop(loop: Any) -> Any:
+        _WATCHDOG_LOOPS.add(loop)
+        return original(loop)
+
+    asyncio.events._set_running_loop = _tracking_set_running_loop
+
+
+def _dump_async_tasks() -> None:
+    import asyncio
+    import sys
+    import traceback
+
+    for loop in list(_WATCHDOG_LOOPS):
+        if not getattr(loop, "is_running", lambda: False)():
+            continue
+        try:
+            tasks = asyncio.all_tasks(loop)
+        except Exception:  # pragma: no cover - 诊断兜底
+            continue
+        for task in tasks:
+            print(f"\n---- asyncio task: {task!r}", file=sys.__stderr__)
+            try:
+                for frame in task.get_stack():
+                    line = traceback.format_list(
+                        traceback.extract_stack(frame)
+                    )
+                    print("".join(line), file=sys.__stderr__, end="")
+            except Exception:  # pragma: no cover - 诊断兜底
+                continue
+
+
+def _start_watchdog(idle_seconds: float) -> None:
+    import faulthandler
+    import sys
+    import threading
+
+    def watcher() -> None:
+        print(
+            f"[pytest-watchdog] started (idle threshold {idle_seconds:.0f}s)",
+            file=sys.stderr,
+            flush=True,
+        )
+        while True:
+            time.sleep(5.0)
+            idle = time.monotonic() - _WATCHDOG_LAST_PROGRESS["ts"]
+            if idle < idle_seconds:
+                continue
+            print(
+                f"\n===== PYTEST WATCHDOG: no test progress for {idle:.0f}s; "
+                "dumping thread + asyncio task stacks =====",
+                file=sys.__stderr__,
+                flush=True,
+            )
+            faulthandler.dump_traceback(file=sys.__stderr__)
+            _dump_async_tasks()
+            sys.__stderr__.flush()
+            os._exit(1)
+
+    threading.Thread(target=watcher, name="pytest-watchdog", daemon=True).start()
+
+
+def pytest_runtest_logstart(nodeid: str, location: Any) -> None:
+    _WATCHDOG_LAST_PROGRESS["ts"] = time.monotonic()
+
+
+def pytest_runtest_logreport(report: pytest.TestReport) -> None:
+    _WATCHDOG_LAST_PROGRESS["ts"] = time.monotonic()
 
 
 def pytest_configure(config: pytest.Config) -> None:
@@ -55,15 +144,15 @@ def pytest_configure(config: pytest.Config) -> None:
         "sqlite+aiosqlite:///"
         + (Path(tempfile.gettempdir()) / f"agent-console-pytest-{uuid.uuid4().hex}.db").as_posix(),
     )
-    # CI 诊断看门狗（可选，默认关闭）：pytest-timeout 的 session-timeout 只覆盖
-    # 测试执行阶段，收集/导入阶段挂起不会触发。设置该 env 后由 faulthandler 在
-    # 超时后 dump 全线程栈并退出，让挂死位置直接出现在日志里（替代 6 小时静默）。
+    # CI 诊断看门狗（可选，默认关闭）：检测“测试进展停滞”而不是固定时长，
+    # 覆盖收集/夹具/退出阶段（pytest-timeout 的 session-timeout 只覆盖测试执行）。
     watchdog_seconds = os.environ.get("PYTEST_WATCHDOG_SECONDS", "").strip()
     if watchdog_seconds:
         import faulthandler
 
         faulthandler.enable()
-        faulthandler.dump_traceback_later(float(watchdog_seconds), exit=True)
+        _install_progress_tracking()
+        _start_watchdog(float(watchdog_seconds))
 
 
 @pytest_asyncio.fixture
