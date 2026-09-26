@@ -247,6 +247,8 @@ PostgreSQL + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后�
 | 2026-09-26 10:44 | C-224 | 已完成 | [2e21b95](https://github.com/liwe123/Agent-Togterher/commit/2e21b95) | LI | BUG | 后端 | fix: test_command 改 argv exec 加白名单，集成派发补 admin 角色鉴权（P0-3） | - | backend/app/api；backend/app/core；backend/app/services；backend/tests/test_integrations.py | 否 | 否 | - | - |
 | 2026-09-26 10:44 | C-225 | 已完成 | [9d08731](https://github.com/liwe123/Agent-Togterher/commit/9d08731) | LI | BUG | 后端 | fix: 生产认证 fail-closed 与去硬编码 JWT 密钥，收敛 DAG 孤儿运行记录（P0-4/P0-5） | - | backend/app/core；backend/app/main.py；backend/app/services；backend/app/worker.py；backend/tests/test_security_hardening.py；backend/tests/test_worker_lease.py | 否 | 否 | - | - |
 | 2026-09-26 10:44 | C-226 | 已完成 | [ac48a69](https://github.com/liwe123/Agent-Togterher/commit/ac48a69) | LI | BUG | 后端 | fix: 恢复任务改为真实重新调度，回放携带错误信息并补工作区鉴权（P0-1/P0-2/P0-6） | - | backend/app/api；backend/tests/test_task_replay.py | 否 | 否 | - | - |
+| 2026-09-26 10:47 | C-227 | 已完成 | [57bf515](https://github.com/liwe123/Agent-Togterher/commit/57bf515) | LI | Optimization | 其他、文档 | docs: 登记 P0 止血三提交，收账文档（断链文件入库/数字回写/状态矛盾修正/守则补条款） | - | - | 否 | 否 | - | - |
+| 2026-09-26 11:34 | C-228 | 已完成 | [16b0d4f](https://github.com/liwe123/Agent-Togterher/commit/16b0d4f) | LI | Optimization | 后端 | optimize: 按独立验收反馈澄清 test_command 白名单残留边界（admin 等价代码执行权） | - | backend/app/services | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
