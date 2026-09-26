@@ -115,7 +115,8 @@
 
 ## 4. 质量与验证基准
 
-- **后端自动化测试**：43 个测试模块，共计 **267 tests passed**（100% 通过；测试用一次性 SQLite 文件库跑测，CI 另有 `test-postgres` job 覆盖 PG 方言，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性；2026-08-29 compose 容器实跑 AC1/AC2/AC4/AC7/AC8 通过；2026-09-25 本机复跑 267 passed，含 P0 止血批次新增 14 例）。
+- **后端自动化测试**：44 个测试模块，共计 **270 tests passed**（100% 通过；测试用一次性 SQLite 文件库跑测，CI 另有 `test-postgres` job 覆盖 PG 方言，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性；2026-08-29 compose 容器实跑 AC1/AC2/AC4/AC7/AC8 通过；2026-09-26 本机复跑 270 passed / PG 复跑 270 passed）。
+- **CI 稳定性修复（2026-09-26）**：`test-postgres` 跨事件循环 Redis 客户端（配额限流单例）改为随循环重建；`build-linux` aiosqlite 取消期关闭竞争（WS 会话取消中断 DB 操作 → invalidate → terminate 双 stop 挂死）通过「WS 快照与会话释放前移到握手 accept 之前」根除；CI 增加 job `timeout-minutes`、pytest-timeout、无进展看门狗（dump 线程栈 + asyncio 任务栈）与 `-s` 诊断。修复后连续 3 次复跑三 job 全绿。
 - **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 35 passed，`next build` 12+ 页面全部编译成功。
 - **文档自动化体系**：14 列变更记录全量无空值，`PRD.md`、`Agent_Console_变更追踪.xlsx` 与 `PRD.html` 自动化生成并与 Git 历史完全同步。
 
