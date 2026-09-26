@@ -131,7 +131,12 @@ def _parse_test_command(command: str) -> tuple[list[str] | None, str]:
 
     P0 安全修复：此前使用 ``create_subprocess_shell`` 直接执行用户输入，
     端点又无鉴权，构成未认证 RCE。改为 argv 数组（exec、无 shell 解释）
-    并限制可执行文件必须在配置白名单内，双层阻断命令注入。
+    并限制可执行文件必须在配置白名单内，阻断 shell 注入与未授权二进制。
+
+    残留边界（独立验收 2026-09-25 确认）：白名单中的解释器/构建工具
+    （python/npx/make 等）本身仍可执行任意代码，且校验只看可执行文件
+    basename。因此 dispatch 端点要求工作区 admin 及以上角色——admin
+    在该能力下等价于代码执行权限，后续如需收紧应引入命令模板白名单。
     """
     try:
         argv = shlex.split(command, posix=True)
