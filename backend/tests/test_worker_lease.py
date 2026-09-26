@@ -18,6 +18,8 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app import worker as worker_module
 from app.db.base import Base, utc_now
 from app.models import Task, TaskQueueItem, TaskStatus, Workspace
+from app.models.workflow import WorkflowRun, WorkflowTemplate
+from app.services.task_lease import recover_orphan_workflow_runs
 from app.services.task_service import TaskService
 
 
@@ -231,3 +233,85 @@ async def test_sweep_does_not_touch_valid_running_task(
         task = await session.get(Task, task_id)
     assert task is not None and task.status == TaskStatus.RUNNING
     assert task.execution_token == "still-valid-token"
+
+
+# ---------------------------------------------------------------------------
+# P0-5：DAG 孤儿 WorkflowRun 收敛（崩溃后不再永久 running）
+# ---------------------------------------------------------------------------
+
+
+async def _seed_workflow_run(factory, task_id: int, status: str = "running") -> int:
+    async with factory() as session:
+        template = WorkflowTemplate(
+            name=f"tpl-{task_id}",
+            display_name="Tpl",
+            nodes_json="[]",
+        )
+        session.add(template)
+        await session.flush()
+        run = WorkflowRun(template_id=template.id, task_id=task_id, status=status)
+        session.add(run)
+        await session.commit()
+        return run.id
+
+
+async def _seed_task_with_status(factory, status: TaskStatus) -> int:
+    async with factory() as session:
+        workspace = Workspace(name=f"orphan-{status.value}", description="tests")
+        session.add(workspace)
+        await session.flush()
+        task = Task(
+            workspace_id=workspace.id,
+            title="Workflow host task",
+            description="DAG host",
+            status=status,
+        )
+        session.add(task)
+        await session.commit()
+        return task.id
+
+
+@pytest.mark.asyncio
+async def test_sweep_converges_workflow_run_of_expired_task(
+    queue_factory, monkeypatch
+) -> None:
+    """任务级租约过期被回收时，关联的 running WorkflowRun 一并收敛。"""
+    monkeypatch.setattr(worker_module, "AsyncSessionLocal", queue_factory)
+    task_id = await _seed_expired_running_task(queue_factory)
+    run_id = await _seed_workflow_run(queue_factory, task_id)
+
+    await worker_module._sweep_expired_leases()
+
+    async with queue_factory() as session:
+        task = await session.get(Task, task_id)
+        run = await session.get(WorkflowRun, run_id)
+    assert task is not None and task.status == TaskStatus.FAILED
+    assert run is not None and run.status == "failed"
+
+
+@pytest.mark.asyncio
+async def test_recover_orphan_workflow_runs_maps_terminal_status(
+    queue_factory,
+) -> None:
+    """父任务终态映射：completed→completed，failed/cancelled→failed。"""
+    completed_task_id = await _seed_task_with_status(
+        queue_factory, TaskStatus.COMPLETED
+    )
+    failed_task_id = await _seed_task_with_status(queue_factory, TaskStatus.FAILED)
+    pending_task_id = await _seed_task_with_status(queue_factory, TaskStatus.PENDING)
+
+    completed_run_id = await _seed_workflow_run(queue_factory, completed_task_id)
+    failed_run_id = await _seed_workflow_run(queue_factory, failed_task_id)
+    pending_run_id = await _seed_workflow_run(queue_factory, pending_task_id)
+
+    async with queue_factory() as session:
+        recovered = await recover_orphan_workflow_runs(session)
+        completed_run = await session.get(WorkflowRun, completed_run_id)
+        failed_run = await session.get(WorkflowRun, failed_run_id)
+        pending_run = await session.get(WorkflowRun, pending_run_id)
+
+    assert recovered == 2
+    assert completed_run is not None and completed_run.status == "completed"
+    assert failed_run is not None and failed_run.status == "failed"
+    # 任务仍 PENDING（尚未执行）时不得误伤运行记录。
+    assert pending_run is not None and pending_run.status == "running"

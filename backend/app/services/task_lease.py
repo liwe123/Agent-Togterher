@@ -29,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.base import utc_now
 from app.db.session import AsyncSessionLocal
 from app.models import Task, TaskStatus
+from app.models.workflow import WorkflowRun
 from app.schemas import TaskRead
 from app.websocket.events import create_event
 
@@ -217,5 +218,55 @@ async def recover_expired_task_leases(session: AsyncSession) -> int:
         task.execution_token = None
         task.execution_token_expires_at = None
         task.updated_at = utc_now()
+        # P0-5：DAG 运行记录随宿主任务一起收敛，避免 workflow_runs 永久
+        # 停留在 running（崩溃的进程不会再回写终态）。
+        runs = await _running_workflow_runs(session, task.id)
+        for run in runs:
+            run.status = "failed"
+            run.updated_at = utc_now()
     await session.commit()
     return len(expired)
+
+
+async def _running_workflow_runs(
+    session: AsyncSession, task_id: int
+) -> list[WorkflowRun]:
+    return list(
+        await session.scalars(
+            select(WorkflowRun).where(
+                WorkflowRun.task_id == task_id,
+                WorkflowRun.status == "running",
+            )
+        )
+    )
+
+
+async def recover_orphan_workflow_runs(session: AsyncSession) -> int:
+    """收敛父任务已终态、但运行记录仍为 running 的孤儿 WorkflowRun（P0-5）。
+
+    触发场景：API 进程在 DAG 执行中途崩溃 / 被强杀，``asyncio.create_task``
+    协程消失，``except Exception`` 兜不住 ``CancelledError``，终态回写丢失。
+    启动时按宿主任务的终态映射运行记录状态（completed→completed，其余→failed），
+    避免运行历史出现永久"运行中"的僵尸行。
+    """
+    terminal_statuses = [
+        TaskStatus.COMPLETED,
+        TaskStatus.FAILED,
+        TaskStatus.CANCELLED,
+    ]
+    rows = (
+        await session.execute(
+            select(WorkflowRun, Task.status)
+            .join(Task, Task.id == WorkflowRun.task_id)
+            .where(
+                WorkflowRun.status == "running",
+                Task.status.in_(terminal_statuses),
+            )
+        )
+    ).all()
+    for run, task_status in rows:
+        run.status = "completed" if task_status == TaskStatus.COMPLETED else "failed"
+        run.updated_at = utc_now()
+    if rows:
+        await session.commit()
+    return len(rows)

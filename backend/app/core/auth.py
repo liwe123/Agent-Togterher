@@ -16,6 +16,13 @@ from app.models.user import User
 _HASH_ITERATIONS = 260_000
 _SALT_LENGTH = 32
 
+# 开发环境（未配置 JWT_SECRET_KEY 且未配置 APP_API_TOKEN）使用进程级随机
+# 密钥，替代历史上的硬编码公开常量。副作用：多进程开发（uvicorn --workers>1）
+# 之间 token 互不通用，需显式配置 JWT_SECRET_KEY。
+_DEV_EPHEMERAL_SECRET = uuid.uuid4().hex
+
+_DEVELOPMENT_ENVS = {"development", "dev", "test", "testing", "local"}
+
 
 def hash_password(password: str) -> str:
     """Hash a password with PBKDF2-SHA256 and a random salt."""
@@ -48,10 +55,16 @@ def _get_secret_key() -> str:
         value = secret.get_secret_value() if hasattr(secret, "get_secret_value") else str(secret)
         if value.strip():
             return value.strip()
-    # Fallback: derive from app_api_token or use a default (development only)
+    # Fallback: derive from app_api_token when configured.
     if settings.app_api_token:
-        return f"jwt-{settings.app_api_token.get_secret_value()}"
-    return "agent-console-dev-secret-change-in-production"
+        value = settings.app_api_token.get_secret_value().strip()
+        if value:
+            return f"jwt-{value}"
+    if str(settings.app_env).lower() in _DEVELOPMENT_ENVS:
+        return _DEV_EPHEMERAL_SECRET
+    raise RuntimeError(
+        "JWT_SECRET_KEY 未配置：非开发环境拒绝签发 / 校验 token（fail-closed）"
+    )
 
 
 def create_access_token(user_id: int) -> str:

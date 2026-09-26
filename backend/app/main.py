@@ -17,9 +17,32 @@ from app.websocket.router import router as websocket_router
 settings = get_settings()
 _event_relay = build_event_relay(websocket_manager, settings.worker_instance_id, settings.event_bus_enabled)
 
+_DEVELOPMENT_ENVS = {"development", "dev", "test", "testing", "local"}
+
+
+def _assert_production_secrets(settings: object) -> None:
+    """非开发环境强制要求认证凭据，缺配置则拒绝启动（fail-closed）。
+
+    P0 安全修复：历史实现下 ``APP_API_TOKEN`` 为空时整个 API 处于 open 模式，
+    生产部署会零鉴权裸奔。这里在启动期硬性拦截。
+    """
+    app_env = str(getattr(settings, "app_env", "development")).lower()
+    if app_env in _DEVELOPMENT_ENVS:
+        return
+    api_token = getattr(settings, "app_api_token", None)
+    jwt_secret = getattr(settings, "jwt_secret_key", None)
+    has_api_token = bool(api_token and api_token.get_secret_value().strip())
+    has_jwt_secret = bool(jwt_secret and jwt_secret.get_secret_value().strip())
+    if not has_api_token and not has_jwt_secret:
+        raise RuntimeError(
+            "拒绝启动：非开发环境（APP_ENV="
+            f"{app_env}）必须显式配置 APP_API_TOKEN 或 JWT_SECRET_KEY"
+        )
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
+    _assert_production_secrets(settings)
     await init_db()
     # C-183: install the real plugin webhook executor (idempotent).
     from app.services.webhook import register_webhook_executor
@@ -29,11 +52,14 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     from app.db.session import AsyncSessionLocal
     from app.core.message_hub import recover_unfinished_tasks
     from app.services.integration_service import recover_orphan_integration_steps
+    from app.services.task_lease import recover_orphan_workflow_runs
 
     await _event_relay.start()
     async with AsyncSessionLocal() as session:
         await seed_defaults(session)
         await recover_orphan_integration_steps(session)
+        # P0-5：收敛父任务已终态但 WorkflowRun 仍 running 的孤儿记录。
+        await recover_orphan_workflow_runs(session)
         if settings.task_execution_mode == "inline":
             await recover_unfinished_tasks(session)
     yield
