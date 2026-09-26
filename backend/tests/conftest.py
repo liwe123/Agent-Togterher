@@ -55,6 +55,15 @@ def pytest_configure(config: pytest.Config) -> None:
         "sqlite+aiosqlite:///"
         + (Path(tempfile.gettempdir()) / f"agent-console-pytest-{uuid.uuid4().hex}.db").as_posix(),
     )
+    # CI 诊断看门狗（可选，默认关闭）：pytest-timeout 的 session-timeout 只覆盖
+    # 测试执行阶段，收集/导入阶段挂起不会触发。设置该 env 后由 faulthandler 在
+    # 超时后 dump 全线程栈并退出，让挂死位置直接出现在日志里（替代 6 小时静默）。
+    watchdog_seconds = os.environ.get("PYTEST_WATCHDOG_SECONDS", "").strip()
+    if watchdog_seconds:
+        import faulthandler
+
+        faulthandler.enable()
+        faulthandler.dump_traceback_later(float(watchdog_seconds), exit=True)
 
 
 @pytest_asyncio.fixture

@@ -4,9 +4,17 @@ on:
   push:
   pull_request:
 
+env:
+  # 让 pytest 进度实时落日志：进程被取消时也能看到最后完成的用例位置。
+  PYTHONUNBUFFERED: "1"
+  # 覆盖收集/导入阶段的挂起：超时 dump 全线程栈并退出（配合 job timeout-minutes）。
+  PYTEST_WATCHDOG_SECONDS: "900"
+
 jobs:
   build-linux:
     runs-on: ubuntu-latest
+    # 防 6 小时挂死：超过 20 分钟直接失败并保留日志。
+    timeout-minutes: 20
     defaults:
       run:
         shell: bash
@@ -38,7 +46,9 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/backend
           DATABASE_URL: sqlite+aiosqlite:///./agent_console_ci.db
         run: |
-          pytest -q
+          # --timeout 单测上限，--session-timeout 兜住收集/夹具阶段的挂起并
+          # dump 全部线程栈（诊断 CI 历史挂死问题）。
+          pytest -q --timeout=120 --timeout-method=thread --session-timeout=900
 
   # 20260907 报告 OPT-2/A3：SQLite 内存库只能证明逻辑正确，无法覆盖真实
   # PostgreSQL 方言行为（JSON、索引、并发写）。本 job 用 service container
@@ -47,6 +57,7 @@ jobs:
   # conftest 默认 false（总线专项另立项）。
   test-postgres:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     defaults:
       run:
         shell: bash
@@ -100,12 +111,13 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/backend
           DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/agent_console_ci
         run: |
-          pytest -q
+          pytest -q --timeout=120 --timeout-method=thread --session-timeout=900
 
   # 20260907 报告 OPT-2/A3：前端质量门禁（lint + 单测）入 CI。
   # build 耗时长，首期 lint + test；页面编译由本地 npm run build 门禁保障。
   test-frontend:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: frontend
