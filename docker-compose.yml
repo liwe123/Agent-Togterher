@@ -132,6 +132,24 @@ services:
       backend:
         condition: service_healthy
 
+  # Cloudflare Tunnel（免费）：把本机后端（含 /ws WebSocket）以 HTTPS 暴露到公网，
+  # 供部署在 Cloudflare Workers 上的前端调用；仅在使用 --profile cf 时启动。
+  #   快速隧道（无域名）：docker compose --profile cf up -d tunnel
+  #     随机公网地址在日志中：docker compose logs tunnel（trycloudflare.com）
+  #   命名隧道（有域名）：.env 设 TUNNEL_TOKEN 与
+  #     CLOUDFLARED_COMMAND=tunnel --no-autoupdate run 后同样方式启动。
+  # 详见 docs/Cloudflare部署指南.md
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    profiles: ["cf"]
+    command: ${CLOUDFLARED_COMMAND:-tunnel --no-autoupdate --url http://backend:8000}
+    environment:
+      TUNNEL_TOKEN: ${TUNNEL_TOKEN:-}
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   backend_data:
   redis_data:
