@@ -405,33 +405,9 @@ OPENAI_API_KEY=sk-xxx
 
 # 可选
 APP_API_TOKEN=         # 设了就开启 Bearer 鉴权
-JWT_SECRET_KEY=        # 非开发环境必填（缺失启动即拒绝）
 TASK_EXECUTION_MODE=inline  # 改 worker 则 API 只入队
 WORKER_CONCURRENCY=2
 ```
-
----
-
-## Cloudflare 免费部署
-
-前端部署到 **Cloudflare Workers**（`@opennextjs/cloudflare`，免费），后端经 **Cloudflare Tunnel**（免费）回源本机，REST + WebSocket 全部 HTTPS：
-
-```powershell
-# 1) 后端 + 快速隧道（获取公网地址）
-docker compose --profile cf up -d
-docker compose logs tunnel | Select-String "trycloudflare.com"
-
-# 2) 前端部署（地址是构建期内联，换地址需重新 deploy）
-cd frontend
-npm ci
-$env:NEXT_PUBLIC_API_BASE_URL = "<隧道地址>"
-npm run deploy
-
-# 3) 把 Workers 地址回填 .env 的 CORS_ORIGINS 并重启 backend
-```
-
-完整步骤（命名隧道 / 自定义域名 / 生产加固 / 免费额度 / 故障排查）见
-[`docs/Cloudflare部署指南.md`](docs/Cloudflare部署指南.md)。
 
 ---
 
