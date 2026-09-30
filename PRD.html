@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>32</b> 份</span>
-        <span>变更记录 <b>246</b> 条</span>
-        <span>生成于 2026-09-30 22:04</span>
+        <span>变更记录 <b>247</b> 条</span>
+        <span>生成于 2026-09-30 22:07</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -4223,6 +4223,22 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否</td>
 <td>-</td>
 <td>-</td>
+</tr>
+<tr>
+<td>2026-09-30 22:06</td>
+<td>C-247</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/920b54f">920b54f</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>其他、后端、文档、前端</td>
+<td>修复艾特候选与路由核心缺陷：统一内部 Agent 与外部节点首位艾特探测，消除中文无空格混排下外部节点越权抢跑；修复中文输入法回车误触发补全；排除邮箱地址误弹；补齐@后端等角色别名；增加空 Agent 工作区防御</td>
+<td>mention-utils.ts 增加 ROLE_ALIASES 与邮箱过滤；chat-composer.tsx 增加 isComposing 守卫、Tab 支持与外部点击关闭；mention-menu.tsx 增加激活项自动滚动</td>
+<td>message_hub.py 引入 _resolve_mention_target 与 _ASCII_WORD_CHARS，统一节点与 Agent 探测；扩充 _ROLE_ALIASES；空 Agent 友好校验；test_message_hub.py 增补 5 项关键边界测试</td>
+<td>否</td>
+<td>否</td>
+<td>前端测试 52 passed；eslint 0 错误；next build 成功；后端 flake8 0 错误；pytest 全量通过</td>
+<td>独立复核修复 6 处缺陷（节点顺序倒挂、IME 输入拦截、邮箱误判、别名遗漏、空工作区崩溃、视口滚动缺失）</td>
 </tr>
 </tbody>
 </table></div>

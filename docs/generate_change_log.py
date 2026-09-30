@@ -58,6 +58,16 @@ PREFIX_TYPE = {
 
 # Curated rows: keyed by short commit sha. Fields override git inference.
 CURATED = {
+    "920b54f": {
+        "type": "BUG",
+        "content": "修复艾特候选与路由核心缺陷：统一内部 Agent 与外部节点首位艾特探测，消除中文无空格混排下外部节点越权抢跑；修复中文输入法回车误触发补全；排除邮箱地址误弹；补齐@后端等角色别名；增加空 Agent 工作区防御",
+        "frontend": "mention-utils.ts 增加 ROLE_ALIASES 与邮箱过滤；chat-composer.tsx 增加 isComposing 守卫、Tab 支持与外部点击关闭；mention-menu.tsx 增加激活项自动滚动",
+        "backend": "message_hub.py 引入 _resolve_mention_target 与 _ASCII_WORD_CHARS，统一节点与 Agent 探测；扩充 _ROLE_ALIASES；空 Agent 友好校验；test_message_hub.py 增补 5 项关键边界测试",
+        "db": "否",
+        "breaking": "否",
+        "verify": "前端测试 52 passed；eslint 0 错误；next build 成功；后端 flake8 0 错误；pytest 全量通过",
+        "notes": "独立复核修复 6 处缺陷（节点顺序倒挂、IME 输入拦截、邮箱误判、别名遗漏、空工作区崩溃、视口滚动缺失）",
+    },
     "08ed038": {
         "type": "Optimization",
         "content": "全站优化：消除前端 4 处重复 WebSocket 逻辑与死代码，统一连接/任务工具/常量，增加 ErrorBoundary；后端事件契约规范化、记录模型成本、限制并发",
