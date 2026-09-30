@@ -35,6 +35,14 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_AGENT_NAME = "项目总设计师"
 _MENTION_PATTERN = re.compile(r"[@＠]([\w-]+)")
+_ROLE_ALIASES: dict[str, tuple[str, ...]] = {
+    "project_architect": ("架构师", "总设计师", "项目总设计师"),
+    "agent_engineer": ("Agent工程师", "后端工程师"),
+    "frontend_designer": ("前端设计师", "前端"),
+    "knowledge_manager": ("知识库管理员", "知识库"),
+    "qa_engineer": ("测试专员", "测试", "测试工程师"),
+    "operations_engineer": ("运维工程师", "运维"),
+}
 MAX_RUNNING_TASKS_PER_WORKSPACE = 3
 TaskDispatcher = Callable[[int], None]
 
@@ -303,9 +311,17 @@ class MessageHub:
     async def _match_integration_node(
         self, content: str, agents: list[Agent], conversation: Conversation
     ) -> IntegrationNode | None:
-        """Return the integration node whose ``name`` exactly matches the first
+        """Return the integration node whose ``name`` or ``provider`` matches the first
         @mention that is not already an internal agent name."""
-        agents_by_name = {agent.name: agent for agent in agents}
+        agents_by_name = {agent.name.lower(): agent for agent in agents}
+        agents_by_role = {agent.role.lower(): agent for agent in agents}
+        agents_by_model = {agent.model_name.lower(): agent for agent in agents}
+        alias_to_agent = {
+            alias.lower(): agent
+            for agent in agents
+            for alias in _ROLE_ALIASES.get(agent.role, ())
+        }
+
         nodes = list(
             await self._session.scalars(
                 select(IntegrationNode).where(
@@ -313,14 +329,31 @@ class MessageHub:
                 )
             )
         )
-        nodes_by_name = {node.name: node for node in nodes}
+        nodes_by_name = {node.name.lower(): node for node in nodes}
+        nodes_by_provider = {node.provider.lower(): node for node in nodes}
+
         for name in parse_mentions(content):
-            if name in agents_by_name:
+            lowered = name.lower()
+            if (
+                lowered in agents_by_name
+                or lowered in agents_by_role
+                or lowered in agents_by_model
+                or lowered in alias_to_agent
+            ):
                 # An internal agent takes priority over an integration node.
-                continue
-            node = nodes_by_name.get(name)
+                return None
+            node = nodes_by_name.get(lowered) or nodes_by_provider.get(lowered)
             if node is not None:
                 return node
+
+        # Check direct substring matching for integration nodes if no internal agent matched
+        for node in nodes:
+            for term in (node.name, node.provider):
+                if not term:
+                    continue
+                for marker in ("@", "＠"):
+                    if f"{marker}{term.lower()}" in content.lower():
+                        return node
         return None
 
     async def _create_node_task(
@@ -392,9 +425,23 @@ class MessageHub:
 
     @staticmethod
     def _select_agent(content: str, agents: list[Agent]) -> Agent:
-        agents_by_name = {agent.name: agent for agent in agents}
+        agents_by_name = {agent.name.lower(): agent for agent in agents}
+        agents_by_role = {agent.role.lower(): agent for agent in agents}
+        agents_by_model = {agent.model_name.lower(): agent for agent in agents}
+        alias_to_agent = {
+            alias.lower(): agent
+            for agent in agents
+            for alias in _ROLE_ALIASES.get(agent.role, ())
+        }
+
         for name in parse_mentions(content):
-            agent = agents_by_name.get(name)
+            lowered = name.lower()
+            agent = (
+                agents_by_name.get(lowered)
+                or agents_by_role.get(lowered)
+                or agents_by_model.get(lowered)
+                or alias_to_agent.get(lowered)
+            )
             if agent is not None:
                 return agent
 
@@ -402,13 +449,18 @@ class MessageHub:
         # mention, where a generic parser cannot infer the name boundary.
         mentioned: list[tuple[int, int, Agent]] = []
         for agent in agents:
-            positions = [
-                position
-                for marker in ("@", "＠")
-                if (position := content.find(f"{marker}{agent.name}")) >= 0
-            ]
-            if positions:
-                mentioned.append((min(positions), -len(agent.name), agent))
+            aliases = _ROLE_ALIASES.get(agent.role, ())
+            candidates = {agent.name, agent.role, agent.model_name, *aliases}
+            for term in candidates:
+                if not term:
+                    continue
+                positions = [
+                    position
+                    for marker in ("@", "＠")
+                    if (position := content.lower().find(f"{marker}{term.lower()}")) >= 0
+                ]
+                if positions:
+                    mentioned.append((min(positions), -len(term), agent))
 
         if mentioned:
             mentioned.sort(key=lambda item: (item[0], item[1], item[2].id))

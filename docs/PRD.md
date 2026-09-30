@@ -264,6 +264,7 @@ PostgreSQL + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后�
 | 2026-09-27 18:36 | C-241 | 已完成 | [003767a](https://github.com/liwe123/Agent-Togterher/commit/003767a) | LI | Optimization | 其他、文档 | docs: 登记 Cloudflare 部署通路并重生成（C-236） | - | - | 否 | 否 | - | - |
 | 2026-09-27 18:36 | C-242 | 已完成 | [b162ad2](https://github.com/liwe123/Agent-Togterher/commit/b162ad2) | LI | Optimization | 其他、文档、部署、前端 | optimize: 打通 Cloudflare 免费部署（前端 OpenNext→Workers，后端 Cloudflare Tunnel 回源） | frontend/.dev.vars.example；frontend/.gitignore；frontend/eslint.config.mjs；frontend/open-next.config.ts；frontend/package-lock.json；frontend/package.json；frontend/public/_headers；frontend/wrangler.jsonc | - | 否 | 否 | - | - |
 | 2026-09-27 18:54 | C-243 | 已完成 | [7ea3fd0](https://github.com/liwe123/Agent-Togterher/commit/7ea3fd0) | LI | Optimization | 其他、文档、部署、前端 | optimize: 回滚 Cloudflare 部署通路（需求暂缓，历史保留可再恢复） | frontend/.dev.vars.example；frontend/.gitignore；frontend/eslint.config.mjs；frontend/open-next.config.ts；frontend/package-lock.json；frontend/package.json；frontend/public/_headers；frontend/wrangler.jsonc | - | 否 | 否 | - | - |
+| 2026-09-27 18:54 | C-244 | 已完成 | [dfd4df7](https://github.com/liwe123/Agent-Togterher/commit/dfd4df7) | LI | Optimization | 其他、文档 | docs: 登记 Cloudflare 回滚并重生成（C-237） | - | - | 否 | 否 | - | - |
 <!-- CHANGELOG:END -->
 
 ---
@@ -305,6 +306,7 @@ PostgreSQL + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后�
 | [PRD-链路追踪字段.md](prd/PRD-链路追踪字段.md) | 链路追踪字段（Message/Task/TaskStep/ModelCall 的 trace_id/correlation_id 与传播，R-05） | 见追踪表 | C-220 |
 | [PRD-DAG工作流引擎.md](prd/PRD-DAG工作流引擎.md) | DAG 工作流引擎（WorkflowRun 运行记录、Kahn 拓扑分层、环检测、层内并行执行、task_steps 节点化落库） | 见追踪表 | C-186 |
 | [PRD-人工审批节点.md](prd/PRD-人工审批节点.md) | HITL 人工审批节点（WAITING_APPROVAL 状态机、approve/reject 端点、DB 轮询解耦跨进程、前端审批按钮） | 见追踪表 | C-185 |
+| [PRD-群聊艾特角色弹出与模型路由.md](prd/PRD-群聊艾特角色弹出与模型路由.md) | 群聊艾特角色弹出与模型路由（输入“@”对话框上方弹出角色列表、多维模糊过滤、后端路由到对应模型） | 见追踪表 | C-245 |
 
 ---
 

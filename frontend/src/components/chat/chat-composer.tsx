@@ -7,17 +7,15 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { MentionMenu, type MentionEntry } from "@/components/chat/mention-menu"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  buildMentionEntries,
+  filterMentionEntries,
+  findMention,
+  insertMention,
+  type MentionMatch,
+} from "@/lib/mention-utils"
 import type { Agent } from "@/types/agent"
 import type { IntegrationNode } from "@/types/integration"
-
-const roleOrder: Record<string, number> = {
-  project_architect: 0,
-  agent_engineer: 1,
-  frontend_designer: 2,
-  knowledge_manager: 3,
-  qa_engineer: 4,
-  operations_engineer: 5,
-}
 
 const promptTemplates = [
   { label: "设计系统方案", text: "@项目总设计师 请分析并输出系统架构方案" },
@@ -25,24 +23,6 @@ const promptTemplates = [
   { label: "编写后端代码", text: "@Agent工程师 请检查并重构后端 API 服务" },
   { label: "自动化测试", text: "@测试专员 请执行全量功能质量检查" },
 ]
-
-interface MentionMatch {
-  start: number
-  query: string
-}
-
-function findMention(value: string, caret: number): MentionMatch | null {
-  const beforeCaret = value.slice(0, caret)
-  const match = beforeCaret.match(/(^|\s)@([^\s@]*)$/)
-  if (!match) {
-    return null
-  }
-
-  return {
-    start: beforeCaret.lastIndexOf("@"),
-    query: match[2].toLocaleLowerCase("zh-CN"),
-  }
-}
 
 interface ChatComposerProps {
   agents: Agent[]
@@ -86,44 +66,16 @@ export function ChatComposer({
     return () => cancelAnimationFrame(frame)
   }, [searchParams])
 
-  const orderedAgents = useMemo(
-    () =>
-      [...agents].sort(
-        (left, right) =>
-          (roleOrder[left.role] ?? Number.MAX_SAFE_INTEGER) -
-          (roleOrder[right.role] ?? Number.MAX_SAFE_INTEGER) ||
-          left.name.localeCompare(right.name, "zh-CN"),
-      ),
-    [agents],
+  const allMentionEntries = useMemo<MentionEntry[]>(
+    () => buildMentionEntries(agents, integrationNodes),
+    [agents, integrationNodes],
   )
-  const allMentionEntries = useMemo<MentionEntry[]>(() => {
-    const agentEntries: MentionEntry[] = orderedAgents.map((agent) => ({
-      key: `agent-${agent.id}`,
-      name: agent.name,
-      kind: "agent",
-      avatar: agent.avatar,
-      subtitle: agent.model_name,
-      status: agent.status,
-    }))
-    const nodeEntries: MentionEntry[] = integrationNodes.map((node) => ({
-      key: `node-${node.id}`,
-      name: node.name,
-      kind: "integration",
-      avatar: node.name.slice(0, 1),
-      subtitle: node.provider,
-      status: node.status,
-    }))
-    return [...agentEntries, ...nodeEntries]
-  }, [orderedAgents, integrationNodes])
 
-  const filteredEntries = useMemo(() => {
-    if (!mention) {
-      return []
-    }
-    return allMentionEntries.filter((entry) =>
-      entry.name.toLocaleLowerCase("zh-CN").includes(mention.query),
-    )
-  }, [mention, allMentionEntries])
+  const filteredEntries = useMemo(
+    () => (mention ? filterMentionEntries(allMentionEntries, mention.query) : []),
+    [mention, allMentionEntries],
+  )
+
   const isMentionOpen = mention !== null && filteredEntries.length > 0
 
   function updateMention(nextValue: string, caret: number | null) {
@@ -140,8 +92,7 @@ export function ChatComposer({
     }
     const textarea = textareaRef.current
     const caret = textarea?.selectionStart ?? value.length
-    const nextValue = `${value.slice(0, mention.start)}@${entry.name} ${value.slice(caret)}`
-    const nextCaret = mention.start + entry.name.length + 2
+    const { nextValue, nextCaret } = insertMention(value, caret, mention, entry.name)
     setValue(nextValue)
     setMention(null)
     requestAnimationFrame(() => {
@@ -214,7 +165,7 @@ export function ChatComposer({
 
   return (
     <div className="border-t border-border/70 bg-card/90 backdrop-blur-xl px-4 py-3 md:px-6 md:py-4">
-      <div className="relative mx-auto w-full max-w-4xl space-y-3">
+      <div className="mx-auto w-full max-w-4xl space-y-3">
         {mobileActionsOpen ? (
           <div className="space-y-3 rounded-3xl border border-border/80 bg-card p-4 shadow-xl md:hidden">
             <div>
@@ -236,7 +187,7 @@ export function ChatComposer({
               </div>
             </div>
             <div>
-              <p className="mb-2 text-xs font-semibold text-foreground">选择协作对象</p>
+              <p className="mb-2 text-xs font-semibold text-foreground">选择可 @ 的角色</p>
               <div className="flex flex-wrap gap-2">
                 {allMentionEntries.map((entry) => (
                   <button
@@ -277,7 +228,7 @@ export function ChatComposer({
               <button
                 key={entry.key}
                 type="button"
-                title={`@${entry.name}`}
+                title={`@${entry.name} (${entry.roleLabel ?? entry.subtitle})`}
                 onClick={() => selectMention(entry)}
                 className="flex items-center gap-1 rounded-full border border-border/60 bg-secondary/40 px-2.5 py-0.5 text-[11px] text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-foreground transition-all active:scale-95"
               >
@@ -288,78 +239,81 @@ export function ChatComposer({
           </div>
         </div>
 
-        {isMentionOpen && (
-          <MentionMenu
-            items={filteredEntries}
-            activeIndex={activeMentionIndex}
-            onSelect={selectMention}
-          />
-        )}
+        {/* Dialogue box container with MentionMenu anchored directly above it */}
+        <div className="relative">
+          {isMentionOpen && (
+            <MentionMenu
+              items={filteredEntries}
+              activeIndex={activeMentionIndex}
+              onSelect={selectMention}
+            />
+          )}
 
-        {/* Pixel M3 Pill Composer Container */}
-        <div className="flex items-end gap-2 rounded-3xl border border-border/80 bg-secondary/40 p-2 transition-all focus-within:border-primary focus-within:bg-card/90 focus-within:ring-2 focus-within:ring-primary/20 md:block md:rounded-3xl md:p-3.5 shadow-sm">
-          <button
-            type="button"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary md:hidden"
-            aria-label={mobileActionsOpen ? "关闭快捷操作" : "打开快捷操作"}
-            aria-expanded={mobileActionsOpen}
-            onClick={() => setMobileActionsOpen((open) => !open)}
-          >
-            <Zap aria-hidden="true" className="size-5" />
-          </button>
-          <Textarea
-            ref={textareaRef}
-            value={value}
-            disabled={disabled || isSending}
-            rows={1}
-            placeholder="输入消息派发任务，或输入 @ 选择指定 Agent 协作…"
-            aria-label="输入群聊消息"
-            aria-expanded={isMentionOpen}
-            onChange={(event) => {
-              setValue(event.target.value)
-              updateMention(event.target.value, event.target.selectionStart)
-            }}
-            onClick={(event) =>
-              updateMention(event.currentTarget.value, event.currentTarget.selectionStart)
-            }
-            onKeyUp={(event) => {
-              if (["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(event.key)) {
-                return
+          {/* Pixel M3 Pill Composer Container */}
+          <div className="flex items-end gap-2 rounded-3xl border border-border/80 bg-secondary/40 p-2 transition-all focus-within:border-primary focus-within:bg-card/90 focus-within:ring-2 focus-within:ring-primary/20 md:block md:rounded-3xl md:p-3.5 shadow-sm">
+            <button
+              type="button"
+              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary md:hidden"
+              aria-label={mobileActionsOpen ? "关闭快捷操作" : "打开快捷操作"}
+              aria-expanded={mobileActionsOpen}
+              onClick={() => setMobileActionsOpen((open) => !open)}
+            >
+              <Zap aria-hidden="true" className="size-5" />
+            </button>
+            <Textarea
+              ref={textareaRef}
+              value={value}
+              disabled={disabled || isSending}
+              rows={1}
+              placeholder="输入消息派发任务，或输入 @ 选择指定角色协作…"
+              aria-label="输入群聊消息"
+              aria-expanded={isMentionOpen}
+              onChange={(event) => {
+                setValue(event.target.value)
+                updateMention(event.target.value, event.target.selectionStart)
+              }}
+              onClick={(event) =>
+                updateMention(event.currentTarget.value, event.currentTarget.selectionStart)
               }
-              updateMention(event.currentTarget.value, event.currentTarget.selectionStart)
-            }}
-            onKeyDown={handleKeyDown}
-            className="min-h-10 min-w-0 flex-1 max-h-36 border-0 bg-transparent px-2 py-2 text-base shadow-none focus-visible:border-transparent focus-visible:ring-0 md:min-h-20 md:w-full md:px-2 md:py-1 md:text-sm"
-          />
+              onKeyUp={(event) => {
+                if (["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(event.key)) {
+                  return
+                }
+                updateMention(event.currentTarget.value, event.currentTarget.selectionStart)
+              }}
+              onKeyDown={handleKeyDown}
+              className="min-h-10 min-w-0 flex-1 max-h-36 border-0 bg-transparent px-2 py-2 text-base shadow-none focus-visible:border-transparent focus-visible:ring-0 md:min-h-20 md:w-full md:px-2 md:py-1 md:text-sm"
+            />
 
-          <div className="flex shrink-0 items-center gap-3 md:w-full md:justify-between md:pt-2.5 md:border-t md:border-border/50">
-            <p className="hidden items-center gap-1.5 px-2 text-[11px] text-muted-foreground md:flex">
-              <CornerDownLeft aria-hidden="true" className="size-3 text-primary" />
-              Enter 发送 · Shift + Enter 换行 · 输入 @ 召唤 Agent
-            </p>
-            <div className="ml-auto flex items-center gap-2">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="hidden size-9 rounded-full md:inline-flex"
-                disabled={!value || isSending}
-                onClick={clearInput}
-                aria-label="清空输入框"
-                title="清空输入框"
-              >
-                <Trash2 className="size-4" />
-              </Button>
-              <Button
-                type="button"
-                size="lg"
-                className="size-10 rounded-full px-0 md:h-9.5 md:w-auto md:px-5 shadow-md transition-all active:scale-95"
-                disabled={!value.trim() || disabled || isSending}
-                onClick={() => void submitMessage()}
-              >
-                <Send data-icon="inline-start" className="size-4" />
-                <span className="hidden md:inline font-semibold">{isSending ? "发送中…" : "发送任务"}</span>
-              </Button>
+            <div className="flex shrink-0 items-center gap-3 md:w-full md:justify-between md:pt-2.5 md:border-t md:border-border/50">
+              <p className="hidden items-center gap-1.5 px-2 text-[11px] text-muted-foreground md:flex">
+                <CornerDownLeft aria-hidden="true" className="size-3 text-primary" />
+                Enter 发送 · Shift + Enter 换行 · 输入 @ 召唤角色
+              </p>
+              <div className="ml-auto flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="hidden size-9 rounded-full md:inline-flex"
+                  disabled={!value || isSending}
+                  onClick={clearInput}
+                  aria-label="清空输入框"
+                  title="清空输入框"
+                >
+                  <Trash2 className="size-4" />
+                </Button>
+                <Button
+                  type="button"
+                  size="lg"
+                  className="size-10 rounded-full px-0 md:h-9.5 md:w-auto md:px-5 shadow-md transition-all active:scale-95"
+                  disabled={!value.trim() || disabled || isSending}
+                  onClick={() => void submitMessage()}
+                >
+                  <Send data-icon="inline-start" className="size-4" />
+                  <span className="hidden md:inline font-semibold">{isSending ? "发送中…" : "发送任务"}</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>

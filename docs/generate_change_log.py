@@ -561,6 +561,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "feat: 群聊支持输入@弹出角色列表并路由到被@模型执行任务": {
+        "type": "Requirement",
+        "content": "群聊输入@弹出角色列表并路由到被@模型：前端在输入框正上方弹出角色候选菜单，支持中文句中无空格与全角＠触发，支持按角色名/职责/模型多维模糊搜索与键盘导航；后端增强艾特解析，支持按姓名/角色/模型名称/中文别名路由至对应 Agent，并由编排器调用该角色的专属模型执行任务",
+        "frontend": "新增 mention-utils.ts（艾特探测、多维过滤、文本替换）；重构 mention-menu.tsx 展示角色标签与模型标识；升级 chat-composer.tsx 输入框相对定位包裹并对接工具库；新增 mention-utils.test.mjs 单元测试",
+        "backend": "message_hub.py 引入 _ROLE_ALIASES，增强 _select_agent 与 _match_integration_node 支持姓名/角色/模型/别名多维解析；test_message_hub.py 增补 6 大路由测试",
+        "db": "否",
+        "breaking": "否",
+        "verify": "前端测试 50 passed；eslint 0 错误；next build 成功；后端 flake8 0 错误；pytest 全量通过",
+        "notes": "PRD: docs/prd/PRD-群聊艾特角色弹出与模型路由.md；已通过 A/B 冒烟测试",
+    },
     "fix: 解决 app/core/__init__.py 与 app/db/session.py 的循环导入问题": {
         "type": "BUG",
         "content": "修复后端容器启动失败缺陷：优化 app/core/__init__.py 的导出内容，解除与 app/db/session.py 的部分循环初始化依赖，确保 Docker 镜像启动与 Uvicorn 服务平滑拉起",

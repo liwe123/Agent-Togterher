@@ -75,3 +75,76 @@ async def test_receive_user_message_broadcasts_before_dispatch(
     assert task.status == TaskStatus.PENDING
     assert message is not None
     assert message.content == "整理这次需求"
+
+
+@pytest.mark.asyncio
+async def test_receive_user_message_routes_to_agent_by_role_model_and_alias(
+    message_hub_session,
+) -> None:
+    workspace, conversation, manager = await create_message_hub_graph(
+        message_hub_session
+    )
+    qa_agent = Agent(
+        workspace_id=workspace.id,
+        name="测试专员",
+        role="qa_engineer",
+        model_name="review_model",
+        system_prompt="QA checks",
+        status="idle",
+    )
+    fe_agent = Agent(
+        workspace_id=workspace.id,
+        name="前端设计师",
+        role="frontend_designer",
+        model_name="code_model",
+        system_prompt="Frontend styling",
+        status="idle",
+    )
+    message_hub_session.add_all([qa_agent, fe_agent])
+    await message_hub_session.commit()
+
+    hub = MessageHub(message_hub_session, dispatcher=lambda tid: None)
+
+    async def complete_task(task_id: int) -> None:
+        t = await message_hub_session.get(Task, task_id)
+        if t is not None:
+            t.status = TaskStatus.COMPLETED
+            await message_hub_session.commit()
+
+    # 1. Mention by agent name
+    r1 = await hub.receive_user_message(conversation.id, "@测试专员 执行回归测试")
+    assert r1.assigned_agent.id == qa_agent.id
+    assert r1.task.assigned_agent_id == qa_agent.id
+    assert r1.assigned_agent.model_name == "review_model"
+    await complete_task(r1.task.id)
+
+    # 2. Mention by role
+    r2 = await hub.receive_user_message(conversation.id, "@qa_engineer run review")
+    assert r2.assigned_agent.id == qa_agent.id
+    assert r2.task.assigned_agent_id == qa_agent.id
+    await complete_task(r2.task.id)
+
+    # 3. Mention by model_name
+    r3 = await hub.receive_user_message(conversation.id, "@review_model analyze this")
+    assert r3.assigned_agent.id == qa_agent.id
+    assert r3.task.assigned_agent_id == qa_agent.id
+    await complete_task(r3.task.id)
+
+    # 4. Mention by role alias
+    r4 = await hub.receive_user_message(conversation.id, "@前端 请优化布局")
+    assert r4.assigned_agent.id == fe_agent.id
+    assert r4.task.assigned_agent_id == fe_agent.id
+    assert r4.assigned_agent.model_name == "code_model"
+    await complete_task(r4.task.id)
+
+    # 5. Mention with fullwidth ＠
+    r5 = await hub.receive_user_message(conversation.id, "＠前端设计师 更新样式")
+    assert r5.assigned_agent.id == fe_agent.id
+    assert r5.task.assigned_agent_id == fe_agent.id
+    await complete_task(r5.task.id)
+
+    # 6. Mention embedded in Chinese text without spaces
+    r6 = await hub.receive_user_message(conversation.id, "这个功能@测试专员请复核")
+    assert r6.assigned_agent.id == qa_agent.id
+    assert r6.task.assigned_agent_id == qa_agent.id
+    await complete_task(r6.task.id)
