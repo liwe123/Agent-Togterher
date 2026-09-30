@@ -79,6 +79,7 @@ AgentOrchestrator 领取任务 -> call_agent_model
 ### FR1：触发与字符兼容
 - 支持半角 `@` 与全角 `＠` 字符触发。
 - 支持紧随中文字符、英文字符或标点符号输入时触发，不强制要求前面存在空格。
+- 排除普通邮箱地址（当 `@` 紧随英文字母/数字/下划线时，如 `user@example.com`，不弹出候选弹窗）。
 - 当光标移动到包含空格或其它艾特符号的文本后时，自动关闭候选弹窗。
 
 ### FR2：对话框上方定位与视觉呈现
@@ -96,20 +97,26 @@ AgentOrchestrator 领取任务 -> call_agent_model
   - 角色姓名（如“测试专员”）
   - 角色标识（如“qa_engineer”、“agent_engineer”）
   - 角色标签（如“前端设计师”）
+  - 角色中文别名（如“后端”、“架构师”、“QA”、“方案设计”）
   - 模型代号（如“code_model”、“review_model”、“manager_model”）
   - 职责描述关键字（如“架构”、“代码”、“测试”）
 
 ### FR4：全套键盘与触控交互
-- 上下方向键（`ArrowUp` / `ArrowDown`）循环切换高亮项。
-- `Enter` 键确认选中当前高亮角色，自动在输入框替换为 `@角色名 ` 并在末尾补全空格。
-- `Escape` 键关闭候选弹窗。
+- 上下方向键（`ArrowUp` / `ArrowDown`）循环切换高亮项，列表自动平滑滚动保证高亮项处于可视区。
+- `Enter` 与 `Tab` 键确认选中当前高亮角色，自动在输入框替换为 `@角色名 ` 并在末尾补全空格。
+- 输入法输入合成态（IME Composition，`isComposing`）期间，回车确认候选字不会误触发菜单选中。
+- `Escape` 键或点击页面外部空白区域自动关闭候选弹窗。
 - 鼠标点击选项即时选中，光标保持聚焦在输入框合适位置。
 
-### FR5：后端艾特多维路由解析
-- 后端 `MessageHub._select_agent`：
-  - 优先按精确 mention token 匹配 `agent.name`、`agent.role`、`agent.model_name` 以及预设别名表（`_ROLE_ALIASES`）。
-  - 若未分词匹配（中文无空格直接连缀，如 `@测试专员帮我测试`），执行子串位置探测，按出现位置由前至后、匹配长度由长至短排序命中。
-  - 内部 Agent 优先于外部集成节点；若均未匹配则兜底由默认 Manager 接收。
+### FR5：后端艾特统一多维路由解析
+- 后端 `MessageHub` 统筹解析消息内所有艾特符号：
+  - 统一识别内部 Agent（姓名、角色标识、模型代号、角色别名表 `_ROLE_ALIASES`）与外部集成节点（节点名、提供方代号）。
+  - 按正文先后顺序以首个有效提及优先（文本位置最早的一处决定任务流向）。
+  - 同一位置支持最长候选词优先匹配（如 `@测试专员` 优先于 `@测试`）。
+  - 英文候选词严格校验单词边界，避免 `@coder` 误匹配 `code`。
+  - 识别并跳过普通邮箱格式（如 `user@example.com`）。
+  - 相同起始位置与长度下，内部 Agent 优先于外部集成节点；若均未匹配则兜底由默认 Manager 接收。
+  - 防御性异常处理：若工作区无可用 Agent 且未艾特外部节点，返回友好 400 校验异常。
 
 ### FR6：精准模型调用与任务执行
 - 任务生成时准确记录 `assigned_agent_id`。
@@ -120,11 +127,13 @@ AgentOrchestrator 领取任务 -> call_agent_model
 ## 6. 验收标准 (AC)
 
 - **AC1**：在对话框输入“@”或“＠”，正上方立即出现角色列表弹窗，弹窗内完整展示角色名、职责、模型和在线状态。
-- **AC2**：输入“@qa”或“@测试”，能实时过滤出测试专员；按回车后输入框变为 `@测试专员 `。
-- **AC3**：在中文句中输入（如“请处理@Agent”），无需空格即可顺利弹出候选列表。
-- **AC4**：发送包含 `@测试专员`、`@qa_engineer` 或 `@review_model` 的消息，后端返回的 Task 正确绑定到测试专员（`model_name="review_model"`）。
-- **AC5**：前端 TypeScript 检查与单元测试全部通过（`npm test` 50 passed，`npm run lint` 0 错误，`npm run build` 成功）。
-- **AC6**：后端回归测试与 flake8 检查全部通过（pytest 全量通过，flake8 0 错误）。
+- **AC2**：输入“@qa”、“@测试”或“@后端”，能实时过滤出对应角色；按回车或 Tab 后输入框自动补全。
+- **AC3**：在中文句中输入（如“请处理@Agent”），无需空格即可顺利弹出候选列表；输入邮箱（如 `user@example.com`）不会误弹菜单。
+- **AC4**：中文输入法键入拼音过程中，按回车确认拼音文字不会误拦截或选中菜单项。
+- **AC5**：发送包含 `@测试专员`、`@qa_engineer`、`@review_model` 或 `@后端` 的消息，后端返回的 Task 正确绑定到对应角色模型（如 `model_name="review_model"` 或 `model_name="backend_model"`）。
+- **AC6**：消息中混合提及内部 Agent 与外部节点时，按首个出现位置准确路由，中文无空格语境下不发生顺序倒挂。
+- **AC7**：前端 TypeScript 检查与单元测试全部通过（`npm test` 52 passed，`npm run lint` 0 错误，`npm run build` 成功）。
+- **AC8**：后端回归测试与 flake8 检查全部通过（pytest 消息路由与全量回归用例全部通过，flake8 0 错误）。
 
 ---
 
@@ -132,9 +141,9 @@ AgentOrchestrator 领取任务 -> call_agent_model
 
 | 模块 | 文件 | 改动性质 | 说明 |
 |---|---|---|---|
-| 前端工具 | `frontend/src/lib/mention-utils.ts` | 新增 | 艾特解析、角色列表构建、多维过滤与文本替换工具函数 |
-| 前端组件 | `frontend/src/components/chat/mention-menu.tsx` | 重构 | 弹窗 UI 增强，支持角色标签与模型代号展示，位置样式加固 |
-| 前端组件 | `frontend/src/components/chat/chat-composer.tsx` | 修改 | 输入框包裹相对定位，集成 mention-utils，多维检索与全角兼容 |
-| 前端测试 | `frontend/tests/mention-utils.test.mjs` | 新增 | 覆盖触发检测、中文字符、多维过滤、替换光标等 15 个用例 |
-| 后端逻辑 | `backend/app/core/message_hub.py` | 修改 | 增加 `_ROLE_ALIASES`，增强 `_select_agent` 与节点匹配支持多维标识 |
-| 后端测试 | `backend/tests/test_message_hub.py` | 修改 | 增加姓名、角色、模型名称、别名、全角、中文连缀 6 大路由测试 |
+| 前端工具 | `frontend/src/lib/mention-utils.ts` | 新增 | 艾特解析、角色列表构建、别名映射、多维过滤、邮箱排除与文本替换工具函数 |
+| 前端组件 | `frontend/src/components/chat/mention-menu.tsx` | 重构 | 弹窗 UI 增强，支持角色标签与模型代号展示，键盘高亮项视口滚动 |
+| 前端组件 | `frontend/src/components/chat/chat-composer.tsx` | 修改 | 输入框包裹相对定位，集成 mention-utils，防 IME 误触，支持 Tab 补全与外部点击收起 |
+| 前端测试 | `frontend/tests/mention-utils.test.mjs` | 新增 | 覆盖触发检测、中文字符、邮箱过滤、多维过滤、替换光标等 17 个用例 |
+| 后端逻辑 | `backend/app/core/message_hub.py` | 修改 | 统一首个艾特多维解析（`_resolve_mention_target`），防邮箱与词边界误匹配，扩充别名库，防空 Agent 异常 |
+| 后端测试 | `backend/tests/test_message_hub.py` | 修改 | 增加姓名、角色、模型名称、别名、邮箱跳过、多节点优先级及空工作区等 11 大维度测试 |

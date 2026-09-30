@@ -36,13 +36,16 @@ logger = logging.getLogger(__name__)
 DEFAULT_AGENT_NAME = "项目总设计师"
 _MENTION_PATTERN = re.compile(r"[@＠]([\w-]+)")
 _ROLE_ALIASES: dict[str, tuple[str, ...]] = {
-    "project_architect": ("架构师", "总设计师", "项目总设计师"),
-    "agent_engineer": ("Agent工程师", "后端工程师"),
-    "frontend_designer": ("前端设计师", "前端"),
-    "knowledge_manager": ("知识库管理员", "知识库"),
-    "qa_engineer": ("测试专员", "测试", "测试工程师"),
-    "operations_engineer": ("运维工程师", "运维"),
+    "project_architect": ("架构师", "总设计师", "项目总设计师", "方案设计"),
+    "agent_engineer": ("Agent工程师", "后端工程师", "后端", "后台"),
+    "frontend_designer": ("前端设计师", "前端", "UI", "视觉"),
+    "knowledge_manager": ("知识库管理员", "知识库", "资料管理员", "文档管理员"),
+    "qa_engineer": ("测试专员", "测试", "测试工程师", "QA", "质量审核"),
+    "operations_engineer": ("运维工程师", "运维", "SRE"),
 }
+_ASCII_WORD_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+)
 MAX_RUNNING_TASKS_PER_WORKSPACE = 3
 TaskDispatcher = Callable[[int], None]
 
@@ -223,14 +226,25 @@ class MessageHub:
             )
         )
 
-        # Route @mentions to integration nodes (e.g. "@Cursor") when no internal
-        # agent matches the mention name. This dispatches the task to a connected
-        # external node instead of the internal LLM orchestrator.
-        matched_node = await self._match_integration_node(content, agents, conversation)
-        if matched_node is not None:
-            return await self._create_node_task(conversation, content, matched_node)
+        nodes = list(
+            await self._session.scalars(
+                select(IntegrationNode).where(
+                    IntegrationNode.workspace_id == conversation.workspace_id
+                )
+            )
+        )
+        matched_target = self._resolve_mention_target(content, agents, nodes)
+        if isinstance(matched_target, IntegrationNode):
+            return await self._create_node_task(conversation, content, matched_target)
 
-        assigned_agent = self._select_agent(content, agents)
+        if not agents:
+            raise AppError(400, "Workspace has no available agents")
+
+        assigned_agent = (
+            matched_target
+            if isinstance(matched_target, Agent)
+            else self._default_agent(agents)
+        )
 
         message = Message(
             conversation_id=conversation.id,
@@ -308,20 +322,78 @@ class MessageHub:
                 workspace_id,
             )
 
+    @classmethod
+    def _resolve_mention_target(
+        cls,
+        content: str,
+        agents: list[Agent],
+        nodes: list[IntegrationNode],
+    ) -> Agent | IntegrationNode | None:
+        """Find the earliest valid @mention target in the content.
+
+        Supports:
+        - Internal agents via agent.name, agent.role, agent.model_name, and _ROLE_ALIASES.
+        - Integration nodes via node.name and node.provider.
+        - Chinese text immediately following the mention without delimiter.
+        - Full-width '＠' and half-width '@'.
+        - Excludes email addresses (where '@' is preceded by an ASCII word char).
+        - Word boundary enforcement for English candidate tokens (e.g. '@coder' does not match 'code').
+        - Longest-match prioritization when candidate names share a prefix.
+        - Internal Agent taking priority over IntegrationNode if both match at the same earliest position.
+        """
+        if not content:
+            return None
+
+        candidates: list[tuple[str, int, Agent | IntegrationNode]] = []
+        for agent in agents:
+            terms = {agent.name, agent.role, getattr(agent, "model_name", None)}
+            terms.update(_ROLE_ALIASES.get(agent.role, ()))
+            for term in terms:
+                if term and term.strip():
+                    candidates.append((term.strip(), 0, agent))
+
+        for node in nodes:
+            terms = {node.name, getattr(node, "provider", None)}
+            for term in terms:
+                if term and term.strip():
+                    candidates.append((term.strip(), 1, node))
+
+        mention_positions = [
+            i for i, ch in enumerate(content) if ch == "@" or ch == "＠"
+        ]
+
+        for at_idx in mention_positions:
+            if at_idx > 0 and content[at_idx - 1] in _ASCII_WORD_CHARS:
+                continue
+
+            subtext = content[at_idx + 1 :]
+            subtext_lower = subtext.lower()
+
+            best_match: tuple[int, int, Agent | IntegrationNode] | None = None
+            for term, priority, target in candidates:
+                term_lower = term.lower()
+                if not subtext_lower.startswith(term_lower):
+                    continue
+
+                term_len = len(term_lower)
+                if term[-1] in _ASCII_WORD_CHARS:
+                    if term_len < len(subtext) and subtext[term_len] in _ASCII_WORD_CHARS:
+                        continue
+
+                match_score = (term_len, -priority)
+                if best_match is None or match_score > (best_match[0], -best_match[1]):
+                    best_match = (term_len, priority, target)
+
+            if best_match is not None:
+                return best_match[2]
+
+        return None
+
     async def _match_integration_node(
         self, content: str, agents: list[Agent], conversation: Conversation
     ) -> IntegrationNode | None:
-        """Return the integration node whose ``name`` or ``provider`` matches the first
-        @mention that is not already an internal agent name."""
-        agents_by_name = {agent.name.lower(): agent for agent in agents}
-        agents_by_role = {agent.role.lower(): agent for agent in agents}
-        agents_by_model = {agent.model_name.lower(): agent for agent in agents}
-        alias_to_agent = {
-            alias.lower(): agent
-            for agent in agents
-            for alias in _ROLE_ALIASES.get(agent.role, ())
-        }
-
+        """Return the integration node if the first valid mention in content is an
+        integration node rather than an internal agent."""
         nodes = list(
             await self._session.scalars(
                 select(IntegrationNode).where(
@@ -329,32 +401,8 @@ class MessageHub:
                 )
             )
         )
-        nodes_by_name = {node.name.lower(): node for node in nodes}
-        nodes_by_provider = {node.provider.lower(): node for node in nodes}
-
-        for name in parse_mentions(content):
-            lowered = name.lower()
-            if (
-                lowered in agents_by_name
-                or lowered in agents_by_role
-                or lowered in agents_by_model
-                or lowered in alias_to_agent
-            ):
-                # An internal agent takes priority over an integration node.
-                return None
-            node = nodes_by_name.get(lowered) or nodes_by_provider.get(lowered)
-            if node is not None:
-                return node
-
-        # Check direct substring matching for integration nodes if no internal agent matched
-        for node in nodes:
-            for term in (node.name, node.provider):
-                if not term:
-                    continue
-                for marker in ("@", "＠"):
-                    if f"{marker}{term.lower()}" in content.lower():
-                        return node
-        return None
+        target = self._resolve_mention_target(content, agents, nodes)
+        return target if isinstance(target, IntegrationNode) else None
 
     async def _create_node_task(
         self,
@@ -423,49 +471,8 @@ class MessageHub:
             raise AppError(404, "Conversation not found")
         return conversation
 
-    @staticmethod
-    def _select_agent(content: str, agents: list[Agent]) -> Agent:
-        agents_by_name = {agent.name.lower(): agent for agent in agents}
-        agents_by_role = {agent.role.lower(): agent for agent in agents}
-        agents_by_model = {agent.model_name.lower(): agent for agent in agents}
-        alias_to_agent = {
-            alias.lower(): agent
-            for agent in agents
-            for alias in _ROLE_ALIASES.get(agent.role, ())
-        }
-
-        for name in parse_mentions(content):
-            lowered = name.lower()
-            agent = (
-                agents_by_name.get(lowered)
-                or agents_by_role.get(lowered)
-                or agents_by_model.get(lowered)
-                or alias_to_agent.get(lowered)
-            )
-            if agent is not None:
-                return agent
-
-        # A direct match also supports Chinese text immediately following the
-        # mention, where a generic parser cannot infer the name boundary.
-        mentioned: list[tuple[int, int, Agent]] = []
-        for agent in agents:
-            aliases = _ROLE_ALIASES.get(agent.role, ())
-            candidates = {agent.name, agent.role, agent.model_name, *aliases}
-            for term in candidates:
-                if not term:
-                    continue
-                positions = [
-                    position
-                    for marker in ("@", "＠")
-                    if (position := content.lower().find(f"{marker}{term.lower()}")) >= 0
-                ]
-                if positions:
-                    mentioned.append((min(positions), -len(term), agent))
-
-        if mentioned:
-            mentioned.sort(key=lambda item: (item[0], item[1], item[2].id))
-            return mentioned[0][2]
-
+    @classmethod
+    def _default_agent(cls, agents: list[Agent]) -> Agent:
         default_agent = next(
             (agent for agent in agents if agent.name == DEFAULT_AGENT_NAME), None
         )
@@ -475,6 +482,13 @@ class MessageHub:
                 f'Default agent "{DEFAULT_AGENT_NAME}" is not configured in the workspace',
             )
         return default_agent
+
+    @classmethod
+    def _select_agent(cls, content: str, agents: list[Agent]) -> Agent:
+        target = cls._resolve_mention_target(content, agents, [])
+        if isinstance(target, Agent):
+            return target
+        return cls._default_agent(agents)
 
 
 async def receive_user_message(

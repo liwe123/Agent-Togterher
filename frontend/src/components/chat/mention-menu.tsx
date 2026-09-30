@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react"
 import { Activity, Circle } from "lucide-react"
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -13,6 +14,15 @@ interface MentionMenuProps {
 }
 
 export function MentionMenu({ items, activeIndex, onSelect }: MentionMenuProps) {
+  const itemRefs = useRef<(HTMLButtonElement | null)[]>([])
+
+  useEffect(() => {
+    const el = itemRefs.current[activeIndex]
+    if (el) {
+      el.scrollIntoView({ block: "nearest" })
+    }
+  }, [activeIndex])
+
   return (
     <div
       role="listbox"
@@ -38,6 +48,9 @@ export function MentionMenu({ items, activeIndex, onSelect }: MentionMenuProps) 
           return (
             <button
               key={entry.key}
+              ref={(el) => {
+                itemRefs.current[index] = el
+              }}
               type="button"
               role="option"
               aria-selected={index === activeIndex}

@@ -40,6 +40,7 @@ export function ChatComposer({
   onSend,
 }: ChatComposerProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const composerContainerRef = useRef<HTMLDivElement>(null)
   const searchParams = useSearchParams()
   const initialValue = useMemo(() => {
     const mentionParam = searchParams.get("mention")
@@ -65,6 +66,24 @@ export function ChatComposer({
     })
     return () => cancelAnimationFrame(frame)
   }, [searchParams])
+
+  useEffect(() => {
+    if (!mention) return
+
+    function handlePointerDown(event: MouseEvent) {
+      if (
+        composerContainerRef.current &&
+        !composerContainerRef.current.contains(event.target as Node)
+      ) {
+        setMention(null)
+      }
+    }
+
+    document.addEventListener("mousedown", handlePointerDown)
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown)
+    }
+  }, [mention])
 
   const allMentionEntries = useMemo<MentionEntry[]>(
     () => buildMentionEntries(agents, integrationNodes),
@@ -121,6 +140,9 @@ export function ChatComposer({
 
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (isMentionOpen) {
+      if (event.nativeEvent.isComposing) {
+        return
+      }
       if (event.key === "ArrowDown") {
         event.preventDefault()
         setActiveMentionIndex(
@@ -135,7 +157,7 @@ export function ChatComposer({
         )
         return
       }
-      if (event.key === "Enter" && !event.shiftKey) {
+      if ((event.key === "Enter" || event.key === "Tab") && !event.shiftKey) {
         event.preventDefault()
         selectMention(filteredEntries[activeMentionIndex])
         return
@@ -240,7 +262,7 @@ export function ChatComposer({
         </div>
 
         {/* Dialogue box container with MentionMenu anchored directly above it */}
-        <div className="relative">
+        <div ref={composerContainerRef} className="relative">
           {isMentionOpen && (
             <MentionMenu
               items={filteredEntries}

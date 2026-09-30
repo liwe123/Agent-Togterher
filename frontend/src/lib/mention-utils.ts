@@ -19,6 +19,15 @@ export const ROLE_LABELS: Record<string, string> = {
   operations_engineer: "运维",
 }
 
+export const ROLE_ALIASES: Record<string, string[]> = {
+  project_architect: ["架构师", "总设计师", "项目总设计师", "方案设计"],
+  agent_engineer: ["后端工程师", "后端", "后台"],
+  frontend_designer: ["前端", "UI", "视觉"],
+  knowledge_manager: ["知识库", "资料管理员", "文档管理员"],
+  qa_engineer: ["测试", "测试工程师", "QA", "质量审核"],
+  operations_engineer: ["运维工程师", "运维", "SRE"],
+}
+
 export interface MentionMatch {
   start: number
   query: string
@@ -32,6 +41,7 @@ export interface MentionEntry {
   subtitle: string
   role?: string
   roleLabel?: string
+  aliases?: string[]
   description?: string
   status: string
 }
@@ -39,6 +49,7 @@ export interface MentionEntry {
 /**
  * Detect mention trigger character (@ or fullwidth ＠) before the caret.
  * Supports triggering in Chinese sentences without requiring preceding whitespace.
+ * Excludes email addresses where @ is preceded by ASCII alphanumeric characters.
  */
 export function findMention(value: string, caret: number): MentionMatch | null {
   const beforeCaret = value.slice(0, caret)
@@ -46,6 +57,11 @@ export function findMention(value: string, caret: number): MentionMatch | null {
   const lastFullAt = beforeCaret.lastIndexOf("＠")
   const lastAt = Math.max(lastHalfAt, lastFullAt)
   if (lastAt === -1) {
+    return null
+  }
+
+  // If immediately preceded by ASCII word character, treat as email address / word identifier
+  if (lastAt > 0 && /[a-zA-Z0-9_]/.test(beforeCaret[lastAt - 1])) {
     return null
   }
 
@@ -83,6 +99,7 @@ export function buildMentionEntries(
     subtitle: agent.model_name,
     role: agent.role,
     roleLabel: ROLE_LABELS[agent.role] ?? agent.role,
+    aliases: ROLE_ALIASES[agent.role] ?? [],
     description: agent.description,
     status: agent.status,
   }))
@@ -95,6 +112,7 @@ export function buildMentionEntries(
     subtitle: node.provider,
     role: "integration",
     roleLabel: "外部节点",
+    aliases: [node.provider],
     description: `外部集成节点 (${node.provider})`,
     status: node.status,
   }))
@@ -103,7 +121,7 @@ export function buildMentionEntries(
 }
 
 /**
- * Filter entries by query matching name, role, role label, model subtitle, or description.
+ * Filter entries by query matching name, role, role label, aliases, model subtitle, or description.
  */
 export function filterMentionEntries(
   entries: MentionEntry[],
@@ -120,7 +138,17 @@ export function filterMentionEntries(
     const matchRole = entry.role?.toLowerCase().includes(q)
     const matchRoleLabel = entry.roleLabel?.toLocaleLowerCase("zh-CN").includes(q)
     const matchDesc = entry.description?.toLocaleLowerCase("zh-CN").includes(q)
-    return Boolean(matchName || matchSubtitle || matchRole || matchRoleLabel || matchDesc)
+    const matchAliases = entry.aliases?.some((alias) =>
+      alias.toLocaleLowerCase("zh-CN").includes(q),
+    )
+    return Boolean(
+      matchName ||
+        matchSubtitle ||
+        matchRole ||
+        matchRoleLabel ||
+        matchDesc ||
+        matchAliases,
+    )
   })
 }
 

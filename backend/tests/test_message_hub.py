@@ -2,9 +2,18 @@ import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
+from app.api.errors import AppError
 from app.core.message_hub import MessageHub
 from app.db.base import Base
-from app.models import Agent, Conversation, Message, Task, TaskStatus, Workspace
+from app.models import (
+    Agent,
+    Conversation,
+    IntegrationNode,
+    Message,
+    Task,
+    TaskStatus,
+    Workspace,
+)
 
 
 class RecordingBroadcaster:
@@ -100,7 +109,24 @@ async def test_receive_user_message_routes_to_agent_by_role_model_and_alias(
         system_prompt="Frontend styling",
         status="idle",
     )
-    message_hub_session.add_all([qa_agent, fe_agent])
+    be_agent = Agent(
+        workspace_id=workspace.id,
+        name="Agent工程师",
+        role="agent_engineer",
+        model_name="backend_model",
+        system_prompt="Backend engineering",
+        status="idle",
+    )
+    node = IntegrationNode(
+        workspace_id=workspace.id,
+        name="Cursor",
+        provider="cursor",
+        mode="bridge",
+        status="online",
+        current_task_count=0,
+        max_concurrency=1,
+    )
+    message_hub_session.add_all([qa_agent, fe_agent, be_agent, node])
     await message_hub_session.commit()
 
     hub = MessageHub(message_hub_session, dispatcher=lambda tid: None)
@@ -148,3 +174,50 @@ async def test_receive_user_message_routes_to_agent_by_role_model_and_alias(
     assert r6.assigned_agent.id == qa_agent.id
     assert r6.task.assigned_agent_id == qa_agent.id
     await complete_task(r6.task.id)
+
+    # 7. Mention by alias @后端 routes to backend model
+    r7 = await hub.receive_user_message(conversation.id, "@后端 实现API服务")
+    assert r7.assigned_agent.id == be_agent.id
+    assert r7.task.assigned_agent_id == be_agent.id
+    assert r7.assigned_agent.model_name == "backend_model"
+    await complete_task(r7.task.id)
+
+    # 8. Chinese text with internal agent mentioned before external integration node
+    r8 = await hub.receive_user_message(
+        conversation.id, "这个任务给@测试专员做，不用@Cursor"
+    )
+    assert r8.assigned_agent.id == qa_agent.id
+    assert r8.task.assigned_agent_id == qa_agent.id
+    await complete_task(r8.task.id)
+
+    # 9. Email address in message does not trigger mention, valid mention follows
+    r9 = await hub.receive_user_message(
+        conversation.id, "联系邮箱 support@example.com，请@后端 处理"
+    )
+    assert r9.assigned_agent.id == be_agent.id
+    assert r9.task.assigned_agent_id == be_agent.id
+    await complete_task(r9.task.id)
+
+    # 10. External integration node mentioned before internal agent routes to node
+    r10 = await hub.receive_user_message(
+        conversation.id, "请让@Cursor先处理，随后交给@测试专员"
+    )
+    assert r10.assigned_agent is None
+    assert r10.task.assigned_agent_id is None
+    await complete_task(r10.task.id)
+
+
+@pytest.mark.asyncio
+async def test_empty_workspace_agents_raises_error(message_hub_session) -> None:
+    workspace = Workspace(name="Empty workspace", description="no agents")
+    message_hub_session.add(workspace)
+    await message_hub_session.flush()
+    conversation = Conversation(workspace_id=workspace.id, title="Empty chat")
+    message_hub_session.add(conversation)
+    await message_hub_session.commit()
+
+    hub = MessageHub(message_hub_session, dispatcher=lambda tid: None)
+    with pytest.raises(AppError) as exc_info:
+        await hub.receive_user_message(conversation.id, "你好")
+    assert exc_info.value.status_code == 400
+    assert "no available agents" in exc_info.value.message

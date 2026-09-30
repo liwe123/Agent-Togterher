@@ -46,6 +46,12 @@ describe("mention-utils", () => {
       assert.equal(mod.findMention(text, text.length), null)
     })
 
+    it("returns null when @ is preceded by ASCII word character (email address)", () => {
+      const text = "contact@example.com"
+      assert.equal(mod.findMention(text, 8), null)
+      assert.equal(mod.findMention("user@", 5), null)
+    })
+
     it("returns last mention when multiple mentions exist in text", () => {
       const text = "@架构师 请通知 @前端"
       const match = mod.findMention(text, text.length)
@@ -106,14 +112,16 @@ describe("mention-utils", () => {
         name: "项目总设计师",
         role: "project_architect",
         roleLabel: "项目总设计师",
+        aliases: ["架构师", "总设计师", "方案设计"],
         subtitle: "manager_model",
-        description: "架构与方案拆解",
+        description: "总体方案拆解",
       },
       {
         key: "agent-2",
         name: "测试专员",
         role: "qa_engineer",
         roleLabel: "测试专员",
+        aliases: ["测试", "QA", "质量审核"],
         subtitle: "review_model",
         description: "质量验证与缺陷复现",
       },
@@ -144,6 +152,16 @@ describe("mention-utils", () => {
       assert.equal(res[0].name, "测试专员")
     })
 
+    it("matches by role alias", () => {
+      const res1 = mod.filterMentionEntries(entries, "方案")
+      assert.equal(res1.length, 1)
+      assert.equal(res1[0].name, "项目总设计师")
+
+      const res2 = mod.filterMentionEntries(entries, "质量")
+      assert.equal(res2.length, 1)
+      assert.equal(res2[0].name, "测试专员")
+    })
+
     it("matches by model subtitle", () => {
       const res = mod.filterMentionEntries(entries, "manager")
       assert.equal(res.length, 1)
@@ -151,9 +169,9 @@ describe("mention-utils", () => {
     })
 
     it("matches by description keyword", () => {
-      const res = mod.filterMentionEntries(entries, "架构")
+      const res = mod.filterMentionEntries(entries, "缺陷")
       assert.equal(res.length, 1)
-      assert.equal(res[0].name, "项目总设计师")
+      assert.equal(res[0].name, "测试专员")
     })
   })
 
