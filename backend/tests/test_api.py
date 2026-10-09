@@ -608,7 +608,13 @@ def test_message_hub_requires_default_agent_before_writing(
         f"/api/conversations/{conversation['id']}/messages",
         json={"sender_type": "user", "content": "No configured recipient"},
     )
-    assert response.status_code == 422
+    # 契约以 PRD-群聊艾特角色弹出与模型路由 L119 为准：工作区无可用 Agent 且未
+    # 艾特外部节点时返回 400 校验异常。C-247 已把实现与该 PRD 对齐，本用例此前
+    # 仍断言 422 属过时预期（C-247 只同步了 test_message_hub.py）。
+    assert response.status_code == 400
+    body = response.json()
+    assert body["success"] is False
+    assert "no available agents" in body["error"]
     assert assert_success(
         api_client.get(f"/api/conversations/{conversation['id']}/messages")
     ) == []
