@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>32</b> 份</span>
-        <span>变更记录 <b>247</b> 条</span>
-        <span>生成于 2026-09-30 22:07</span>
+        <span>变更记录 <b>250</b> 条</span>
+        <span>生成于 2026-10-09 20:44</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -4239,6 +4239,54 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否</td>
 <td>前端测试 52 passed；eslint 0 错误；next build 成功；后端 flake8 0 错误；pytest 全量通过</td>
 <td>独立复核修复 6 处缺陷（节点顺序倒挂、IME 输入拦截、邮箱误判、别名遗漏、空工作区崩溃、视口滚动缺失）</td>
+</tr>
+<tr>
+<td>2026-09-30 22:08</td>
+<td>C-248</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/73f0c9c">73f0c9c</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>docs: 登记艾特缺陷修复变更记录并重生成（C-247）</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>-</td>
+<td>-</td>
+</tr>
+<tr>
+<td>2026-10-09 20:43</td>
+<td>C-249</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/9d5149b">9d5149b</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、后端、前端</td>
+<td>补齐 20260925 报告 P2-4/P2-5 未落地的质量门禁：前端类型检查与页面编译入 CI；CI flake8 第二遍去掉 --exit-zero 成为真门禁并清零 79 项存量违规；新增本地/CI 一致的 flake8 与 pytest 配置，并把 pytest 告警升级为错误</td>
+<td>package.json 新增 typecheck 脚本（tsc --noEmit）；CI test-frontend 增加 Typecheck 与 Build 两步，补齐此前「类型安全与页面编译无门禁」的缺口</td>
+<td>清零 79 项 flake8 违规（25 处未用导入、7 处未用变量、7 处超长行、11 处复杂度以行内 noqa 显式豁免、E302/W291/W293 等空白与空行）；新增 backend/.flake8 与 backend/pytest.ini（timeout 120 / session 900 / filterwarnings=error，仅放行第三方噪声）；修 test_integrations.py 将同步 prepare_task 误用 AsyncMock 造成的协程泄漏；test_websocket_auth.py 钉 48 字节 JWT 密钥消除弱密钥告警</td>
+<td>否</td>
+<td>否</td>
+<td>后端 272 passed（告警门禁开启、0 告警）；flake8 严格参数 0 违规；前端 typecheck 0 错误 / build 成功 / lint 0 / npm test 52 passed</td>
+<td>告警门禁当场抓到 test_integrations.py 的 AsyncMock 误用（真实缺陷）；11 处存量 C901 复杂度债已行内标注，重构另行立项；PG/Redis job 的告警面因本机 Docker 守护进程未启动无法本地复跑，待 CI 验证</td>
+</tr>
+<tr>
+<td>2026-10-09 20:43</td>
+<td>C-250</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/ab60842">ab60842</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>后端</td>
+<td>修复 C-247 引入的 API 级用例回归：C-247 按 PRD 把「工作区无可用 Agent」改为 400 校验异常并同步了 test_message_hub.py，但 tests/test_api.py 仍断言 422，导致 HEAD 上该用例确定性失败（全量 1 failed / 271 passed），文档仍宣称 270 passed</td>
+<td>-</td>
+<td>tests/test_api.py 的 test_message_hub_requires_default_agent_before_writing 改断言 400 + success=false + 文案含 no available agents，保留「不落库」断言，并注明契约来源为 PRD-群聊艾特角色弹出与模型路由 L119</td>
+<td>否</td>
+<td>否</td>
+<td>单用例与 tests/test_api.py 全模块通过；全量 272 passed（改前 1 failed / 271 passed）；flake8 0 错误</td>
+<td>契约以 PRD 的 400 为准，属过时测试预期修正，实现无变更</td>
 </tr>
 </tbody>
 </table></div>

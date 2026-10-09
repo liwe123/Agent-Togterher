@@ -566,11 +566,44 @@ CURATED = {
         "verify": "全量 252 passed；flake8 0 错误；alembic autogenerate 零 diff",
         "notes": "PRD: docs/prd/PRD-链路追踪字段.md；结构化日志字段改造另立项",
     },
+    "ab60842": {
+        "type": "BUG",
+        "content": "修复 C-247 引入的 API 级用例回归：C-247 按 PRD 把「工作区无可用 Agent」改为 400 校验异常并同步了 test_message_hub.py，但 tests/test_api.py 仍断言 422，导致 HEAD 上该用例确定性失败（全量 1 failed / 271 passed），文档仍宣称 270 passed",
+        "frontend": "-",
+        "backend": "tests/test_api.py 的 test_message_hub_requires_default_agent_before_writing 改断言 400 + success=false + 文案含 no available agents，保留「不落库」断言，并注明契约来源为 PRD-群聊艾特角色弹出与模型路由 L119",
+        "db": "否",
+        "breaking": "否",
+        "verify": "单用例与 tests/test_api.py 全模块通过；全量 272 passed（改前 1 failed / 271 passed）；flake8 0 错误",
+        "notes": "契约以 PRD 的 400 为准，属过时测试预期修正，实现无变更",
+    },
+    "9d5149b": {
+        "type": "Optimization",
+        # 影响范围显式指定：本批对 models/*.py 的改动只是清除未用导入，并非数据库变更，
+        # 避免按路径推断出「数据库」这一假标签。
+        "scope": "其他、后端、前端",
+        "content": "补齐 20260925 报告 P2-4/P2-5 未落地的质量门禁：前端类型检查与页面编译入 CI；CI flake8 第二遍去掉 --exit-zero 成为真门禁并清零 79 项存量违规；新增本地/CI 一致的 flake8 与 pytest 配置，并把 pytest 告警升级为错误",
+        "frontend": "package.json 新增 typecheck 脚本（tsc --noEmit）；CI test-frontend 增加 Typecheck 与 Build 两步，补齐此前「类型安全与页面编译无门禁」的缺口",
+        "backend": "清零 79 项 flake8 违规（25 处未用导入、7 处未用变量、7 处超长行、11 处复杂度以行内 noqa 显式豁免、E302/W291/W293 等空白与空行）；新增 backend/.flake8 与 backend/pytest.ini（timeout 120 / session 900 / filterwarnings=error，仅放行第三方噪声）；修 test_integrations.py 将同步 prepare_task 误用 AsyncMock 造成的协程泄漏；test_websocket_auth.py 钉 48 字节 JWT 密钥消除弱密钥告警",
+        "db": "否",
+        "breaking": "否",
+        "verify": "后端 272 passed（告警门禁开启、0 告警）；flake8 严格参数 0 违规；前端 typecheck 0 错误 / build 成功 / lint 0 / npm test 52 passed",
+        "notes": "告警门禁当场抓到 test_integrations.py 的 AsyncMock 误用（真实缺陷）；11 处存量 C901 复杂度债已行内标注，重构另行立项；PG/Redis job 的告警面因本机 Docker 守护进程未启动无法本地复跑，待 CI 验证",
+    },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 登记基线修复与质量门禁批次并重生成（C-249/C-250）": {
+        "type": "Optimization",
+        "content": "重生成变更追踪表与 PRD.html，登记 B0 契约修复（C-250）与 P2-4/P2-5 质量门禁批次（C-249）；并修复 generate_change_log.py 中 CURATED 的 scope 覆盖只在 details 分支生效的缺陷，使「影响范围」可按策划值覆盖，而非仅按文件路径推断",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 250 行；xlsx 与 PRD.md 一致；PRD.html 由 32 份 PRD + 250 条记录生成",
+        "notes": "regen 提交自身滞后一行属预期（守则 4 豁免），下次重生成时补齐",
+    },
     "feat: 群聊支持输入@弹出角色列表并路由到被@模型执行任务": {
         "type": "Requirement",
         "content": "群聊输入@弹出角色列表并路由到被@模型：前端在输入框正上方弹出角色候选菜单，支持中文句中无空格与全角＠触发，支持按角色名/职责/模型多维模糊搜索与键盘导航；后端增强艾特解析，支持按姓名/角色/模型名称/中文别名路由至对应 Agent，并由编排器调用该角色的专属模型执行任务",
@@ -1099,7 +1132,9 @@ def git_rows():
             verify = "-"
             notes = "-"
         status = curated.get("status", "已完成") if curated else "已完成"
-        scope = infer_scope(files)
+        # CURATED 的 scope 覆盖此前只在 details 分支生效，普通分支恒用路径推断，
+        # 导致「models/*.py 仅清理未用导入」被误标为数据库改动；此处对齐 details 分支。
+        scope = curated.get("scope", infer_scope(files)) if curated else infer_scope(files)
         rows.append((when, f"C-{next_id:03d}", status, sha, author, ctype, scope,
                      content, fe, be, db, breaking, verify, notes))
         next_id += 1
