@@ -129,8 +129,10 @@ async def test_kill_process_tree_safe_on_dead_process(monkeypatch):
     monkeypatch.setattr("app.services.codex_bridge.sys.platform", "linux")
     # 真实契约：pid 与 kill() 是同步的，只有 wait() 是协程。此前整对象用
     # AsyncMock，kill() 会返回一个从未 await 的协程（ProcessLookupError 被推迟
-    # 到 await 时才抛），兜底分支从未执行、协程被丢弃——CI 上表现为
-    # PytestUnraisableExceptionWarning（本机 Windows 因 GC 时机不同未暴露）。
+    # 到 await 时才抛），兜底分支从未执行、协程被丢弃——CI（Linux）上表现为
+    # PytestUnraisableExceptionWarning。本机 Windows 之所以没暴露，不是因为 GC
+    # 时机，而是 _kill_process_tree 在 win32 分支走 taskkill、根本不调用 kill()，
+    # 协程从未被创建；故本用例显式钉住非 win32 分支（独立验收 P1）。
     proc = MagicMock()
     proc.pid = 999999999
     # 模拟进程已死：同步 kill() 立即抛 ProcessLookupError。
