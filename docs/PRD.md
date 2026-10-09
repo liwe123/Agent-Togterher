@@ -275,6 +275,7 @@ PostgreSQL + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后�
 | 2026-10-09 20:53 | C-252 | 已完成 | [e5f41ae](https://github.com/liwe123/Agent-Togterher/commit/e5f41ae) | LI | Optimization | 其他、文档 | 重生成变更追踪表与 PRD.html：把独立验收子 Agent 的验收结论与三条非阻断提示写入 C-249/C-250 行「备注」列（守则 3 验收闭环），并补齐上一次 regen 提交（2188ae9）自身的滞后行 | - | - | 否 | 否 | 生成 251 行；xlsx 与 PRD.md 一致；PRD.html 由 32 份 PRD + 251 条记录生成 | 本次提交自身行滞后一行属预期（守则 4 豁免），下次重生成时补齐 |
 | 2026-10-09 20:59 | C-253 | 已完成 | [3a8db46](https://github.com/liwe123/Agent-Togterher/commit/3a8db46) | LI | Optimization | 其他、后端 | 按上一轮独立验收提示做反馈整改：收窄 pytest 告警放行面（删除模块无关的 DeprecationWarning / PendingDeprecationWarning 整类放行），并补回两处清理 F841 死变量时被顺带削弱的隐式断言 | - | backend/pytest.ini 放行项改为仅第三方定向；tests/test_rest_rbac.py 恢复 .json()["data"] 隐式信封断言；tests/test_workflows.py 补显式 assert "task_id" in run_data | 否 | 否 | 全量 272 passed（告警门禁开启、0 告警）；flake8 严格参数 0 违规；两文件 F841 = 0 | 独立验收子 Agent 通过（2026-10-09）：以对照探针证明门禁确已变严（整改前 DeprecationWarning 被吞、整改后 FAILED）；验收提出 P-1（验收期间存在并发写入，环境类）与 P-2（新放行仍偏宽），P-2 已由 C-253 进一步收窄为逐条具名第三方对象 |
 | 2026-10-09 21:13 | C-254 | 已完成 | [9a6e5c8](https://github.com/liwe123/Agent-Togterher/commit/9a6e5c8) | LI | BUG | 其他、后端 | 修复告警门禁暴露的真实缺陷并恢复真实 CI 绿：Codex 桥接用例把同步的 kill() 误用 AsyncMock，导致 ProcessLookupError 被推迟到 await、兜底分支从未执行、协程被丢弃（CI 表现为 PytestUnraisableExceptionWarning，且该用例原本零断言）；同时按验收 P-2 把告警放行面从整类放行收窄为逐条具名的第三方对象 | - | tests/test_codex_bridge.py 改用 MagicMock + AsyncMock(wait)、钉住非 win32 分支使断言跨平台确定，并补 kill 调用 2 次与 wait 被 await 一次的断言；pytest.ini 依据 CI 日志枚举结果逐条放行 asyncpg / asyncio / socket 四类析构噪声，本项目协程泄漏仍升级为错误 | 否 | 否 | 本地 272 passed；flake8 严格参数 0 违规；真实 CI（GitHub Actions run for 9a6e5c8）build-linux / test-postgres / test-frontend 三 job 全部 success，为 C-247 以来首次全绿 | 流程披露：因 main 处于红态（红态可追溯至 C-247 的 API 级用例回归，证据：run 73f0c9c 双 job 失败于 assert 400 == 422，已由 C-250 修复），本提交在独立验收前已推送以尽快恢复 CI，偏离守则 4 的时序要求；独立验收已派发，结论随后回写 |
+| 2026-10-09 21:20 | C-255 | 已完成 | [a78b833](https://github.com/liwe123/Agent-Togterher/commit/a78b833) | LI | Optimization | 其他、文档 | 重生成变更追踪表与 PRD.html：登记上一轮验收反馈整改（C-253）与 CI 假红修复（C-254），并把两份独立验收结论、真实 CI 三 job 全绿证据与流程偏离披露写入「备注」列 | - | - | 否 | 否 | 生成 254 行；xlsx 与 PRD.md 一致；PRD.html 由 32 份 PRD + 254 条记录生成 | 本次提交自身行滞后一行属预期（守则 4 豁免），下次重生成时补齐 |
 <!-- CHANGELOG:END -->
 
 ---
@@ -317,6 +318,7 @@ PostgreSQL + LiteLLM + WebSocket。用户在群聊 `@Agent` 派发任务，后�
 | [PRD-DAG工作流引擎.md](prd/PRD-DAG工作流引擎.md) | DAG 工作流引擎（WorkflowRun 运行记录、Kahn 拓扑分层、环检测、层内并行执行、task_steps 节点化落库） | 见追踪表 | C-186 |
 | [PRD-人工审批节点.md](prd/PRD-人工审批节点.md) | HITL 人工审批节点（WAITING_APPROVAL 状态机、approve/reject 端点、DB 轮询解耦跨进程、前端审批按钮） | 见追踪表 | C-185 |
 | [PRD-群聊艾特角色弹出与模型路由.md](prd/PRD-群聊艾特角色弹出与模型路由.md) | 群聊艾特角色弹出与模型路由（输入“@”对话框上方弹出角色列表、多维模糊过滤、后端路由到对应模型） | 见追踪表 | C-245 |
+| [PRD-工作流运行记录与画布可视化.md](prd/PRD-工作流运行记录与画布可视化.md) | 工作流运行记录与画布可视化（运行历史读 API、纯 SVG 分层 DAG 画布、模板表单补齐变量/依赖/删节点，REQ-B1/B2） | 见追踪表 | 见追踪表（实现批次登记后回填） |
 
 ---
 
