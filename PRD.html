@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>32</b> 份</span>
-        <span>变更记录 <b>251</b> 条</span>
-        <span>生成于 2026-10-09 20:53</span>
+        <span>变更记录 <b>254</b> 条</span>
+        <span>生成于 2026-10-09 21:20</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -4303,6 +4303,54 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否</td>
 <td>生成 250 行；xlsx 与 PRD.md 一致；PRD.html 由 32 份 PRD + 250 条记录生成</td>
 <td>regen 提交自身滞后一行属预期（守则 4 豁免），下次重生成时补齐</td>
+</tr>
+<tr>
+<td>2026-10-09 20:53</td>
+<td>C-252</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/e5f41ae">e5f41ae</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>重生成变更追踪表与 PRD.html：把独立验收子 Agent 的验收结论与三条非阻断提示写入 C-249/C-250 行「备注」列（守则 3 验收闭环），并补齐上一次 regen 提交（2188ae9）自身的滞后行</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>生成 251 行；xlsx 与 PRD.md 一致；PRD.html 由 32 份 PRD + 251 条记录生成</td>
+<td>本次提交自身行滞后一行属预期（守则 4 豁免），下次重生成时补齐</td>
+</tr>
+<tr>
+<td>2026-10-09 20:59</td>
+<td>C-253</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/3a8db46">3a8db46</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、后端</td>
+<td>按上一轮独立验收提示做反馈整改：收窄 pytest 告警放行面（删除模块无关的 DeprecationWarning / PendingDeprecationWarning 整类放行），并补回两处清理 F841 死变量时被顺带削弱的隐式断言</td>
+<td>-</td>
+<td>backend/pytest.ini 放行项改为仅第三方定向；tests/test_rest_rbac.py 恢复 .json()["data"] 隐式信封断言；tests/test_workflows.py 补显式 assert "task_id" in run_data</td>
+<td>否</td>
+<td>否</td>
+<td>全量 272 passed（告警门禁开启、0 告警）；flake8 严格参数 0 违规；两文件 F841 = 0</td>
+<td>独立验收子 Agent 通过（2026-10-09）：以对照探针证明门禁确已变严（整改前 DeprecationWarning 被吞、整改后 FAILED）；验收提出 P-1（验收期间存在并发写入，环境类）与 P-2（新放行仍偏宽），P-2 已由 C-253 进一步收窄为逐条具名第三方对象</td>
+</tr>
+<tr>
+<td>2026-10-09 21:13</td>
+<td>C-254</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/9a6e5c8">9a6e5c8</a></td>
+<td>LI</td>
+<td>BUG</td>
+<td>其他、后端</td>
+<td>修复告警门禁暴露的真实缺陷并恢复真实 CI 绿：Codex 桥接用例把同步的 kill() 误用 AsyncMock，导致 ProcessLookupError 被推迟到 await、兜底分支从未执行、协程被丢弃（CI 表现为 PytestUnraisableExceptionWarning，且该用例原本零断言）；同时按验收 P-2 把告警放行面从整类放行收窄为逐条具名的第三方对象</td>
+<td>-</td>
+<td>tests/test_codex_bridge.py 改用 MagicMock + AsyncMock(wait)、钉住非 win32 分支使断言跨平台确定，并补 kill 调用 2 次与 wait 被 await 一次的断言；pytest.ini 依据 CI 日志枚举结果逐条放行 asyncpg / asyncio / socket 四类析构噪声，本项目协程泄漏仍升级为错误</td>
+<td>否</td>
+<td>否</td>
+<td>本地 272 passed；flake8 严格参数 0 违规；真实 CI（GitHub Actions run for 9a6e5c8）build-linux / test-postgres / test-frontend 三 job 全部 success，为 C-247 以来首次全绿</td>
+<td>流程披露：因 main 处于红态（红态可追溯至 C-247 的 API 级用例回归，证据：run 73f0c9c 双 job 失败于 assert 400 == 422，已由 C-250 修复），本提交在独立验收前已推送以尽快恢复 CI，偏离守则 4 的时序要求；独立验收已派发，结论随后回写</td>
 </tr>
 </tbody>
 </table></div>
