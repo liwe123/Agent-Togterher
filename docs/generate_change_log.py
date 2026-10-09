@@ -574,7 +574,7 @@ CURATED = {
         "db": "否",
         "breaking": "否",
         "verify": "单用例与 tests/test_api.py 全模块通过；全量 272 passed（改前 1 failed / 271 passed）；flake8 0 错误",
-        "notes": "契约以 PRD 的 400 为准，属过时测试预期修正，实现无变更",
+        "notes": "契约以 PRD 的 400 为准，属过时测试预期修正，实现无变更；随 C-249 同批通过独立验收（明细见 C-249 备注）",
     },
     "9d5149b": {
         "type": "Optimization",
@@ -587,13 +587,23 @@ CURATED = {
         "db": "否",
         "breaking": "否",
         "verify": "后端 272 passed（告警门禁开启、0 告警）；flake8 严格参数 0 违规；前端 typecheck 0 错误 / build 成功 / lint 0 / npm test 52 passed",
-        "notes": "告警门禁当场抓到 test_integrations.py 的 AsyncMock 误用（真实缺陷）；11 处存量 C901 复杂度债已行内标注，重构另行立项；PG/Redis job 的告警面因本机 Docker 守护进程未启动无法本地复跑，待 CI 验证",
+        "notes": "独立验收子 Agent 通过（2026-10-09，8/8 项，只校验未改动）：改动表字段/中文/类型字面量、严格 flake8（并导出父提交 73f0c9c 独立复现 79 项违规）、前端 typecheck/test/build 复跑、告警门禁探针实测有效、全量 272 passed、重跑两脚本仅新增自身滞后行（守则 4 豁免）、类型判定合规。非阻断提示列入下一批：① pytest.ini 的 DeprecationWarning/PendingDeprecationWarning 放行为模块无关（比「仅第三方噪声」更宽，也会吞本项目自身告警），需收窄为第三方模块限定；② test_rest_rbac.py:262 与 test_workflows.py 两处 F841 清理顺带移除了隐式断言，需补回；③ PG/Redis job 的告警面仍需 CI 验证。告警门禁当场抓到 test_integrations.py 的 AsyncMock 误用（真实缺陷）；11 处存量 C901 复杂度债已行内标注，重构另行立项",
     },
 }
 
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 登记独立验收结论并重生成（C-249/C-250）": {
+        "type": "Optimization",
+        "content": "重生成变更追踪表与 PRD.html：把独立验收子 Agent 的验收结论与三条非阻断提示写入 C-249/C-250 行「备注」列（守则 3 验收闭环），并补齐上一次 regen 提交（2188ae9）自身的滞后行",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 251 行；xlsx 与 PRD.md 一致；PRD.html 由 32 份 PRD + 251 条记录生成",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免），下次重生成时补齐",
+    },
     "docs: 登记基线修复与质量门禁批次并重生成（C-249/C-250）": {
         "type": "Optimization",
         "content": "重生成变更追踪表与 PRD.html，登记 B0 契约修复（C-250）与 P2-4/P2-5 质量门禁批次（C-249）；并修复 generate_change_log.py 中 CURATED 的 scope 覆盖只在 details 分支生效的缺陷，使「影响范围」可按策划值覆盖，而非仅按文件路径推断",
