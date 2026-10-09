@@ -15,6 +15,9 @@ class ReplayFrame(BaseModel):
     input_payload: dict[str, Any] | None = None
     output_payload: dict[str, Any] | None = None
     error_message: str | None = None
+    # FR6：与工作流画布节点对齐（node_id 为公共键）
+    node_id: str | None = None
+    order_index: int | None = None
     model_calls_count: int = 0
     tokens_used: int = 0
     cost_usd: float = 0.0

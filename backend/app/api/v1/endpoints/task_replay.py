@@ -108,6 +108,8 @@ async def get_task_replay_timeline(  # noqa: C901 存量复杂度债（B1 门禁
                 # P0-6：失败步骤的错误文本由 orchestrator/DAG 持久化在 output 中
                 # （见 orchestrator._mark_failed / dag_engine 失败分支）。
                 error_message=(step.output if step.status == "failed" else None),
+                node_id=step.node_id,
+                order_index=step.order_index,
                 model_calls_count=len(step_calls),
                 tokens_used=step_tokens,
                 cost_usd=round(step_cost, 6),

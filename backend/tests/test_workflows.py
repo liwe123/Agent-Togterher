@@ -141,3 +141,118 @@ def test_workflow_lifecycle(workflow_client: TestClient) -> None:
     )
     assert del_res.status_code == 200
     assert del_res.json()["data"]["deleted_id"] == custom_id
+
+
+def test_workflow_run_history_and_isolation(workflow_client: TestClient) -> None:
+    """运行记录读 API（PRD-工作流运行记录与画布可视化 FR1/FR2 + AC1~AC4）。"""
+
+    def register(email: str, name: str) -> tuple[str, int]:
+        res = workflow_client.post(
+            "/api/v1/auth/register",
+            json={"email": email, "password": "Password123!", "display_name": name},
+        )
+        assert res.status_code == 200
+        token = res.json()["data"]["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        ws = workflow_client.get("/api/v1/workspaces/my", headers=headers).json()["data"][0]["id"]
+        return token, ws
+
+    token_a, ws_a = register("wf_runs_a@example.com", "Runs A")
+    headers_a = {"Authorization": f"Bearer {token_a}"}
+
+    nodes = [
+        {
+            "id": "n1",
+            "name": "取数",
+            "agent_role": "coder",
+            "prompt_template": "查询 {{table}} 的近 7 日数据。",
+            "dependencies": [],
+        },
+        {
+            "id": "n2",
+            "name": "复核",
+            "agent_role": "reviewer",
+            "prompt_template": "复核 n1 的结果。",
+            "dependencies": ["n1"],
+        },
+    ]
+    create_res = workflow_client.post(
+        f"/api/v1/workspaces/{ws_a}/workflows",
+        headers=headers_a,
+        json={
+            "name": "runs-api-pipeline",
+            "display_name": "运行记录读 API 流水线",
+            "description": "用于验收运行历史读接口",
+            "nodes": nodes,
+            "variables": [{"key": "table", "label": "表名", "default": "orders"}],
+        },
+    )
+    assert create_res.status_code == 200
+    tpl_id = create_res.json()["data"]["id"]
+
+    run_res = workflow_client.post(
+        f"/api/v1/workspaces/{ws_a}/workflows/{tpl_id}/run",
+        headers=headers_a,
+        json={"variables": {"table": "orders"}},
+    )
+    assert run_res.status_code == 200
+    task_id = run_res.json()["data"]["task_id"]
+
+    # AC1：列表按倒序返回，字段完整
+    list_res = workflow_client.get(
+        f"/api/v1/workspaces/{ws_a}/workflows/{tpl_id}/runs", headers=headers_a
+    )
+    assert list_res.status_code == 200, list_res.text
+    runs = list_res.json()["data"]
+    assert len(runs) >= 1
+    latest = runs[0]
+    assert latest["task_id"] == task_id
+    assert latest["template_id"] == tpl_id
+    assert latest["status"] in {"running", "completed", "failed"}
+    assert latest["created_at"]
+
+    # AC4：详情返回解析后的节点快照（快照为运行时渲染后的节点数组）
+    detail_res = workflow_client.get(
+        f"/api/v1/workspaces/{ws_a}/workflows/{tpl_id}/runs/{latest['id']}",
+        headers=headers_a,
+    )
+    assert detail_res.status_code == 200, detail_res.text
+    detail = detail_res.json()["data"]
+    assert detail["id"] == latest["id"]
+    assert detail["task_id"] == task_id
+    assert isinstance(detail["nodes"], list)
+
+    # AC2：limit 上限 50
+    over = workflow_client.get(
+        f"/api/v1/workspaces/{ws_a}/workflows/{tpl_id}/runs?limit=51", headers=headers_a
+    )
+    assert over.status_code == 422
+
+    # AC3：不存在的 run / 模板
+    missing_run = workflow_client.get(
+        f"/api/v1/workspaces/{ws_a}/workflows/{tpl_id}/runs/999999", headers=headers_a
+    )
+    assert missing_run.status_code == 404
+    missing_tpl = workflow_client.get(
+        f"/api/v1/workspaces/{ws_a}/workflows/999999/runs", headers=headers_a
+    )
+    assert missing_tpl.status_code == 404
+
+    # AC3：非成员访问 → 403（workflow_runs 无 workspace_id，隔离经 tasks 反查）。
+    # 注意：按当前注册语义，新用户会自动加入「第一个」工作区，因此不能拿 B 访问
+    # ws_a 来验证 403；这里由 A 另建一个工作区，B 不是其成员。
+    token_b, _ws_b = register("wf_runs_b@example.com", "Runs B")
+    ws2_res = workflow_client.post(
+        "/api/v1/workspaces",
+        headers=headers_a,
+        json={"name": "Runs 隔离工作区", "description": "验证非成员 403"},
+    )
+    assert ws2_res.status_code == 200
+    ws2 = ws2_res.json()["data"]["id"]
+    assert ws2 != ws_a
+
+    foreign = workflow_client.get(
+        f"/api/v1/workspaces/{ws2}/workflows/{tpl_id}/runs",
+        headers={"Authorization": f"Bearer {token_b}"},
+    )
+    assert foreign.status_code == 403

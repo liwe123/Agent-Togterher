@@ -1,7 +1,7 @@
 import asyncio
 import json
 from typing import Any
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,8 +15,10 @@ from app.models.workflow import WorkflowRun, WorkflowTemplate
 from app.schemas.common import SuccessResponse
 from app.schemas.workflow import (
     WorkflowNode,
+    WorkflowRunDetail,
     WorkflowRunRequest,
     WorkflowRunResponse,
+    WorkflowRunSummary,
     WorkflowTemplateCreate,
     WorkflowTemplateResponse,
     WorkflowVariable,
@@ -375,6 +377,92 @@ async def run_workflow_template(  # noqa: C901 存量复杂度债（B1 门禁清
             message=f"已基于工作流「{tpl.display_name}」成功创建 DAG 任务 #{task.id}（共 {len(nodes_data)} 个节点 / {len(layers)} 层），等待调度执行",
         )
     )
+
+
+async def _load_workspace_template(
+    db: AsyncSession, workspace_id: int, template_id: int
+) -> WorkflowTemplate:
+    """取模板并校验可见性：系统预设全局可见，自定义模板必须属于该工作区。"""
+    tpl = await db.get(WorkflowTemplate, template_id)
+    if tpl is None or (not tpl.is_system and tpl.workspace_id != workspace_id):
+        raise AppError(status_code=404, message="工作流模板不存在")
+    return tpl
+
+
+@router.get(
+    "/{template_id}/runs",
+    response_model=SuccessResponse[list[WorkflowRunSummary]],
+)
+async def list_workflow_runs(
+    workspace_id: int,
+    template_id: int,
+    limit: int = Query(default=20, ge=1, le=50),
+    offset: int = Query(default=0, ge=0),
+    membership: WorkspaceMembership = Depends(require_workspace_role("viewer")),
+    db: AsyncSession = Depends(get_db),
+):
+    """列出某模板的运行记录（按 id 倒序分页）。
+
+    workflow_runs 没有 workspace_id 列，隔离必须经 tasks.workspace_id 反查
+    （inner join），否则可用 template_id 越权读取他工作区的运行记录。
+    """
+    await _load_workspace_template(db, workspace_id, template_id)
+
+    stmt = (
+        select(WorkflowRun)
+        .join(Task, Task.id == WorkflowRun.task_id)
+        .where(
+            WorkflowRun.template_id == template_id,
+            Task.workspace_id == workspace_id,
+        )
+        .order_by(WorkflowRun.id.desc())
+        .limit(limit)
+        .offset(offset)
+    )
+    runs = (await db.scalars(stmt)).all()
+    return SuccessResponse(
+        data=[WorkflowRunSummary.model_validate(run) for run in runs]
+    )
+
+
+@router.get(
+    "/{template_id}/runs/{run_id}",
+    response_model=SuccessResponse[WorkflowRunDetail],
+)
+async def get_workflow_run(
+    workspace_id: int,
+    template_id: int,
+    run_id: int,
+    membership: WorkspaceMembership = Depends(require_workspace_role("viewer")),
+    db: AsyncSession = Depends(get_db),
+):
+    """单次运行详情：解析运行时节点快照，非法/缺失快照返回空列表而不是报错。"""
+    await _load_workspace_template(db, workspace_id, template_id)
+
+    stmt = (
+        select(WorkflowRun)
+        .join(Task, Task.id == WorkflowRun.task_id)
+        .where(
+            WorkflowRun.id == run_id,
+            WorkflowRun.template_id == template_id,
+            Task.workspace_id == workspace_id,
+        )
+    )
+    run = await db.scalar(stmt)
+    if run is None:
+        raise AppError(status_code=404, message="工作流运行记录不存在")
+
+    nodes: list[WorkflowNode] = []
+    if run.snapshot_nodes_json:
+        try:
+            nodes = [WorkflowNode(**n) for n in parse_nodes(run.snapshot_nodes_json)]
+        except Exception:
+            # 快照是展示性数据：损坏不应阻断详情查询（PRD AC4）。
+            nodes = []
+
+    detail = WorkflowRunDetail.model_validate(run)
+    detail.nodes = nodes
+    return SuccessResponse(data=detail)
 
 
 @router.delete("/{template_id}", response_model=SuccessResponse[dict[str, Any]])

@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class WorkflowNode(BaseModel):
@@ -55,3 +55,26 @@ class WorkflowRunResponse(BaseModel):
     title: str
     status: str
     message: str
+
+
+class WorkflowRunSummary(BaseModel):
+    """运行记录列表项（PRD-工作流运行记录与画布可视化 FR1）。
+
+    命名刻意避开 WorkflowRunResponse：后者是「派发一次运行」的响应契约，
+    与「读取历史运行记录」不是一回事。
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    template_id: int
+    task_id: int
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class WorkflowRunDetail(WorkflowRunSummary):
+    """单次运行详情（FR2）：附带运行时节点快照，非法/缺失快照容错为空列表。"""
+
+    nodes: list[WorkflowNode] = Field(default_factory=list)

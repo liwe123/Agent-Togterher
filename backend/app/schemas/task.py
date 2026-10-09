@@ -84,6 +84,11 @@ class TaskStepRead(BaseModel):
     status: str
     started_at: datetime | None
     finished_at: datetime | None
+    # FR6（PRD-工作流运行记录与画布可视化）：DAG 引擎早已落库的节点化三字段，
+    # 此前只写不读，导致任务回放步骤无法与工作流画布节点对齐。
+    node_id: str | None = None
+    dependencies_json: str | None = None
+    order_index: int | None = None
 
     @computed_field
     @property
