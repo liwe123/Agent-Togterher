@@ -122,12 +122,22 @@ async def test_timeout_uses_config_and_kills_tree(tmp_path, monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_kill_process_tree_safe_on_dead_process():
+async def test_kill_process_tree_safe_on_dead_process(monkeypatch):
     """_kill_process_tree must not raise when the process is already gone."""
-    proc = AsyncMock()
+    # _kill_process_tree 按 sys.platform 分叉（win32 走 taskkill，其他走 kill()），
+    # 为保证断言在 Windows 与 Linux 上语义一致，本用例钉住非 win32 分支。
+    monkeypatch.setattr("app.services.codex_bridge.sys.platform", "linux")
+    # 真实契约：pid 与 kill() 是同步的，只有 wait() 是协程。此前整对象用
+    # AsyncMock，kill() 会返回一个从未 await 的协程（ProcessLookupError 被推迟
+    # 到 await 时才抛），兜底分支从未执行、协程被丢弃——CI 上表现为
+    # PytestUnraisableExceptionWarning（本机 Windows 因 GC 时机不同未暴露）。
+    proc = MagicMock()
     proc.pid = 999999999
-    # Simulate kill raising because the process is already dead.
+    # 模拟进程已死：同步 kill() 立即抛 ProcessLookupError。
     proc.kill.side_effect = ProcessLookupError()
-    proc.wait.return_value = -1
+    proc.wait = AsyncMock(return_value=-1)
     # Should not raise.
     await _kill_process_tree(proc)
+    # 首次 kill() 抛错 → 走兜底再次 kill() → 仍抛错并被吞掉；wait() 被 await。
+    assert proc.kill.call_count == 2
+    proc.wait.assert_awaited_once()
