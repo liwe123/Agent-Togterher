@@ -259,9 +259,11 @@ def test_task_run_requires_member_and_cancel_rejects_viewer(
     )
     assert member_created.status_code == 201, member_created.text
 
+    # 保留 .json()["data"] 的隐式信封断言：清理 F841 死变量时不应一并削弱断言
+    # （独立验收 2026-10-09 提示 2）。
     rest_client.post(
         "/api/agents", json=agent_payload(workspace_id), headers=auth(owner_token)
-    ).json()
+    ).json()["data"]
     conversation = rest_client.post(
         "/api/conversations",
         json={"workspace_id": workspace_id, "title": "rbac chat"},

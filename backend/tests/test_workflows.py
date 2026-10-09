@@ -123,6 +123,9 @@ def test_workflow_lifecycle(workflow_client: TestClient) -> None:
     assert run_data["status"] == "pending"
     assert run_data["workflow_id"] == custom_id
     assert "orders" in run_data["title"]
+    # 原为 task_id = run_data["task_id"] 的隐式键存在性检查（F841 清理时被一并
+    # 移除），此处补回为显式断言（独立验收 2026-10-09 提示 2）。
+    assert "task_id" in run_data
 
     # 5. 验证系统预设模板不可删除
     del_sys_res = workflow_client.delete(
