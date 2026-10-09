@@ -1,6 +1,5 @@
 import asyncio
 from collections.abc import Iterator
-import json
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -124,7 +123,6 @@ def test_workflow_lifecycle(workflow_client: TestClient) -> None:
     assert run_data["status"] == "pending"
     assert run_data["workflow_id"] == custom_id
     assert "orders" in run_data["title"]
-    task_id = run_data["task_id"]
 
     # 5. 验证系统预设模板不可删除
     del_sys_res = workflow_client.delete(

@@ -85,10 +85,10 @@ app.add_middleware(
 @app.middleware("http")
 async def authenticate_api_request(request: Request, call_next):
     public_paths = {
-        "/", 
-        f"{settings.api_v1_prefix}/health", 
-        f"{settings.api_v1_prefix}/healthz", 
-        "/docs", 
+        "/",
+        f"{settings.api_v1_prefix}/health",
+        f"{settings.api_v1_prefix}/healthz",
+        "/docs",
         "/openapi.json",
         f"{settings.api_v1_prefix}/auth/register",
         f"{settings.api_v1_prefix}/auth/login",
@@ -105,7 +105,7 @@ async def authenticate_api_request(request: Request, call_next):
         if not is_valid and req_token:
             # Try JWT validation
             is_valid = jwt_user_id(req_token) is not None
-            
+
         if not is_valid:
             return JSONResponse(
                 status_code=401,

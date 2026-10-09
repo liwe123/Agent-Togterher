@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import subprocess
 import sys
-from pathlib import Path
 
 from app.core.config import get_settings
 from app.services.bridge import BaseBridge, BridgeResult, BridgeTask
@@ -58,7 +56,7 @@ class CodexBridge(BaseBridge):
       5. Returns a :class:`BridgeResult` with the final message and artifacts.
     """
 
-    async def execute(self, task: BridgeTask) -> BridgeResult:
+    async def execute(self, task: BridgeTask) -> BridgeResult:  # noqa: C901 存量复杂度债（B1 门禁清零，重构另行立项）
         output_file = task.output_path
         events_file = task.events_path
 

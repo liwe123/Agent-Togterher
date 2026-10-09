@@ -471,7 +471,7 @@ def _sanitize_error_message(error: BaseException) -> str:
     return message[:500]
 
 
-async def chat_completion(
+async def chat_completion(  # noqa: C901 存量复杂度债（B1 门禁清零，重构另行立项）
     model_name: str,
     messages: Sequence[Message],
     temperature: float = 0.7,

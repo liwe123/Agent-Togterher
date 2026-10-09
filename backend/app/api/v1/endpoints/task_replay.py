@@ -35,7 +35,7 @@ _RESUMABLE_TASK_STATUSES = {
 
 
 @router.get("/replay", response_model=SuccessResponse[TaskReplayResponse])
-async def get_task_replay_timeline(
+async def get_task_replay_timeline(  # noqa: C901 存量复杂度债（B1 门禁清零，重构另行立项）
     task_id: int,
     request: Request,
     db: AsyncSession = Depends(get_db),

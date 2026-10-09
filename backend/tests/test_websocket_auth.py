@@ -55,11 +55,17 @@ def settings():
     current = get_settings()
     saved_token = current.app_api_token
     saved_origins = list(current.ws_allowed_origins)
+    saved_jwt_secret = current.jwt_secret_key
+    # HMAC-SHA256 要求密钥 ≥32 字节；本文件多数用例会设置 app_api_token，届时
+    # _get_secret_key() 走 "jwt-<token>" 派生路径（约 19 字节）并触发 PyJWT 的
+    # InsecureKeyLengthWarning。测试显式钉一个长密钥，消除告警噪声。
+    current.jwt_secret_key = SecretStr("ws-auth-test-secret-key-0123456789abcdef")
     try:
         yield current
     finally:
         current.app_api_token = saved_token
         current.ws_allowed_origins = saved_origins
+        current.jwt_secret_key = saved_jwt_secret
 
 
 def expect_policy_violation(client: TestClient, url: str, **kwargs) -> None:

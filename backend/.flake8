@@ -1,0 +1,10 @@
+[flake8]
+# 本地与 CI 对齐的门禁参数（CI: flake8 app tests --count --max-complexity=10
+# --max-line-length=127 --statistics，去掉 --exit-zero 后为真门禁）。
+max-line-length = 127
+max-complexity = 10
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    runs

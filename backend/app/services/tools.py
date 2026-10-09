@@ -77,7 +77,15 @@ async def _tool_query_tasks(
     if status:
         stmt = stmt.where(Task.status == status)
     rows = (await session.scalars(stmt)).all()
-    items = [{"id": t.id, "status": t.status.value if hasattr(t.status, "value") else t.status, "title": (t.title or "")[:80], "result": (t.result or "")[:120]} for t in rows]
+    items = [
+        {
+            "id": t.id,
+            "status": t.status.value if hasattr(t.status, "value") else t.status,
+            "title": (t.title or "")[:80],
+            "result": (t.result or "")[:120],
+        }
+        for t in rows
+    ]
     return json.dumps(items, ensure_ascii=False, default=str)
 
 
@@ -130,7 +138,7 @@ TOOL_SPECS: list[dict] = [
         "function": {
             "name": "get_agents",
             "description": "List configured agents in the current workspace.",
-            "parameters": {"type": "object", "properties": {}}, 
+            "parameters": {"type": "object", "properties": {}},
         },
     },
     {
@@ -256,7 +264,7 @@ def _validate_plugin_arguments(args: dict, parameters) -> str | None:
     return None
 
 
-async def load_active_plugin_tools(session, workspace_id: int | None) -> list[dict]:
+async def load_active_plugin_tools(session, workspace_id: int | None) -> list[dict]:  # noqa: C901 存量复杂度债（B1 门禁清零，重构另行立项）
     """Load the normalized tool records of every plugin enabled in a workspace.
 
     Built-in tool names and duplicate plugin tool names are skipped (first

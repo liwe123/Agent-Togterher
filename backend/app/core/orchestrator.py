@@ -109,7 +109,6 @@ class AgentOrchestrator:
         self._approval_session_factory = approval_session_factory or AsyncSessionLocal
         self._lease_lost_cancel_event: asyncio.Event | None = None
 
-
     @staticmethod
     def _clip_text(value: str | None, limit: int = 800) -> str | None:
         if value is None:

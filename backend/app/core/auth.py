@@ -3,7 +3,6 @@ import hmac
 import os
 import time
 import uuid
-from datetime import datetime, timezone
 
 import jwt
 from sqlalchemy import select

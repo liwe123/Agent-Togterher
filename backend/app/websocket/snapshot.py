@@ -6,7 +6,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import Agent, Message, Task, TaskStatus
+from app.models import Agent, Message, Task
 from app.websocket.events import create_event
 
 logger = logging.getLogger(__name__)

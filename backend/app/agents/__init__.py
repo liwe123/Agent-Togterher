@@ -1,9 +1,9 @@
 """Agent orchestration package.
 
-Manager, Worker, Review, and Final Agent implementations will be added in a
-later phase. Keeping the package now avoids coupling orchestration to HTTP code.
+Role-specific building blocks for the multi-Agent workflow: manager planning,
+worker execution, review and final-result assembly. Keeping the package boundary
+avoids coupling orchestration to HTTP code.
 """
-"""Role-specific building blocks for the multi-Agent workflow."""
 
 from app.agents.final_agent import build_final_result
 from app.agents.manager_agent import (

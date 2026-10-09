@@ -10,6 +10,7 @@ from app.schemas import CustomModelCreate, CustomModelRead, SuccessResponse
 
 router = APIRouter(prefix="/custom-models", tags=["custom-models"])
 
+
 @router.get("", response_model=SuccessResponse[list[CustomModelRead]])
 async def list_custom_models(
     request: Request, session: AsyncSession = Depends(get_db)
@@ -17,6 +18,7 @@ async def list_custom_models(
     await enforce_global_role(request, session, min_role="viewer")
     rows = (await session.execute(select(CustomModelConfig).order_by(CustomModelConfig.id))).scalars().all()
     return SuccessResponse(data=[CustomModelRead.model_validate(r) for r in rows])
+
 
 @router.post("", status_code=status.HTTP_201_CREATED, response_model=SuccessResponse[CustomModelRead])
 async def create_custom_model(
@@ -37,6 +39,7 @@ async def create_custom_model(
     await commit_or_conflict(session, f"Model name '{payload.name}' already exists")
     await session.refresh(cfg)
     return SuccessResponse(data=CustomModelRead.model_validate(cfg))
+
 
 @router.delete("/{name}", response_model=SuccessResponse[dict])
 async def delete_custom_model(

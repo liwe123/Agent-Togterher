@@ -259,9 +259,9 @@ def test_task_run_requires_member_and_cancel_rejects_viewer(
     )
     assert member_created.status_code == 201, member_created.text
 
-    agent = rest_client.post(
+    rest_client.post(
         "/api/agents", json=agent_payload(workspace_id), headers=auth(owner_token)
-    ).json()["data"]
+    ).json()
     conversation = rest_client.post(
         "/api/conversations",
         json={"workspace_id": workspace_id, "title": "rbac chat"},

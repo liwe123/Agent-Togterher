@@ -18,7 +18,8 @@ import json
 import httpx
 import pytest
 
-from app.models import Plugin, Workspace, WorkspacePlugin  # noqa: F401 — populate Base.metadata before db fixtures create tables
+# Importing the models populates Base.metadata before db fixtures create tables.
+from app.models import Plugin, Workspace, WorkspacePlugin  # noqa: F401
 from app.services import tools as tools_service
 from app.services import webhook
 

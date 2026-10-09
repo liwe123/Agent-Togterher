@@ -216,7 +216,11 @@ class MessageHub:
         if active_count is not None and active_count >= MAX_RUNNING_TASKS_PER_WORKSPACE:
             raise AppError(
                 429,
-                f"Workspace has {active_count} active tasks (max {MAX_RUNNING_TASKS_PER_WORKSPACE}). Please wait for some to complete.",
+                (
+                    f"Workspace has {active_count} active tasks "
+                    f"(max {MAX_RUNNING_TASKS_PER_WORKSPACE}). "
+                    "Please wait for some to complete."
+                ),
             )
         agents = list(
             await self._session.scalars(
@@ -323,7 +327,7 @@ class MessageHub:
             )
 
     @classmethod
-    def _resolve_mention_target(
+    def _resolve_mention_target(  # noqa: C901 存量复杂度债（B1 门禁清零，重构另行立项）
         cls,
         content: str,
         agents: list[Agent],
@@ -366,7 +370,7 @@ class MessageHub:
             if at_idx > 0 and content[at_idx - 1] in _ASCII_WORD_CHARS:
                 continue
 
-            subtext = content[at_idx + 1 :]
+            subtext = content[at_idx + 1:]
             subtext_lower = subtext.lower()
 
             best_match: tuple[int, int, Agent | IntegrationNode] | None = None

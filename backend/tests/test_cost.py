@@ -1,6 +1,5 @@
 import asyncio
 from collections.abc import Iterator
-from datetime import datetime, timezone
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
@@ -8,8 +7,6 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
-from app.models.model_call import ModelCall
-from app.models.task import Task
 
 
 @pytest.fixture

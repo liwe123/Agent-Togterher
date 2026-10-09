@@ -12,7 +12,6 @@ from app.models.enums import TaskStatus
 from app.models.membership import WorkspaceMembership
 from app.models.task import Task
 from app.models.workflow import WorkflowRun, WorkflowTemplate
-from app.models.workspace import Workspace
 from app.schemas.common import SuccessResponse
 from app.schemas.workflow import (
     WorkflowNode,
@@ -255,7 +254,7 @@ async def create_workflow_template(
 
 
 @router.post("/{template_id}/run", response_model=SuccessResponse[WorkflowRunResponse])
-async def run_workflow_template(
+async def run_workflow_template(  # noqa: C901 存量复杂度债（B1 门禁清零，重构另行立项）
     workspace_id: int,
     template_id: int,
     payload: WorkflowRunRequest,
@@ -308,7 +307,9 @@ async def run_workflow_template(
             )
             continue
         prompt_sections.append(
-            f"步骤 {idx} [{node.get('name', '未命名步骤')}] (执行角色: {node.get('agent_role', 'agent')}):\n{node.get('prompt_template', '')}"
+            f"步骤 {idx} [{node.get('name', '未命名步骤')}] "
+            f"(执行角色: {node.get('agent_role', 'agent')}):\n"
+            f"{node.get('prompt_template', '')}"
         )
     full_prompt = f"【执行工作流流水线：{tpl.display_name}】\n\n" + "\n\n".join(prompt_sections)
     full_prompt += f"\n\n【DAG 编排概览】\n{build_dag_summary(layers)}"

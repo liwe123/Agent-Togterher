@@ -7,14 +7,12 @@ from collections.abc import Iterator
 import jwt as pyjwt
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from app.core.auth import REFRESH_TOKEN_EXPIRE_DAYS, _get_secret_key, get_jti_from_token
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
-from app.models.refresh_token import RefreshToken
 
 
 @pytest.fixture

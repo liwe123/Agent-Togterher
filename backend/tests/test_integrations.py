@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Iterator
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,7 +13,6 @@ from app.db.session import get_db
 from app.main import app
 from app.services import integration_service
 from app.services.bridge import BridgeResult
-from app.services.integration_service import dispatch_task_to_node
 
 
 @pytest.fixture
@@ -298,12 +297,18 @@ async def test_dispatch_service_supports_result_writes(tmp_path) -> None:
         await session.refresh(task)
         await session.refresh(node)
 
-        bridge = AsyncMock()
-        bridge.execute.return_value = BridgeResult(
-            success=True,
-            message="ok",
-            artifacts=[],
-            metadata={},
+        # BaseBridge.prepare_task() 是同步方法，只有 execute() 是协程。此前把整个
+        # bridge 建成 AsyncMock，prepare_task() 会返回一个从未被 await 的协程
+        # （PytestUnraisableExceptionWarning），prepare_task 的真实返回契约因此
+        # 从未被测到。这里改为 MagicMock + 显式 AsyncMock 的 execute。
+        bridge = MagicMock()
+        bridge.execute = AsyncMock(
+            return_value=BridgeResult(
+                success=True,
+                message="ok",
+                artifacts=[],
+                metadata={},
+            )
         )
         bridge.prepare_task.return_value = type(
             "PreparedTask",

@@ -92,7 +92,13 @@ class TestRedisDistributedEventBus:
 
         # Create async iterator that yields a test message
         async def mock_listen():
-            yield {"type": "message", "channel": "workspace:1:events", "data": b'{"workspace_id":1,"origin_id":"other","event_id":"e1","event":{"type":"task.status_changed","payload":{}},"published_at":"2026-01-01T00:00:00"}'}
+            yield {
+                "type": "message",
+                "channel": "workspace:1:events",
+                "data": b'{"workspace_id":1,"origin_id":"other","event_id":"e1",'
+                b'"event":{"type":"task.status_changed","payload":{}},'
+                b'"published_at":"2026-01-01T00:00:00"}',
+            }
             return
 
         mock_pubsub.listen = mock_listen
@@ -100,7 +106,6 @@ class TestRedisDistributedEventBus:
 
         with patch("app.websocket.distributed.redis.from_url", return_value=mock_redis):
             bus = RedisDistributedEventBus("redis://localhost", "instance-1")
-            handler = AsyncMock()
             # We can't easily test the full async listen loop here without more mocking
             # but we can verify the structure
             assert hasattr(bus, "listen")
@@ -114,16 +119,28 @@ class TestRedisDistributedEventBus:
 
         async def mock_listen():
             # Event from self
-            yield {"type": "message", "channel": "workspace:1:events", "data": b'{"workspace_id":1,"origin_id":"instance-1","event_id":"e1","event":{"type":"test","payload":{}},"published_at":"2026-01-01T00:00:00"}'}
+            yield {
+                "type": "message",
+                "channel": "workspace:1:events",
+                "data": b'{"workspace_id":1,"origin_id":"instance-1","event_id":"e1",'
+                b'"event":{"type":"test","payload":{}},'
+                b'"published_at":"2026-01-01T00:00:00"}',
+            }
             # Event from other
-            yield {"type": "message", "channel": "workspace:1:events", "data": b'{"workspace_id":1,"origin_id":"other","event_id":"e2","event":{"type":"test","payload":{}},"published_at":"2026-01-01T00:00:00"}'}
+            yield {
+                "type": "message",
+                "channel": "workspace:1:events",
+                "data": b'{"workspace_id":1,"origin_id":"other","event_id":"e2",'
+                b'"event":{"type":"test","payload":{}},'
+                b'"published_at":"2026-01-01T00:00:00"}',
+            }
             return
 
         mock_pubsub.listen = mock_listen
         mock_pubsub.punsubscribe = AsyncMock()
 
         with patch("app.websocket.distributed.redis.from_url", return_value=mock_redis):
-            bus = RedisDistributedEventBus("redis://localhost", "instance-1")
+            RedisDistributedEventBus("redis://localhost", "instance-1")
             # The listen method filters out events where origin_id == self._instance_id
             # This is verified by the implementation
 

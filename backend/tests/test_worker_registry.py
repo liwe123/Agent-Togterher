@@ -58,7 +58,7 @@ class TestWorkerRegistry:
             yield mock
 
     def test_build_worker_registry_disabled(self) -> None:
-        with patch("app.core.worker_registry.WorkerRegistry") as MockRegistry:
+        with patch("app.core.worker_registry.WorkerRegistry"):
             reg = build_worker_registry("redis://localhost", "test-id", enabled=False)
             assert isinstance(reg, NoopWorkerRegistry)
 

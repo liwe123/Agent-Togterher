@@ -18,7 +18,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config

@@ -13,4 +13,3 @@ class ProviderKeyValue(BaseModel):
     configured: bool
     masked_key: str | None = None
     source: str | None = None
-

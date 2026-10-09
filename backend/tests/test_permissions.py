@@ -41,7 +41,6 @@ def test_rbac_and_multitenant_flow(rbac_client: TestClient) -> None:
     )
     assert res_u1.status_code == 200
     u1_token = res_u1.json()["data"]["access_token"]
-    u1_id = res_u1.json()["data"]["user"]["id"]
 
     # 2. 查询我的工作区列表
     my_ws_res = rbac_client.get(
@@ -51,7 +50,6 @@ def test_rbac_and_multitenant_flow(rbac_client: TestClient) -> None:
     assert my_ws_res.status_code == 200
     my_workspaces = my_ws_res.json()["data"]
     assert len(my_workspaces) >= 1
-    ws_id = my_workspaces[0]["id"]
     assert my_workspaces[0]["role"] == "owner"
 
     # 3. 创建新工作区

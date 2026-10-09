@@ -63,6 +63,7 @@ class DispatchPackage:
     budget_turns: int | None = None
     dependencies: list[str] | None = None
 
+
 _BRIDGE_FACTORIES: dict[str, Any] = {
     "cursor": lambda ws, name: CursorBridge(ws, name),
     "codex": lambda ws, name: CodexBridge(ws, name),

@@ -9,7 +9,6 @@ from app.core.permissions import require_workspace_role
 from app.db.session import get_db
 from app.models.membership import WorkspaceMembership
 from app.models.plugin import Plugin, WorkspacePlugin
-from app.models.workspace import Workspace
 from app.schemas.common import SuccessResponse
 from app.schemas.plugin import (
     PluginCreate,

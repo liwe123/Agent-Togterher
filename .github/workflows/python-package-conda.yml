@@ -40,7 +40,9 @@ jobs:
         run: |
           pip install flake8
           flake8 app tests --count --select=E9,F63,F7,F82 --show-source --statistics
-          flake8 app tests --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          # 2026-10-01 P2-4：去掉 --exit-zero，第二遍成为真门禁（存量 79 项违规
+          # 已清零；11 处存量 C901 复杂度债以行内 noqa 显式豁免，重构另行立项）。
+          flake8 app tests --count --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Test with pytest
         env:
@@ -114,8 +116,10 @@ jobs:
         run: |
           pytest -q -s --timeout=120 --timeout-method=thread --session-timeout=900
 
-  # 20260907 报告 OPT-2/A3：前端质量门禁（lint + 单测）入 CI。
-  # build 耗时长，首期 lint + test；页面编译由本地 npm run build 门禁保障。
+  # 20260907 报告 OPT-2/A3：前端质量门禁入 CI。
+  # 2026-10-01 P2-4 补齐：首期只有 lint + test，类型安全与页面编译无门禁
+  # （load-ts-module.mjs 用 transpileModule，不做类型检查），故追加 typecheck
+  # 与 build 两步；本地 npm run build 与之等价。
   test-frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -141,3 +145,9 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

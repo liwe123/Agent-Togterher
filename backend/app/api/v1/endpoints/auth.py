@@ -53,6 +53,7 @@ async def _store_refresh_token(db: AsyncSession, user_id: int, token: str) -> No
         )
     )
 
+
 async def get_current_user_dep(request: Request, db: AsyncSession = Depends(get_db)) -> User:
     """FastAPI dependency to extract and validate the current user from JWT."""
     from app.core.security import _bearer_token

@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from typing import Literal
 
-from fastapi import Depends, Request
+from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 

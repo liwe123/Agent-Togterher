@@ -25,7 +25,6 @@ import hashlib
 import hmac
 import json
 import logging
-import time
 from typing import Any
 
 import httpx
@@ -49,7 +48,7 @@ def _is_retryable(status_code: int) -> bool:
     return status_code >= 500
 
 
-async def call_webhook(
+async def call_webhook(  # noqa: C901 存量复杂度债（B1 门禁清零，重构另行立项）
     url: str,
     *,
     method: str = "POST",

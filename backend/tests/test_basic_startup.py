@@ -12,6 +12,7 @@ from app.main import app
 from app.models import Workspace, Agent
 from app.services.litellm_service import ChatCompletionResult, TokenUsage
 
+
 @pytest.fixture
 def basic_client(tmp_path) -> TestClient:
     """Fixture to provide a TestClient using a temporary SQLite database."""
@@ -29,7 +30,7 @@ def basic_client(tmp_path) -> TestClient:
 
     asyncio.run(create_schema())
     app.dependency_overrides[get_db] = override_get_db
-    
+
     # Pre-seed the test database
     async def pre_seed():
         async with session_factory() as session:
@@ -56,16 +57,16 @@ async def test_database_creation(tmp_path) -> None:
     """2. 数据库是否能创建"""
     database_path = tmp_path / "create-test.db"
     engine = create_async_engine(f"sqlite+aiosqlite:///{database_path.as_posix()}")
-    
+
     async with engine.begin() as connection:
         # Create all tables
         await connection.run_sync(Base.metadata.create_all)
-        
+
     async with engine.connect() as connection:
         # Verify that workspaces table exists and is readable
         result = await connection.execute(select(1))
         assert result.scalar() == 1
-        
+
     await engine.dispose()
 
 
