@@ -4,6 +4,9 @@ export interface WorkflowNode {
   agent_role: string
   prompt_template: string
   dependencies: string[]
+  // 后端 WorkflowNode.type 早已存在（agent | human_approval），前端此前缺失，
+  // 导致画布无法区分人工审批节点（B2-M3）。
+  type?: string
 }
 
 export interface WorkflowVariable {
@@ -35,4 +38,19 @@ export interface WorkflowRunResponse {
   title: string
   status: string
   message: string
+}
+
+/** 运行记录列表项（GET .../workflows/{id}/runs）。 */
+export interface WorkflowRunSummary {
+  id: number
+  template_id: number
+  task_id: number
+  status: string
+  created_at: string
+  updated_at: string
+}
+
+/** 单次运行详情：附带运行时节点快照。 */
+export interface WorkflowRunDetail extends WorkflowRunSummary {
+  nodes: WorkflowNode[]
 }

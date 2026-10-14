@@ -6,6 +6,7 @@ import {
   ArrowRight,
   ChevronRight,
   GitBranch,
+  History,
   Layers,
   Loader2,
   Play,
@@ -19,13 +20,16 @@ import {
 } from "lucide-react"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
+import { DagCanvas } from "@/components/workflows/dag-canvas"
 import { usePermissions } from "@/hooks/use-permissions"
 import { useWorkspaces } from "@/hooks/use-workspaces"
 import { requestData } from "@/lib/task-api"
 import { cn } from "@/lib/utils"
 import type {
   WorkflowNode,
+  WorkflowRunDetail,
   WorkflowRunResponse,
+  WorkflowRunSummary,
   WorkflowTemplateItem,
   WorkflowVariable,
 } from "@/types/workflow"
@@ -46,8 +50,11 @@ export default function WorkflowsPage() {
   const [customTitle, setCustomTitle] = useState("")
   const [isSubmittingRun, setIsSubmittingRun] = useState(false)
 
-  // Inspect nodes drawer
+  // Inspect nodes drawer + run history (B2-M2/M3)
   const [inspectTpl, setInspectTpl] = useState<WorkflowTemplateItem | null>(null)
+  const [inspectRuns, setInspectRuns] = useState<WorkflowRunSummary[]>([])
+  const [isLoadingRuns, setIsLoadingRuns] = useState(false)
+  const [inspectRunDetail, setInspectRunDetail] = useState<WorkflowRunDetail | null>(null)
 
   // Create modal state
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -103,6 +110,46 @@ export default function WorkflowsPage() {
     loadedWsIdRef.current = activeWorkspace.id
     void loadWorkflows(activeWorkspace.id)
   }, [activeWorkspace, loadWorkflows])
+
+  const openInspect = (tpl: WorkflowTemplateItem) => {
+    setInspectTpl(tpl)
+    setInspectRunDetail(null)
+    setInspectRuns([])
+    if (!activeWorkspace) return
+    setIsLoadingRuns(true)
+    void (async () => {
+      try {
+        const data = await requestData<WorkflowRunSummary[]>(
+          `/api/v1/workspaces/${activeWorkspace.id}/workflows/${tpl.id}/runs`
+        )
+        setInspectRuns(data)
+      } catch (err: unknown) {
+        setMessage({
+          type: "error",
+          text: err instanceof Error ? err.message : "获取运行记录失败",
+        })
+      } finally {
+        setIsLoadingRuns(false)
+      }
+    })()
+  }
+
+  const openRunDetail = (run: WorkflowRunSummary) => {
+    if (!activeWorkspace || !inspectTpl) return
+    void (async () => {
+      try {
+        const detail = await requestData<WorkflowRunDetail>(
+          `/api/v1/workspaces/${activeWorkspace.id}/workflows/${inspectTpl.id}/runs/${run.id}`
+        )
+        setInspectRunDetail(detail)
+      } catch (err: unknown) {
+        setMessage({
+          type: "error",
+          text: err instanceof Error ? err.message : "获取运行详情失败",
+        })
+      }
+    })()
+  }
 
   const openRunModal = (tpl: WorkflowTemplateItem) => {
     setRunningTpl(tpl)
@@ -347,10 +394,10 @@ export default function WorkflowsPage() {
                     <div className="flex items-center gap-3">
                       <button
                         type="button"
-                        onClick={() => setInspectTpl(tpl)}
+                        onClick={() => openInspect(tpl)}
                         className="text-xs font-medium text-primary hover:underline"
                       >
-                        链路节点详情
+                        链路与运行记录
                       </button>
                       {!tpl.is_system && isAdmin && (
                         <button
@@ -488,7 +535,75 @@ export default function WorkflowsPage() {
                   </button>
                 </div>
 
-                <div className="flex-1 overflow-y-auto space-y-3 pr-1">
+                <div className="flex-1 overflow-y-auto space-y-4 pr-1">
+                  {/* FR4：分层 DAG 画布（依赖连线、人工审批节点独立样式） */}
+                  <DagCanvas nodes={inspectTpl.nodes} />
+
+                  {/* FR3：运行历史 */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                        <History className="size-3.5" />
+                        运行历史
+                      </span>
+                      {isLoadingRuns && (
+                        <Loader2 className="size-3.5 animate-spin text-muted-foreground" />
+                      )}
+                    </div>
+                    {inspectRuns.length === 0 && !isLoadingRuns && (
+                      <p className="rounded-lg border border-dashed border-border px-3 py-2 text-[11px] text-muted-foreground">
+                        暂无运行记录
+                      </p>
+                    )}
+                    {inspectRuns.map((run) => (
+                      <button
+                        key={run.id}
+                        type="button"
+                        onClick={() => openRunDetail(run)}
+                        className={cn(
+                          "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-[11px] transition-colors",
+                          inspectRunDetail?.id === run.id
+                            ? "border-primary/60 bg-primary/5"
+                            : "border-border bg-background/60 hover:bg-secondary/60"
+                        )}
+                      >
+                        <span className="flex items-center gap-2">
+                          <span
+                            className={cn(
+                              "rounded px-1.5 py-0.5 font-mono text-[10px]",
+                              run.status === "completed" && "bg-emerald-500/15 text-emerald-600",
+                              run.status === "failed" && "bg-destructive/15 text-destructive",
+                              run.status === "running" && "bg-amber-500/15 text-amber-600"
+                            )}
+                          >
+                            {run.status}
+                          </span>
+                          <span className="text-muted-foreground">#{run.id}</span>
+                        </span>
+                        <span className="text-muted-foreground">
+                          {new Date(run.created_at).toLocaleString("zh-CN")} · 任务 #{run.task_id}
+                        </span>
+                      </button>
+                    ))}
+                    {inspectRunDetail && (
+                      <div className="rounded-lg border border-border bg-secondary/30 p-3 text-[11px] text-muted-foreground">
+                        <div className="mb-1 font-semibold text-foreground">
+                          运行 #{inspectRunDetail.id} 的节点快照（{inspectRunDetail.nodes.length} 个）
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {inspectRunDetail.nodes.map((node) => (
+                            <span
+                              key={node.id}
+                              className="rounded bg-background/80 px-2 py-0.5 font-mono"
+                            >
+                              {node.name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {inspectTpl.nodes.map((node, idx) => (
                     <div
                       key={node.id}
