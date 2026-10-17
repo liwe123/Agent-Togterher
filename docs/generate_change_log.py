@@ -620,7 +620,18 @@ CURATED = {
         "db": "否",
         "breaking": "否",
         "verify": "后端 274 passed（+1 用例）；flake8 0；前端 62 passed；typecheck 0；lint 0；build 成功",
-        "notes": "来源：B2 复验（HEAD cc4211b）的 3 条非阻塞项。独立验收已派发，结论随后回写",
+        "notes": "来源：B2 复验（HEAD cc4211b）的 3 条非阻塞项。独立验收已通过（2026-10-17，只校验未改动）：3 项整改均已落实、零回归（后端 274 passed / flake8 双遍 0 / 前端 62 passed + typecheck + lint + build）、真实 CI run 39004339143 三 job 全绿、C-263 行字段与实测吻合；指出 1 条边界残留（脏快照时列表计数 2、详情渲染 0）与 2 条测试覆盖建议，边界已由 C-264 统一解析语义消除；「验收前推送」经评估为流程偏离但不影响产物正确性，建议后续整改提交先分支/PR 或暂缓 push",
+    },
+    "df1b78b": {
+        "type": "BUG",
+        "scope": "其他、后端",
+        "content": "统一运行时节点快照的解析语义，消除列表与详情对同一 run 的节点数不一致：此前列表按 parse_nodes 长度计数、详情按 WorkflowNode 校验后的数量，遇到「JSON 数组但节点缺必填字段」的脏快照会出现列表 2、详情 0",
+        "frontend": "-",
+        "backend": "endpoints/workflows.py 抽出 _snapshot_nodes（全有或全无：任一节点不合契约即整份视为损坏并返回空列表），列表与详情共用；test_workflows.py 单测改为覆盖 None/空/非法 JSON/非数组/节点缺必填字段/正常数组六类",
+        "db": "否",
+        "breaking": "否",
+        "verify": "后端 274 passed；flake8 严格参数 0 违规；tests/test_workflows.py 3 passed",
+        "notes": "来源：C-263 复验指出的边界残留（非阻塞，仅脏数据可触发）。端点级脏快照用例与前端渲染测试仍缺，已记入后续测试补强清单",
     },
     "64eccb2": {
         "type": "Optimization",
@@ -682,6 +693,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 登记快照语义统一与 C-263 验收回写（C-265）": {
+        "type": "Optimization",
+        "content": "重生成变更追踪表与 PRD.html：登记 C-265（统一快照解析语义，消除列表/详情节点数边界不一致），并把 C-263 的独立验收结论（通过 + 1 条边界残留 + 2 条测试建议）回写进「备注」列",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 265 行；xlsx 与 PRD.md 一致；PRD.html 由 33 份 PRD + 265 条记录生成",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）",
+    },
     "docs: 登记 B2 复验整改并重生成（C-263）": {
         "type": "Optimization",
         "content": "重生成变更追踪表与 PRD.html，登记 B2 复验三条非阻塞项的整改（C-263）：详情节点数与列表一致、表单重置基线统一、快照解析容错单测",
