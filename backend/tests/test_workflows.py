@@ -143,6 +143,17 @@ def test_workflow_lifecycle(workflow_client: TestClient) -> None:
     assert del_res.json()["data"]["deleted_id"] == custom_id
 
 
+def test_snapshot_node_count_tolerates_corrupted_snapshot() -> None:
+    """快照解析必须容错：缺失/空/非法 JSON/非数组一律按 0，正常数组按长度。"""
+    from app.api.v1.endpoints.workflows import _snapshot_node_count
+
+    assert _snapshot_node_count(None) == 0
+    assert _snapshot_node_count("") == 0
+    assert _snapshot_node_count("{not-json") == 0
+    assert _snapshot_node_count('{"a": 1}') == 0
+    assert _snapshot_node_count('[{"id": "a"}, {"id": "b"}]') == 2
+
+
 def test_workflow_run_history_and_isolation(workflow_client: TestClient) -> None:
     """运行记录读 API（PRD-工作流运行记录与画布可视化 FR1/FR2 + AC1~AC4）。"""
 
@@ -223,6 +234,9 @@ def test_workflow_run_history_and_isolation(workflow_client: TestClient) -> None
     assert detail["id"] == latest["id"]
     assert detail["task_id"] == task_id
     assert isinstance(detail["nodes"], list)
+    # 快照应解析出模板的两个节点，且详情与列表的 nodes_count 必须一致
+    assert len(detail["nodes"]) == 2
+    assert detail["nodes_count"] == 2
 
     # AC2：limit 上限 50
     over = workflow_client.get(

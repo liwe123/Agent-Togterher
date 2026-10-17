@@ -475,6 +475,9 @@ async def get_workflow_run(
 
     detail = WorkflowRunDetail.model_validate(run)
     detail.nodes = nodes
+    # WorkflowRunDetail 继承 nodes_count：不赋值会恒为 0，与列表接口对同一条 run
+    # 返回的节点数不一致（复验指出的潜在陷阱）。
+    detail.nodes_count = len(nodes)
     return SuccessResponse(data=detail)
 
 

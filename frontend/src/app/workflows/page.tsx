@@ -35,6 +35,32 @@ import type {
   WorkflowVariable,
 } from "@/types/workflow"
 
+/** 新建模板的初始草稿：首次打开与创建成功后重置共用同一基线。 */
+function initialDraftNodes(): WorkflowNode[] {
+  return [
+    {
+      id: "node-1",
+      name: "第一阶段：方案设计",
+      agent_role: "manager",
+      prompt_template: "为「{{title}}」设计方案",
+      dependencies: [],
+      type: "agent",
+    },
+    {
+      id: "node-2",
+      name: "第二阶段：代码实现",
+      agent_role: "coder",
+      prompt_template: "根据前序方案实现「{{title}}」核心代码",
+      dependencies: ["node-1"],
+      type: "agent",
+    },
+  ]
+}
+
+function initialDraftVariables(): WorkflowVariable[] {
+  return [{ key: "title", label: "任务主题", default: "新特性开发", required: true }]
+}
+
 export default function WorkflowsPage() {
   const router = useRouter()
   const { activeWorkspace, currentUserRole } = useWorkspaces()
@@ -62,30 +88,8 @@ export default function WorkflowsPage() {
   const [newTplName, setNewTplName] = useState("")
   const [newTplDisplayName, setNewTplDisplayName] = useState("")
   const [newTplDesc, setNewTplDesc] = useState("")
-  const [newNodes, setNewNodes] = useState<WorkflowNode[]>([
-    {
-      id: "node-1",
-      name: "第一阶段：方案设计",
-      agent_role: "manager",
-      prompt_template: "为「{{title}}」设计方案",
-      dependencies: [],
-    },
-    {
-      id: "node-2",
-      name: "第二阶段：代码实现",
-      agent_role: "coder",
-      prompt_template: "根据前序方案实现「{{title}}」核心代码",
-      dependencies: ["node-1"],
-    },
-  ])
-  const [newVariables, setNewVariables] = useState<WorkflowVariable[]>([
-    {
-      key: "title",
-      label: "任务主题",
-      default: "新特性开发",
-      required: true,
-    },
-  ])
+  const [newNodes, setNewNodes] = useState<WorkflowNode[]>(initialDraftNodes)
+  const [newVariables, setNewVariables] = useState<WorkflowVariable[]>(initialDraftVariables)
   const [isCreating, setIsCreating] = useState(false)
 
   const loadedWsIdRef = useRef<number | null>(null)
@@ -297,18 +301,10 @@ export default function WorkflowsPage() {
       setNewTplName("")
       setNewTplDisplayName("")
       setNewTplDesc("")
-      // 重置节点与变量，避免下次打开模态残留上一次的编辑内容
-      setNewNodes([
-        {
-          id: "node-1",
-          name: "阶段 1",
-          agent_role: "coder",
-          prompt_template: "执行对应子任务",
-          dependencies: [],
-          type: "agent",
-        },
-      ])
-      setNewVariables([])
+      // 重置回「初始草稿」而不是空值：否则首次打开与创建后再次打开的表单基线
+      // 不一致（复验非阻塞项）。
+      setNewNodes(initialDraftNodes())
+      setNewVariables(initialDraftVariables())
       void loadWorkflows(activeWorkspace.id)
     } catch (err: unknown) {
       setMessage({ type: "error", text: err instanceof Error ? err.message : "创建模板失败" })
