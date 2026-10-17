@@ -61,7 +61,11 @@ export function DagCanvas<T extends DagNodeLike>({
         {/* 依赖连线：先画线，节点覆盖其上 */}
         {layout.map(({ node, x, y }) =>
           (node.dependencies ?? [])
-            .filter((depId) => positionById.has(depId))
+            // 归一化：排除自依赖、重复依赖与未知依赖，避免自环与重复 path/key
+            .filter(
+              (depId, index, all) =>
+                depId !== node.id && all.indexOf(depId) === index && positionById.has(depId)
+            )
             .map((depId) => {
               const source = positionById.get(depId)!
               const x1 = source.x + NODE_WIDTH / 2

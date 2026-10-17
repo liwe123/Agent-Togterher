@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   ArrowRight,
@@ -251,10 +252,17 @@ export default function WorkflowsPage() {
   }
 
   const addVariable = () => {
-    setNewVariables((prev) => [
-      ...prev,
-      { key: `var_${prev.length + 1}`, label: `变量 ${prev.length + 1}`, default: "", required: true },
-    ])
+    setNewVariables((prev) => {
+      // 不能直接用 length+1：删中间变量后会生成重复 key（后端无唯一性校验，
+      // 运行弹窗按 key 建对象会互相覆盖）。
+      const used = new Set(prev.map((item) => item.key))
+      let seq = prev.length + 1
+      while (used.has(`var_${seq}`)) seq += 1
+      return [
+        ...prev,
+        { key: `var_${seq}`, label: `变量 ${seq}`, default: "", required: true },
+      ]
+    })
   }
 
   const updateVariable = (index: number, patch: Partial<WorkflowVariable>) => {
@@ -289,6 +297,18 @@ export default function WorkflowsPage() {
       setNewTplName("")
       setNewTplDisplayName("")
       setNewTplDesc("")
+      // 重置节点与变量，避免下次打开模态残留上一次的编辑内容
+      setNewNodes([
+        {
+          id: "node-1",
+          name: "阶段 1",
+          agent_role: "coder",
+          prompt_template: "执行对应子任务",
+          dependencies: [],
+          type: "agent",
+        },
+      ])
+      setNewVariables([])
       void loadWorkflows(activeWorkspace.id)
     } catch (err: unknown) {
       setMessage({ type: "error", text: err instanceof Error ? err.message : "创建模板失败" })
@@ -618,18 +638,21 @@ export default function WorkflowsPage() {
                       </p>
                     )}
                     {inspectRuns.map((run) => (
-                      <button
+                      <div
                         key={run.id}
-                        type="button"
-                        onClick={() => openRunDetail(run)}
                         className={cn(
-                          "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-left text-[11px] transition-colors",
+                          "flex w-full items-center justify-between gap-2 rounded-lg border px-3 py-2 text-[11px] transition-colors",
                           inspectRunDetail?.id === run.id
                             ? "border-primary/60 bg-primary/5"
                             : "border-border bg-background/60 hover:bg-secondary/60"
                         )}
                       >
-                        <span className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => openRunDetail(run)}
+                          className="flex flex-1 items-center gap-2 text-left"
+                          title="查看该次运行的节点快照"
+                        >
                           <span
                             className={cn(
                               "rounded px-1.5 py-0.5 font-mono text-[10px]",
@@ -641,11 +664,19 @@ export default function WorkflowsPage() {
                             {run.status}
                           </span>
                           <span className="text-muted-foreground">#{run.id}</span>
-                        </span>
-                        <span className="text-muted-foreground">
-                          {new Date(run.created_at).toLocaleString("zh-CN")} · 任务 #{run.task_id}
-                        </span>
-                      </button>
+                          <span className="text-muted-foreground">{run.nodes_count} 节点</span>
+                          <span className="text-muted-foreground">
+                            {new Date(run.created_at).toLocaleString("zh-CN")}
+                          </span>
+                        </button>
+                        {/* FR3：可直接跳到该次运行产生的任务详情 */}
+                        <Link
+                          href={`/tasks/${run.task_id}`}
+                          className="shrink-0 text-primary hover:underline"
+                        >
+                          任务 #{run.task_id}
+                        </Link>
+                      </div>
                     ))}
                     {inspectRunDetail && (
                       <div className="rounded-lg border border-border bg-secondary/30 p-3 text-[11px] text-muted-foreground">
@@ -888,7 +919,7 @@ export default function WorkflowsPage() {
                     {newVariables.map((v, vIdx) => (
                       <div
                         key={vIdx}
-                        className="grid grid-cols-1 gap-2 rounded-xl border border-border/80 bg-secondary/20 p-2 sm:grid-cols-[1fr,1fr,1fr,auto]"
+                        className="grid grid-cols-1 gap-2 rounded-xl border border-border/80 bg-secondary/20 p-2 sm:grid-cols-[1fr_1fr_1fr_auto]"
                       >
                         <input
                           type="text"

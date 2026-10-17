@@ -379,6 +379,16 @@ async def run_workflow_template(  # noqa: C901 存量复杂度债（B1 门禁清
     )
 
 
+def _snapshot_node_count(snapshot: str | None) -> int:
+    """运行时快照里的节点数；缺失或损坏一律按 0（展示性数据不阻断列表）。"""
+    if not snapshot:
+        return 0
+    try:
+        return len(parse_nodes(snapshot))
+    except Exception:
+        return 0
+
+
 async def _load_workspace_template(
     db: AsyncSession, workspace_id: int, template_id: int
 ) -> WorkflowTemplate:
@@ -420,9 +430,12 @@ async def list_workflow_runs(
         .offset(offset)
     )
     runs = (await db.scalars(stmt)).all()
-    return SuccessResponse(
-        data=[WorkflowRunSummary.model_validate(run) for run in runs]
-    )
+    summaries: list[WorkflowRunSummary] = []
+    for run in runs:
+        summary = WorkflowRunSummary.model_validate(run)
+        summary.nodes_count = _snapshot_node_count(run.snapshot_nodes_json)
+        summaries.append(summary)
+    return SuccessResponse(data=summaries)
 
 
 @router.get(

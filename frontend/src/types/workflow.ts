@@ -48,6 +48,8 @@ export interface WorkflowRunSummary {
   status: string
   created_at: string
   updated_at: string
+  /** 运行时快照的节点数（列表展示用） */
+  nodes_count: number
 }
 
 /** 单次运行详情：附带运行时节点快照。 */

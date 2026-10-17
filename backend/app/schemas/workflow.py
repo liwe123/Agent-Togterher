@@ -72,6 +72,8 @@ class WorkflowRunSummary(BaseModel):
     status: str
     created_at: datetime
     updated_at: datetime
+    # 运行时快照的节点数（FR3 要求列表展示节点数；快照损坏时按 0 计）
+    nodes_count: int = 0
 
 
 class WorkflowRunDetail(WorkflowRunSummary):

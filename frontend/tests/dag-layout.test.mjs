@@ -82,4 +82,15 @@ describe("dag-layout", () => {
     assert.equal(byId.b.y, byId.c.y)
     assert.ok(byId.c.x > byId.b.x)
   })
+
+  it("12 节点宽层与汇点：分层不退化（1 根 → 10 并行 → 1 汇）", () => {
+    const nodes = [{ id: "root" }]
+    for (let i = 1; i <= 10; i += 1) nodes.push({ id: `w${i}`, dependencies: ["root"] })
+    nodes.push({
+      id: "sink",
+      dependencies: Array.from({ length: 10 }, (_, i) => `w${i + 1}`),
+    })
+    const layers = mod.layoutDag(nodes)
+    assert.deepEqual(Array.from(layers, (l) => l.nodes.length), [1, 10, 1])
+  })
 })

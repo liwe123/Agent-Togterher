@@ -210,6 +210,8 @@ def test_workflow_run_history_and_isolation(workflow_client: TestClient) -> None
     assert latest["template_id"] == tpl_id
     assert latest["status"] in {"running", "completed", "failed"}
     assert latest["created_at"]
+    # FR3 要求列表展示节点数：该次运行的两节点模板快照应解析出 2
+    assert latest["nodes_count"] == 2
 
     # AC4：详情返回解析后的节点快照（快照为运行时渲染后的节点数组）
     detail_res = workflow_client.get(
