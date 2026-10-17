@@ -77,7 +77,7 @@ export default function WorkflowsPage() {
       dependencies: ["node-1"],
     },
   ])
-  const [newVariables] = useState<WorkflowVariable[]>([
+  const [newVariables, setNewVariables] = useState<WorkflowVariable[]>([
     {
       key: "title",
       label: "任务主题",
@@ -201,6 +201,68 @@ export default function WorkflowsPage() {
     } catch (err: unknown) {
       setMessage({ type: "error", text: err instanceof Error ? err.message : "删除失败" })
     }
+  }
+
+  // FR5：节点与变量的增删改（此前变量数组连 setter 都没有，依赖恒为空）
+  const addNode = () => {
+    setNewNodes((prev) => {
+      const used = new Set(prev.map((item) => item.id))
+      let seq = prev.length + 1
+      while (used.has(`node-${seq}`)) seq += 1
+      return [
+        ...prev,
+        {
+          id: `node-${seq}`,
+          name: `阶段 ${seq}`,
+          agent_role: "coder",
+          prompt_template: "执行对应子任务",
+          dependencies: [],
+          type: "agent",
+        },
+      ]
+    })
+  }
+
+  const removeNode = (nodeId: string) => {
+    setNewNodes((prev) =>
+      prev
+        .filter((item) => item.id !== nodeId)
+        // 删除节点时必须清理其它节点指向它的依赖，否则会留下悬空引用
+        .map((item) => ({
+          ...item,
+          dependencies: (item.dependencies ?? []).filter((dep) => dep !== nodeId),
+        }))
+    )
+  }
+
+  const toggleDependency = (nodeId: string, depId: string) => {
+    setNewNodes((prev) =>
+      prev.map((item) => {
+        if (item.id !== nodeId) return item
+        const deps = item.dependencies ?? []
+        return {
+          ...item,
+          dependencies: deps.includes(depId)
+            ? deps.filter((dep) => dep !== depId)
+            : [...deps, depId],
+        }
+      })
+    )
+  }
+
+  const addVariable = () => {
+    setNewVariables((prev) => [
+      ...prev,
+      { key: `var_${prev.length + 1}`, label: `变量 ${prev.length + 1}`, default: "", required: true },
+    ])
+  }
+
+  const updateVariable = (index: number, patch: Partial<WorkflowVariable>) => {
+    setNewVariables((prev) => prev.map((item, i) => (i === index ? { ...item, ...patch } : item)))
+  }
+
+  const removeVariable = (index: number) => {
+    setNewVariables((prev) => prev.filter((_, i) => i !== index))
   }
 
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -711,18 +773,7 @@ export default function WorkflowsPage() {
                       </label>
                       <button
                         type="button"
-                        onClick={() =>
-                          setNewNodes((prev) => [
-                            ...prev,
-                            {
-                              id: `node-${prev.length + 1}`,
-                              name: `阶段 ${prev.length + 1}`,
-                              agent_role: "coder",
-                              prompt_template: "执行对应子任务",
-                              dependencies: [],
-                            },
-                          ])
-                        }
+                        onClick={addNode}
                         className="text-xs text-primary hover:underline"
                       >
                         + 添加节点
@@ -731,6 +782,19 @@ export default function WorkflowsPage() {
 
                     {newNodes.map((n, idx) => (
                       <div key={n.id} className="rounded-xl border border-border/80 bg-secondary/20 p-3 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono text-[11px] text-muted-foreground">
+                            #{idx + 1} · {n.id}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeNode(n.id)}
+                            className="text-[11px] text-muted-foreground transition-colors hover:text-destructive"
+                            title="删除该节点并清理其依赖引用"
+                          >
+                            删除节点
+                          </button>
+                        </div>
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                           <input
                             type="text"
@@ -773,6 +837,87 @@ export default function WorkflowsPage() {
                           }}
                           className="w-full rounded-lg border border-border bg-background p-2 text-xs font-mono"
                         />
+                        <div className="space-y-1">
+                          <span className="text-[11px] font-semibold text-muted-foreground">
+                            前置依赖（可多选，同层不含依赖关系）
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {newNodes.filter((item) => item.id !== n.id).length === 0 && (
+                              <span className="text-[11px] text-muted-foreground">暂无其它节点</span>
+                            )}
+                            {newNodes
+                              .filter((item) => item.id !== n.id)
+                              .map((other) => (
+                                <label
+                                  key={other.id}
+                                  className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-background/60 px-2 py-1 text-[11px]"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={(n.dependencies ?? []).includes(other.id)}
+                                    onChange={() => toggleDependency(n.id, other.id)}
+                                  />
+                                  {other.name}
+                                </label>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* FR5：模板变量编辑器（此前变量写死且无 setter） */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-semibold text-foreground">
+                        模板变量 ({newVariables.length})
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addVariable}
+                        className="text-xs text-primary hover:underline"
+                      >
+                        + 添加变量
+                      </button>
+                    </div>
+                    {newVariables.length === 0 && (
+                      <p className="rounded-lg border border-dashed border-border px-3 py-2 text-[11px] text-muted-foreground">
+                        暂无变量；Prompt 中的 {"{{占位符}}"} 需要在此定义后才能在运行时填写
+                      </p>
+                    )}
+                    {newVariables.map((v, vIdx) => (
+                      <div
+                        key={vIdx}
+                        className="grid grid-cols-1 gap-2 rounded-xl border border-border/80 bg-secondary/20 p-2 sm:grid-cols-[1fr,1fr,1fr,auto]"
+                      >
+                        <input
+                          type="text"
+                          placeholder="key"
+                          value={v.key}
+                          onChange={(e) => updateVariable(vIdx, { key: e.target.value })}
+                          className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs font-mono"
+                        />
+                        <input
+                          type="text"
+                          placeholder="展示名"
+                          value={v.label}
+                          onChange={(e) => updateVariable(vIdx, { label: e.target.value })}
+                          className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs"
+                        />
+                        <input
+                          type="text"
+                          placeholder="默认值"
+                          value={v.default ?? ""}
+                          onChange={(e) => updateVariable(vIdx, { default: e.target.value })}
+                          className="rounded-lg border border-border bg-background px-2.5 py-1.5 text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeVariable(vIdx)}
+                          className="rounded-lg border border-border px-2.5 py-1.5 text-[11px] hover:text-destructive"
+                        >
+                          删除
+                        </button>
                       </div>
                     ))}
                   </div>
