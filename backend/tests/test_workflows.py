@@ -143,15 +143,21 @@ def test_workflow_lifecycle(workflow_client: TestClient) -> None:
     assert del_res.json()["data"]["deleted_id"] == custom_id
 
 
-def test_snapshot_node_count_tolerates_corrupted_snapshot() -> None:
-    """快照解析必须容错：缺失/空/非法 JSON/非数组一律按 0，正常数组按长度。"""
-    from app.api.v1.endpoints.workflows import _snapshot_node_count
+def test_snapshot_nodes_tolerates_corrupted_snapshot() -> None:
+    """快照解析容错：缺失/空/非法 JSON/非数组/节点缺必填字段 → 空列表（全有或全无）。"""
+    from app.api.v1.endpoints.workflows import _snapshot_nodes
 
-    assert _snapshot_node_count(None) == 0
-    assert _snapshot_node_count("") == 0
-    assert _snapshot_node_count("{not-json") == 0
-    assert _snapshot_node_count('{"a": 1}') == 0
-    assert _snapshot_node_count('[{"id": "a"}, {"id": "b"}]') == 2
+    assert _snapshot_nodes(None) == []
+    assert _snapshot_nodes("") == []
+    assert _snapshot_nodes("{not-json") == []
+    assert _snapshot_nodes('{"a": 1}') == []
+    # 部分节点缺必填字段时整份视为损坏，避免列表/详情计数不一致
+    assert _snapshot_nodes('[{"id": "a", "name": "A"}, {"id": "b"}]') == []
+    nodes = _snapshot_nodes(
+        '[{"id": "a", "name": "A", "agent_role": "coder", "prompt_template": "p"},'
+        ' {"id": "b", "name": "B", "agent_role": "coder", "prompt_template": "q"}]'
+    )
+    assert [node.id for node in nodes] == ["a", "b"]
 
 
 def test_workflow_run_history_and_isolation(workflow_client: TestClient) -> None:

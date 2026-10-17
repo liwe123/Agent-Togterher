@@ -379,14 +379,19 @@ async def run_workflow_template(  # noqa: C901 存量复杂度债（B1 门禁清
     )
 
 
-def _snapshot_node_count(snapshot: str | None) -> int:
-    """运行时快照里的节点数；缺失或损坏一律按 0（展示性数据不阻断列表）。"""
+def _snapshot_nodes(snapshot: str | None) -> list[WorkflowNode]:
+    """解析运行时节点快照（展示性数据，全有或全无）。
+
+    语义刻意做成「全有或全无」：只要有一个节点不满足 WorkflowNode 契约，就整份
+    快照视为损坏并返回空列表，避免出现「列表显示 N 个节点、详情却渲染 0 个」的
+    计数不一致（独立验收在 HEAD b404530 指出的边界）。
+    """
     if not snapshot:
-        return 0
+        return []
     try:
-        return len(parse_nodes(snapshot))
+        return [WorkflowNode(**node) for node in parse_nodes(snapshot)]
     except Exception:
-        return 0
+        return []
 
 
 async def _load_workspace_template(
@@ -433,7 +438,7 @@ async def list_workflow_runs(
     summaries: list[WorkflowRunSummary] = []
     for run in runs:
         summary = WorkflowRunSummary.model_validate(run)
-        summary.nodes_count = _snapshot_node_count(run.snapshot_nodes_json)
+        summary.nodes_count = len(_snapshot_nodes(run.snapshot_nodes_json))
         summaries.append(summary)
     return SuccessResponse(data=summaries)
 
@@ -465,18 +470,11 @@ async def get_workflow_run(
     if run is None:
         raise AppError(status_code=404, message="工作流运行记录不存在")
 
-    nodes: list[WorkflowNode] = []
-    if run.snapshot_nodes_json:
-        try:
-            nodes = [WorkflowNode(**n) for n in parse_nodes(run.snapshot_nodes_json)]
-        except Exception:
-            # 快照是展示性数据：损坏不应阻断详情查询（PRD AC4）。
-            nodes = []
+    # 与列表端点共用同一解析语义（全有或全无），保证同一 run 两处计数一致。
+    nodes = _snapshot_nodes(run.snapshot_nodes_json)
 
     detail = WorkflowRunDetail.model_validate(run)
     detail.nodes = nodes
-    # WorkflowRunDetail 继承 nodes_count：不赋值会恒为 0，与列表接口对同一条 run
-    # 返回的节点数不一致（复验指出的潜在陷阱）。
     detail.nodes_count = len(nodes)
     return SuccessResponse(data=detail)
 
