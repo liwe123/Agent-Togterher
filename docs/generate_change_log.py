@@ -611,6 +611,17 @@ CURATED = {
         "verify": "本地 272 passed；flake8 严格参数 0 违规；真实 CI（GitHub Actions run for 9a6e5c8）build-linux / test-postgres / test-frontend 三 job 全部 success，为 C-247 以来首次全绿",
         "notes": "流程披露：因 main 处于红态（红态可追溯至 C-247 的 API 级用例回归，证据：run 73f0c9c 双 job 失败于 assert 400 == 422，已由 C-250 修复），本提交在独立验收前已推送以尽快恢复 CI，偏离守则 4 的时序要求；独立验收已派发，结论随后回写",
     },
+    "87c849a": {
+        "type": "BUG",
+        "scope": "其他、后端、前端",
+        "content": "B2 复验非阻塞项整改：运行详情接口继承自列表的 nodes_count 未赋值恒为 0，与列表对同一条 run 的返回值不一致；创建成功后的表单重置默认值与首次打开的初始草稿不一致（2 节点+1 变量 vs 1 节点+0 变量）；并补强测试（详情断言节点数与数量、快照解析容错单测）",
+        "frontend": "page.tsx 抽出 initialDraftNodes()/initialDraftVariables() 工厂，useState 初值与创建成功后重置共用同一基线",
+        "backend": "endpoints/workflows.py 详情端点补 detail.nodes_count = len(nodes)；test_workflows.py 详情断言 len(nodes)==2 与 nodes_count==2，新增 _snapshot_node_count 容错单测（None/空/非法 JSON/非数组 → 0）",
+        "db": "否",
+        "breaking": "否",
+        "verify": "后端 274 passed（+1 用例）；flake8 0；前端 62 passed；typecheck 0；lint 0；build 成功",
+        "notes": "来源：B2 复验（HEAD cc4211b）的 3 条非阻塞项。独立验收已派发，结论随后回写",
+    },
     "64eccb2": {
         "type": "Optimization",
         "scope": "其他、后端",
@@ -671,6 +682,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 登记 B2 复验整改并重生成（C-263）": {
+        "type": "Optimization",
+        "content": "重生成变更追踪表与 PRD.html，登记 B2 复验三条非阻塞项的整改（C-263）：详情节点数与列表一致、表单重置基线统一、快照解析容错单测",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 263 行；xlsx 与 PRD.md 一致；PRD.html 由 33 份 PRD + 263 条记录生成",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）",
+    },
     "docs: 登记 B2 工作流批次与验收结论并重生成（C-257~C-261）": {
         "type": "Optimization",
         "content": "重生成变更追踪表与 PRD.html：登记 B2「工作流运行记录与画布可视化」的 5 笔提交（C-257~C-261）与两份独立验收结论（首轮前端验收不通过 → 整改 → 复验通过），并回填 PRD 索引中该 PRD 的实现批次号",
