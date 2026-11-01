@@ -693,6 +693,63 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "feat: Batch1 执行级预算与内容脱敏、并发与治理收口（C-275~C-277）": {
+        "details": [
+            {
+                "type": "Requirement",
+                "scope": "后端、文档",
+                "content": "新增执行级预算与内容脱敏：REQ-D4 internal 工具循环接入 agent_max_tool_iterations（1~20，默认 5），Codex CLI 桥接改为流式识别 turn.started 事件计数，超过 budget_turns 立即 taskkill 进程树并返回 metadata.budget_exceeded；REQ-D6 新增 core/redaction.py 规则表（OpenAI/Anthropic Key、AWS、GitHub、Google、JWT、PEM 私钥、Bearer、password/token 赋值），消息、任务步骤、模型调用错误、集成桥接结果在落库与 WS 广播前统一 redact_content，CONTENT_REDACTION_ENABLED 默认开启",
+                "frontend": "-",
+                "backend": "新增 core/redaction.py；core/config.py 新增配置项；core/orchestrator.py 落库/广播入口接入脱敏并回填 Task.result；core/message_hub.py 用户消息与节点任务脱敏（路由仍用原文）；services/integration_service.py 桥接结果脱敏；services/codex_bridge.py 流式轮次预算与进程树终止；tests/test_budget_redaction.py 与 test_codex_bridge.py",
+                "db": "否（仅新增配置项，无迁移）",
+                "breaking": "是（budget_turns 从仅透传变为实际终止；默认脱敏会改变含敏感值内容的落库形态，可配置关闭）",
+                "verify": "后端 SQLite 全量 320 passed、PostgreSQL 全量 320 passed；flake8 两条命令 0；test_budget_redaction 8 passed、test_codex_bridge 31 passed；PRD 三处同步",
+                "notes": "PRD: docs/prd/PRD-执行级预算与内容脱敏.md（FR1-FR4 / AC1-AC6）。已知存量风险（非本批引入）：无 budget_turns 的 Codex 任务在 _run_buffered 中仍可能等待满 timeout，建议后续单独立项修复",
+            },
+            {
+                "type": "BUG",
+                "scope": "前端、后端",
+                "content": "认证收紧与 P2 收口：refresh token 签名合法但服务端无记录/已过期一律 401（堵住吊销表绕过）；前端登出改为调用 POST /api/v1/auth/logout 吊销 refresh token（失败/超时仍清本地会话）；alert()/confirm() 全部替换为自绘弹层或内联错误条；删除死代码 agent-card.tsx 及随之无引用的 ui/card.tsx、ui/separator.tsx；7 处硬编码 connectionStatus=online 全部接真实 WebSocket 状态；workflows 创建响应不再写死 pending；移除未使用 canManageQuota",
+                "frontend": "components/console/app-sidebar.tsx（登出吊销 + ConfirmDialog + 内联错误）、新增 components/ui/confirm-dialog.tsx、新增 hooks/use-workspace-connection.ts；workflows/settings/任务回放/成员等页面替换 alert/confirm 与连接状态；删除 3 个死代码文件；globals.css 清理 .agent-card 残留样式",
+                "backend": "endpoints/auth.py refresh 校验收紧；endpoints/workflows.py 响应状态取真实 task.status；tests/test_refresh_revocation.py 期望更新（无 jti 拒绝）；test_workflows.py 状态断言兼容 pending/running",
+                "db": "否",
+                "breaking": "是（无 jti 的历史 refresh token 不再可用，需要重新登录）",
+                "verify": "前端 81 passed + typecheck 0 + lint 0 + next build 16 路由；grep 校验 alert()/confirm()/connectionStatus 硬编码/canManageQuota/死代码引用均为 0；后端 test_refresh_revocation/test_auth/test_workflows 通过",
+                "notes": "来源：docs/深度审查与推进计划报告-20260925.md §3.2 P1 遗留（登出半截、refresh 记录校验）与 §3.3 P2 清理项；前端由子 Agent 实现、Lead 复核并跑四门",
+            },
+            {
+                "type": "Optimization",
+                "scope": "后端、CI、文档",
+                "content": "OPT-5 子任务并发化：工具调用关闭且 agent_worker_parallelism>1 时 Worker 模型调用 asyncio.gather 并发、持久化严格按顺序串行（不并发使用 AsyncSession，SQLite 安全），默认 1 保持旧行为；工程治理：新增 backend/constraints.txt 锁定直接依赖、CI 两个后端 job 改用 pip install -r requirements-dev.txt -c constraints.txt 并纳入缓存键、新增周更 dependency-canary（未锁定依赖 + import + collect-only）、新增 scripts/ci-local.ps1 本地 CI 等价门禁（两遍 flake8/pytest/前端四门，可选 PG）",
+                "frontend": "-",
+                "backend": "core/orchestrator.py 抽出 _run_worker_subtasks_sequential/_run_worker_subtasks_parallel 并新增并发配置；config.py 新增 agent_worker_parallelism；tests/test_budget_redaction.py 新增并发用例（max_active>=2 且默认串行回归）",
+                "db": "否",
+                "breaking": "否（默认并行度 1，行为不变）",
+                "verify": "并发用例通过且 max_active>=2、默认串行回归通过；ci-local -SkipTests 7/7 PASS；workflow YAML 4 job 校验通过；constraints pip dry-run 全部 satisfied；本地无 pwsh7，用 powershell.exe 5.1 等价验证",
+                "notes": "演示：constraints 仅锁直接依赖（传递依赖仍浮动）；dependency-canary 首次真实运行需 merge 后手动 workflow_dispatch；本机无 PowerShell 7，脚本按 5.1+7 双兼容编写（UTF-8 BOM 不可清）",
+            },
+        ],
+    },
+    "docs: 整改计划落盘与 Batch1 文档治理（C-278）": {
+        "type": "Optimization",
+        "content": "整改计划落盘与文档治理：新增 docs/整改项目完整计划.md（7 批次 C-275~C-334、里程碑、门禁、风险与待确认决策）；HANDOFF 刷新到 2026-11-01；Agent任务守则补代理推送/CI 依赖锁定/本地门禁条款与检查清单；README 同步新配置、目录结构、ci-local 命令与 320 tests 基线；新增 docs/check_docs_consistency.py 并校验 35 份 PRD 索引一致",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "docs/check_docs_consistency.py 输出 DOCS_CONSISTENCY_OK prds=35；HANDOFF/README 数字与实测一致（后端 320 tests/46 文件、前端 81/7）；计划文档含全部 7 批次与门禁",
+        "notes": "计划于 2026-11-01 经 plan mode 评审批准后落盘；执行进度以《改动表》与计划文档 §7 为准",
+    },
+    "docs: 登记 Batch1 并重生成（C-279）": {
+        "type": "Optimization",
+        "content": "重生成变更追踪表与 PRD.html：登记 Batch1 的三行（C-275 Requirement / C-276 BUG / C-277 Optimization）与 C-278 文档治理行",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 278 行；xlsx 与 PRD.md 一致；PRD.html 由 35 份 PRD + 278 条记录生成",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）",
+    },
     "docs: 回写 CI 复验结果并重生成（C-274）": {
         "type": "Optimization",
         "content": "重生成变更追踪表与 PRD.html：把修复后真实 CI run 41271272994（commit ca66c9d）三 job 全绿的复验结果回写 C-272 的验证结果与备注列，并登记上一笔 regen 提交 C-273",
