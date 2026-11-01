@@ -112,6 +112,9 @@ python docs/build_prd_html.py        # 重生根目录 PRD.html（份数与条�
 - 推送前再次确认《改动表》与 `PRD.html` 已用守则 2 命令重跑对齐，避免把未同步的文档推上去。
 - **regen 提交自身滞后一行属预期，不算失同步**：生成脚本无法在自身提交内登记自身行，表尾始终比 HEAD 少最新一个纯 regen 提交；该项豁免「表与 git 完全一致」的要求，但下一次重生成时必须补齐（先例：handoff-20260820-213413 §2）。
 - **生产部署前置安全要求**：`APP_ENV` 非开发环境时必须显式配置 `APP_API_TOKEN` 或 `JWT_SECRET_KEY`，否则后端启动即拒绝（fail-closed，P0-4 落地）；开发环境 JWT 密钥为进程级随机值，多进程开发需显式配置 `JWT_SECRET_KEY`。
+- **本机网络适配（2026-11-01 新增）**：GitHub 直连被阻断时，推送/拉取统一走本机代理：
+  `git -c http.proxy=http://127.0.0.1:7890 push origin main`；代理端口变化时先探测或改用 `HTTPS_PROXY`，不得伪造「已推送」结论。
+- **质量门禁本地化（2026-11-01 新增）**：提交前优先执行 `pwsh -NoProfile -File scripts/ci-local.ps1`（PG 模式加 `-WithPostgres` 并提供 `TEST_PG_DATABASE_URL`），与 CI 三 job 同参数；CI 依赖由 `backend/constraints.txt` 锁定，升级依赖须同步约束并在本地/CI 各跑绿一次。
 
 ---
 
@@ -124,7 +127,8 @@ python docs/build_prd_html.py        # 重生根目录 PRD.html（份数与条�
 - [ ] 已派子 Agent 独立完成验收且通过，结论写入《改动表》备注
 - [ ] 已重跑 `generate_change_log.py` 与 `build_prd_html.py`，文档与 git 对齐
 - [ ] 提交信息用 Conventional Commits 风格；`git add` 仅加真实改动，排除备份 / `__pycache__` / `.workbuddy`
-- [ ] `git commit` 完成，`git push` 至 `liwe123/Agent-Togterher`（默认分支 `main`）
+- [ ] `git commit` 完成，`git push` 至 `liwe123/Agent-Togterher`（默认分支 `main`；直连被阻断时用守则 4 的代理命令）
+- [ ] 本地 CI 等价门禁已跑（`scripts/ci-local.ps1`，UI/安全类改动附 A/B 截图或契约样例）
 
 ---
 

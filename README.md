@@ -411,7 +411,9 @@ npm run lint
 npm run build
 ```
 
-当前：后端 285 tests passed（45 个测试文件），前端 81 tests（7 个测试文件）/ typecheck 0 / lint 0 / build pass。
+CI 等价门禁：`pwsh -NoProfile -File scripts/ci-local.ps1`（PG 模式加 `-WithPostgres` 并提供 `TEST_PG_DATABASE_URL`）。依赖版本由 `backend/constraints.txt` 锁定，升级依赖后需同步并在本地/CI 各跑绿一次。
+
+当前：后端 320 tests passed（46 个测试文件），前端 81 tests（7 个测试文件）/ typecheck 0 / lint 0 / build pass。
 
 ---
 
@@ -428,6 +430,9 @@ OPENAI_API_KEY=sk-xxx
 APP_API_TOKEN=         # 设了就开启 Bearer 鉴权
 TASK_EXECUTION_MODE=inline  # 改 worker 则 API 只入队
 WORKER_CONCURRENCY=2
+AGENT_MAX_TOOL_ITERATIONS=5     # 内部工具循环轮次上限（1-20，REQ-D4）
+CONTENT_REDACTION_ENABLED=true  # 落库/广播前脱敏 Key/Token/密码（REQ-D6）
+AGENT_WORKER_PARALLELISM=1      # 关闭工具时多 Worker 子任务并发上限（1-4，OPT-5）
 ```
 
 ---
@@ -445,7 +450,7 @@ WORKER_CONCURRENCY=2
 │   │   ├── websocket/           # WebSocket manager / events / distributed
 │   │   └── worker.py            # 独立 Worker 入口
 │   ├── alembic/                # Alembic 迁移（env.py + versions）
-│   ├── tests/                   # 45 个测试文件（285 tests）
+│   ├── tests/                   # 46 个测试文件（320 tests）
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -455,8 +460,12 @@ WORKER_CONCURRENCY=2
 │   │   └── app/                 # Next.js App Router 页面
 │   └── package.json
 ├── docs/
-│   ├── prd/                     # 34 份 PRD 文档
+│   ├── prd/                     # 35 份 PRD 文档
+│   ├── 整改项目完整计划.md       # 2026-11-01 批准：DS-Bot 对标二期 + 历史缺口收口（7 批次）
+│   ├── DS-Bot对标分析与改造方案.md  # 对标分析、A/B 结论与后续 backlog
+│   ├── DS-Bot分析报告/           # 前端 UI / 后端交互两份原始取证报告
 │   ├── PRD.md                   # 变更追踪表（自动生成，由 generate_change_log.py 维护）
+│   ├── check_docs_consistency.py # PRD 索引一致性检查（轻量文档门禁）
 │   ├── generate_change_log.py   # 从 git history 自动生成变更表
 │   └── build_prd_html.py        # 生成单页 PRD.html 阅读器
 ├── docker-compose.yml

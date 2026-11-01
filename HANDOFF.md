@@ -1,8 +1,9 @@
 # Agent Console 项目接力文档 (HANDOFF)
 
-> 更新时间：2026-09-25  
+> 更新时间：2026-11-01  
 > 工作目录：`E:\Agents`  
-> 当前阶段：**Phase 5（外部接入与治理深化）进行中：PostgreSQL 已上线、外部节点桥接与配额熔断已落地、独立 Worker 与事件总线调度链路已启用（C-169~C-174）、工作区快照断线对账与事件总线容错已补齐；Phase 1 三项新能力（Webhook 插件执行器 C-183 / HITL 人工审批 C-185 / DAG 工作流引擎 C-186）已于 2026-09-04 推送（94343a2）；Batch 9+ 已落地 C2 审批收紧（C-214）、C1 Webhook 配置界面（C-217）、B8 Worker 健康探针（C-218）、B7 链路追踪字段（C-220）；2026-09-25 P0 止血批次已修恢复任务假调度、回放错误信息缺失与鉴权、test_command RCE、生产 fail-closed、DAG 孤儿运行收敛。剩余缺口以 `docs/深度审查与推进计划报告-20260925.md` 为最新基线：15 项未落地需求（REQ-A1/A5/A6/A7、B1/B2/B3/B4/B5/B6/B9、D2/D3/D4/D6）+ OPT-5 + 验收补课 E1/E2/E3。**
+> 当前阶段：**Phase 5 整改项目（DS-Bot 对标二期 + 历史缺口收口）进行中**。最新基线：`docs/整改项目完整计划.md`（2026-11-01 批准，7 个批次 C-275~C-334）。已完成 C-267~C-274：群聊多 Agent 接力（多 @ 顺序接力/PASS/relay_progress + 接力链/成员面板/消息分组/时间分隔）、独立验收、CI 依赖漂移假红修复，真实 CI run 41271455539 与后续 run 三 job 全绿；远端 main 已同步。历史缺口已关闭：REQ-B1/B2/B7/B8/C1/C2 与 2026-09-25 P0 五项契约级缺陷。剩余开放项与批次归属见整改计划 §2.2（A1/A5/A6/A7、B3/B4/B5/B6/B9、D2/D3/D4/D6、OPT-5、E1-E3、P1/P2 遗留、DS-Bot P1-1~P2-2）。**  
+> 环境注意：GitHub 直连被阻断，推送须走本机代理 `git -c http.proxy=http://127.0.0.1:7890 push origin main`；本地门禁用 `pwsh -NoProfile -File scripts/ci-local.ps1`，CI 依赖由 `backend/constraints.txt` 锁定。
 
 ---
 
