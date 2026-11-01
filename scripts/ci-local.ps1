@@ -1,4 +1,4 @@
-﻿<#
+<#
 .SYNOPSIS
     Agent Console 本地 CI 等价门禁：一条命令跑完 CI 的检查项。
 
@@ -160,7 +160,7 @@ if ($SkipTests) {
 }
 else {
     Invoke-Gate -Name 'backend pytest（SQLite 全量）' -WorkDir $BackendDir -Action {
-        & $Python -m pytest tests -q
+        & $Python -m pytest tests -q -s --timeout=120 --timeout-method=thread --session-timeout=900
     }
 }
 

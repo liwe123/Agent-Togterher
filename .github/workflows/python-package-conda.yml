@@ -1,27 +1,26 @@
-﻿name: Python Package Tests
+name: Python Package Tests
 
 on:
   push:
   pull_request:
-  # 渚濊禆婕傜Щ鎺㈤拡锛氭瘡鍛ㄤ竴 03:17 UTC 鐢ㄢ€滄湭閿佸畾鈥濈殑鍖洪棿渚濊禆璺戜竴閬?
-  # 锛堣 dependency-canary job锛夛紝鎻愬墠鏆撮湶涓婃父鍙戠増瀵艰嚧鐨勫亣绾紝
-  # 鑰屼笉鏄瓑涓嬫 push 鎵嶅湪 build-linux 涓婃挒瑙併€?
+  # 依赖漂移探针：每周一 03:17 UTC 用未锁定的区间依赖跑一遍，提前暴露
+  # 上游发版导致的假红，而不是等下次 push 才在 build-linux 上撞见。
   schedule:
     - cron: '17 3 * * 1'
-  # 鎵嬪姩瑙﹀彂锛氭兂绔嬪埢楠岃瘉鈥滃綋鍓嶅尯闂存渶鏂颁緷璧栤€濇槸鍚︿粛鍏煎鏃朵娇鐢ㄣ€?
+  # 手动触发：想立刻验证当前区间最新依赖是否仍兼容时使用。
   workflow_dispatch:
 
 env:
-  # 璁?pytest 杩涘害瀹炴椂钀芥棩蹇楋細杩涚▼琚彇娑堟椂涔熻兘鐪嬪埌鏈€鍚庡畬鎴愮殑鐢ㄤ緥浣嶇疆銆?
+  # 让 pytest 进度实时落日志：进程被取消时也能看到最后完成的用例位置。
   PYTHONUNBUFFERED: "1"
-  # 娴嬭瘯杩涘睍鍋滄粸 >90s 鍗?dump 绾跨▼鏍?+ asyncio 浠诲姟鏍堝苟閫€鍑猴紙鍏堜簬 pytest-timeout
-  # 鐨?120s 鍗曟祴瓒呮椂瑙﹀彂锛屽畾浣嶁€滈€€鍑洪樁娈靛悗鍙颁换鍔″彇娑堝崱浣忊€濊繖绫绘寕璧凤級銆?
+  # 测试进展停滞 >90s 即 dump 线程栈 + asyncio 任务栈并退出（先于 pytest-timeout
+  # 的 120s 单测超时触发，定位“退出阶段后台任务取消卡住”这类挂起）。
   PYTEST_WATCHDOG_SECONDS: "90"
 
 jobs:
   build-linux:
     runs-on: ubuntu-latest
-    # 闃?6 灏忔椂鎸傛锛氳秴杩?20 鍒嗛挓鐩存帴澶辫触骞朵繚鐣欐棩蹇椼€?
+    # 防 6 小时挂死：超过 20 分钟直接失败并保留日志。
     timeout-minutes: 20
     defaults:
       run:
@@ -43,17 +42,17 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # -c constraints.txt锛氭妸鍖洪棿渚濊禆鏀舵暃鍒板凡楠岃瘉鐗堟湰锛岄槻涓婃父鍙戠増鍋囩孩
-          # 锛坮un 41269487154锛歱ytest 9.2.0 + pytest-asyncio 1.4.1 瑙﹀彂
-          #  PytestDeprecationWarning锛岃 filterwarnings=error 鍗囦负 INTERNALERROR锛夈€?
+          # -c constraints.txt：把区间依赖收敛到已验证版本，防上游发版假红
+          # （run 41269487154：pytest 9.2.0 + pytest-asyncio 1.4.1 触发
+          #  PytestDeprecationWarning，被 filterwarnings=error 升为 INTERNALERROR）。
           pip install -r requirements-dev.txt -c constraints.txt
 
       - name: Lint with flake8
         run: |
           pip install -c constraints.txt flake8
           flake8 app tests --count --select=E9,F63,F7,F82 --show-source --statistics
-          # 2026-10-01 P2-4锛氬幓鎺?--exit-zero锛岀浜岄亶鎴愪负鐪熼棬绂侊紙瀛橀噺 79 椤硅繚瑙?
-          # 宸叉竻闆讹紱11 澶勫瓨閲?C901 澶嶆潅搴﹀€轰互琛屽唴 noqa 鏄惧紡璞佸厤锛岄噸鏋勫彟琛岀珛椤癸級銆?
+          # 2026-10-01 P2-4：去掉 --exit-zero，第二遍成为真门禁（存量 79 项违规
+          # 已清零；11 处存量 C901 复杂度债以行内 noqa 显式豁免，重构另行立项）。
           flake8 app tests --count --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Test with pytest
@@ -61,15 +60,15 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/backend
           DATABASE_URL: sqlite+aiosqlite:///./agent_console_ci.db
         run: |
-          # -s 鍏抽棴 fd 鎹曡幏锛岀湅闂ㄧ嫍/pytest-timeout 鐨?dump 鎵嶈兘钀藉埌 CI 鏃ュ織锛?
-          # --timeout 鍗曟祴涓婇檺锛?-session-timeout 鍏滀綇鏀堕泦/澶瑰叿闃舵鎸傝捣銆?
+          # -s 关闭 fd 捕获，看门狗/pytest-timeout 的 dump 才能落到 CI 日志；
+          # --timeout 单测上限，--session-timeout 兜住收集/夹具阶段挂起。
           pytest -q -s --timeout=120 --timeout-method=thread --session-timeout=900
 
-  # 20260907 鎶ュ憡 OPT-2/A3锛歋QLite 鍐呭瓨搴撳彧鑳借瘉鏄庨€昏緫姝ｇ‘锛屾棤娉曡鐩栫湡瀹?
-  # PostgreSQL 鏂硅█琛屼负锛圝SON銆佺储寮曘€佸苟鍙戝啓锛夈€傛湰 job 鐢?service container
-  # 璧?PG16 + Redis7 瀹炶窇鍚屼竴濂楁祴璇曪紱conftest 鐢?setdefault 鏄惧紡浼?env 鍗冲彲
-  # 瑕嗙洊锛屼笉闇€锛堜篃涓嶅厑璁革級鏀?conftest銆侲VENT_BUS_ENABLED 涓嶆樉寮忎紶锛屼繚鎸?
-  # conftest 榛樿 false锛堟€荤嚎涓撻」鍙︾珛椤癸級銆?
+  # 20260907 报告 OPT-2/A3：SQLite 内存库只能证明逻辑正确，无法覆盖真实
+  # PostgreSQL 方言行为（JSON、索引、并发写）。本 job 用 service container
+  # 起 PG16 + Redis7 实跑同一套测试；conftest 用 setdefault 显式传 env 即可
+  # 覆盖，不需（也不允许）改 conftest。EVENT_BUS_ENABLED 不显式传，保持
+  # conftest 默认 false（总线专项另立项）。
   test-postgres:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -116,7 +115,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          # 涓?build-linux 鍚屼竴濂楅攣瀹氱増鏈紝淇濊瘉涓や釜 job 鐜涓€鑷淬€?
+          # -c constraints.txt：把区间依赖收敛到已验证版本，防上游发版假红
+          # （run 41269487154：pytest 9.2.0 + pytest-asyncio 1.4.1 触发
+          #  PytestDeprecationWarning，被 filterwarnings=error 升为 INTERNALERROR）。
           pip install -r requirements-dev.txt -c constraints.txt
 
       - name: Lint with flake8
@@ -131,10 +132,10 @@ jobs:
         run: |
           pytest -q -s --timeout=120 --timeout-method=thread --session-timeout=900
 
-  # 20260907 鎶ュ憡 OPT-2/A3锛氬墠绔川閲忛棬绂佸叆 CI銆?
-  # 2026-10-01 P2-4 琛ラ綈锛氶鏈熷彧鏈?lint + test锛岀被鍨嬪畨鍏ㄤ笌椤甸潰缂栬瘧鏃犻棬绂?
-  # 锛坙oad-ts-module.mjs 鐢?transpileModule锛屼笉鍋氱被鍨嬫鏌ワ級锛屾晠杩藉姞 typecheck
-  # 涓?build 涓ゆ锛涙湰鍦?npm run build 涓庝箣绛変环銆?
+  # 20260907 报告 OPT-2/A3：前端质量门禁入 CI。
+  # 2026-10-01 P2-4 补齐：首期只有 lint + test，类型安全与页面编译无门禁
+  # （load-ts-module.mjs 用 transpileModule，不做类型检查），故追加 typecheck
+  # 与 build 两步；本地 npm run build 与之等价。
   test-frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -166,13 +167,12 @@ jobs:
 
       - name: Build
         run: npm run build
-
-  # 渚濊禆婕傜Щ鎺㈤拡锛氬敮涓€涓€涓€滄晠鎰忎笉閿佸畾鈥濈殑 job銆?
-  # 鍙帴鍙?schedule / workflow_dispatch 瑙﹀彂锛坧ush銆丳R 涓婅 if 鐩存帴璺宠繃锛夛紝
-  # 鍥犳鍗充娇涓婃父鍙戠増鎶婂畠鎵撶孩锛屼篃涓嶄細鏀瑰彉 push 鐨勬瀯寤虹粨璁衡€斺€斿畠鍙礋璐ｆ彁鍓?
-  # 棰勮鈥渞equirements 鐨勫尯闂翠緷璧栧凡缁忎笉鍏煎鈥濓紝缁欐洿鏂?constraints.txt 鐣欑獥鍙ｃ€?
-  # 鍒ゅ畾鏍囧噯鍒绘剰淇濇寔鏈€灏忥細瑁呭緱涓?+ app.main 鑳?import + 娴嬭瘯鑳芥敹闆嗐€?
-  # 涓嶈窇鍏ㄩ噺 pytest锛堥偅鏄?build-linux 鐨勮亴璐ｏ級锛屾帰閽堣瓒冲蹇墠鏈変汉鐪嬨€?
+  # 依赖漂移探针：唯一一个“故意不锁定”的 job。
+  # 只接受 schedule / workflow_dispatch 触发（push、PR 上被 if 直接跳过），
+  # 因此即使上游发版把它打红，也不会改变 push 的构建结论——它只负责提前
+  # 预警 requirements 的区间依赖已经不兼容，给更新 constraints.txt 留窗口。
+  # 判定标准刻意保持最小：装得上 + app.main 能 import + 测试能收集。
+  # 不跑全量 pytest（那是 build-linux 的职责），探针要足够快才有人看。
   dependency-canary:
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
@@ -193,9 +193,9 @@ jobs:
       - name: Install dependencies without constraints
         run: |
           python -m pip install --upgrade pip
-          # 鍏抽敭锛氬埢鎰忎笉甯?-c constraints.txt锛岃鐨勬槸 requirements 鍖洪棿鐨勫綋鍓嶆渶鏂扮増銆?
+          # 关键：刻意不带 -c constraints.txt，装的是 requirements 区间的当前最新版。
           pip install -r requirements-dev.txt
-          echo "--- 鏈瀹為檯瑙ｆ瀽鍒扮殑鍏抽敭鐗堟湰 ---"
+          echo "--- 本次实际解析到的关键版本 ---"
           python -m pip list --format=freeze | grep -iE '^(pytest|pytest-asyncio|pytest-timeout|fastapi|sqlalchemy|pydantic|litellm|anyio|starlette)==' || true
 
       - name: Smoke import app.main
@@ -208,5 +208,3 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}/backend
           DATABASE_URL: sqlite+aiosqlite:///./agent_console_canary.db
         run: pytest -q --collect-only tests
-
-

@@ -358,3 +358,129 @@ async def test_worker_subtasks_run_concurrently_when_tools_disabled(
     worker_steps = [step for step in steps if step.step_name.startswith("worker_execute_")]
     assert len(worker_steps) == 2
     assert all(step.status == "completed" for step in worker_steps)
+
+
+@pytest.mark.asyncio
+async def test_parallel_worker_failure_is_attributed_to_failing_step(
+    db_session, monkeypatch
+) -> None:
+    """并行路径失败时，失败收敛必须指向失败子任务，而不是最后一个子任务。"""
+    import asyncio
+    import json
+
+    from app.services.litellm_service import ModelAttemptFailure, ModelCallError
+
+    monkeypatch.setattr(get_settings(), "agent_tools_enabled", False)
+    monkeypatch.setattr(get_settings(), "agent_worker_parallelism", 2)
+
+    workspace = Workspace(name="Parallel failure workspace", description="tests")
+    db_session.add(workspace)
+    await db_session.flush()
+    manager = Agent(
+        workspace_id=workspace.id,
+        name="项目总设计师",
+        role="project_architect",
+        model_name="manager_model",
+        system_prompt="Manager",
+        status="idle",
+    )
+    frontend = Agent(
+        workspace_id=workspace.id,
+        name="前端设计师",
+        role="frontend_designer",
+        model_name="code_model",
+        system_prompt="Frontend",
+        status="idle",
+    )
+    backend = Agent(
+        workspace_id=workspace.id,
+        name="Agent工程师",
+        role="agent_engineer",
+        model_name="code_model",
+        system_prompt="Backend",
+        status="idle",
+    )
+    conversation = Conversation(workspace_id=workspace.id, title="Parallel failure chat")
+    db_session.add_all([manager, frontend, backend, conversation])
+    await db_session.flush()
+    task = Task(
+        workspace_id=workspace.id,
+        conversation_id=conversation.id,
+        title="并行失败归因",
+        description="并行执行并让第一个子任务失败",
+        assigned_agent_id=manager.id,
+        status=TaskStatus.PENDING,
+    )
+    db_session.add(task)
+    await db_session.commit()
+
+    plan_json = json.dumps(
+        {
+            "task_summary": "并行实现前后端",
+            "subtasks": [
+                {
+                    "id": 1,
+                    "title": "前端页面",
+                    "description": "实现页面",
+                    "task_type": "frontend",
+                    "agent": "前端设计师",
+                },
+                {
+                    "id": 2,
+                    "title": "后端接口",
+                    "description": "实现接口",
+                    "task_type": "backend",
+                    "agent": "Agent工程师",
+                },
+            ],
+        },
+        ensure_ascii=False,
+    )
+    failure = ModelCallError(
+        "code_model",
+        [
+            ModelAttemptFailure(
+                provider="test",
+                model_name="test/code_model",
+                message="frontend worker failed",
+                latency_ms=10,
+            )
+        ],
+    )
+
+    async def fake_chat_completion(model_name, messages, **kwargs):
+        if model_name == "manager_model":
+            return completion(plan_json)
+        prompt = messages[-1]["content"] if messages else ""
+        # prompt 含「总体计划」全部子任务；用最后一个 task_type（当前子任务段）区分。
+        marker = prompt.rfind('"task_type"')
+        current = prompt[marker: marker + 40] if marker >= 0 else ""
+        if '"frontend"' in current:
+            raise failure
+        await asyncio.sleep(0.02)
+        return completion("后端接口完成")
+
+    with patch(
+        "app.core.orchestrator.litellm_service.chat_completion",
+        new=AsyncMock(side_effect=fake_chat_completion),
+    ):
+        result = await AgentOrchestrator(
+            db_session, RecordingBroadcaster()
+        ).run_task(task.id)
+
+    assert result.status == TaskStatus.FAILED
+    steps = list(
+        await db_session.scalars(
+            select(TaskStep)
+            .where(TaskStep.task_id == task.id)
+            .order_by(TaskStep.id)
+        )
+    )
+    by_name = {step.step_name: step for step in steps}
+    assert ("worker_execute_1", "failed") == (
+        by_name["worker_execute_1"].step_name,
+        by_name["worker_execute_1"].status,
+    )
+    assert by_name["worker_execute_2"].status == "completed"
+    # 不允许出现额外的 manager_plan failed 伪 step（旧实现会把 manager 阶段覆盖成失败）。
+    assert by_name["manager_plan"].status == "completed"

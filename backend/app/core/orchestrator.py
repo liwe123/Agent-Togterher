@@ -1137,6 +1137,10 @@ class AgentOrchestrator:
                 await self.update_agent_status(agent, "failed")
                 if first_error is None:
                     first_error = outcome
+                    # 失败归因：外层收敛必须指向失败的那一棒，而不是最后一个子任务。
+                    hop_ctx["active_agent"] = agent
+                    hop_ctx["step"] = step
+                    hop_ctx["step_name"] = f"worker_execute_{subtask.id}"
                 continue
             await self.save_model_call(task, agent, completion=outcome)
             await self.save_task_step(

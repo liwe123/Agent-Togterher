@@ -693,6 +693,27 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "fix: 回写验收整改：workflow 注释编码、ci-local 参数与并行失败归因（C-280）": {
+        "type": "BUG",
+        "scope": "后端、CI、文档",
+        "content": "回写独立验收发现的 3 条非阻塞整改：①.python-package-conda.yml 重新以 UTF-8 从 b60b734 原始内容重建（PowerShell 二次编码导致 30 行中文注释乱码，功能未受影响），恢复可读注释并保持 4 job/4 trigger；②scripts/ci-local.ps1 的 SQLite pytest 参数对齐 CI（-s --timeout=120 --timeout-method=thread --session-timeout=900），消除本地/CI 口径差；③OPT-5 并行路径失败归因修复：并行分支把 hop_ctx 指向失败子任务的 agent/step，外层失败收敛不再覆盖末尾已完成 step；新增并行失败回归用例（worker1 failed / worker2 completed / manager_plan 不受污染）",
+        "frontend": "-",
+        "backend": "core/orchestrator.py 并行失败时设置 hop_ctx；tests/test_budget_redaction.py 新增 test_parallel_worker_failure_is_attributed_to_failing_step",
+        "db": "否",
+        "breaking": "否",
+        "verify": "pytest tests/test_budget_redaction.py 9 passed、test_multi_agent_workflow + test_codex_bridge 35 passed；flake8 两条命令 0；workflow YAML 4 job/4 trigger 且无乱码/BOM；docs 一致性 OK",
+        "notes": "来源：Batch1 独立验收（HEAD 76e78d6）的 4 条非阻塞问题；环境限制项（PG 全量/ci-local/canary 无法由验收方独立复跑）已如实保留在 C-275 备注",
+    },
+    "docs: 登记 Batch1 验收整改并重生成（C-281）": {
+        "type": "Optimization",
+        "content": "重生成变更追踪表与 PRD.html：把独立验收结论回写 C-275 备注，登记验收整改 C-280 与上一笔 regen 提交 C-279",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 280 行；xlsx 与 PRD.md 一致；PRD.html 由 35 份 PRD + 280 条记录生成",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）；至此 Batch1 代码/文档/验收/改动表闭环，待推送与 CI 复验",
+    },
     "feat: Batch1 执行级预算与内容脱敏、并发与治理收口（C-275~C-277）": {
         "details": [
             {
@@ -704,7 +725,7 @@ CURATED_BY_SUBJECT = {
                 "db": "否（仅新增配置项，无迁移）",
                 "breaking": "是（budget_turns 从仅透传变为实际终止；默认脱敏会改变含敏感值内容的落库形态，可配置关闭）",
                 "verify": "后端 SQLite 全量 320 passed、PostgreSQL 全量 320 passed；flake8 两条命令 0；test_budget_redaction 8 passed、test_codex_bridge 31 passed；PRD 三处同步",
-                "notes": "PRD: docs/prd/PRD-执行级预算与内容脱敏.md（FR1-FR4 / AC1-AC6）。已知存量风险（非本批引入）：无 budget_turns 的 Codex 任务在 _run_buffered 中仍可能等待满 timeout，建议后续单独立项修复",
+                "notes": "PRD: docs/prd/PRD-执行级预算与内容脱敏.md（FR1-FR4 / AC1-AC6）。独立验收（2026-11-01，子 Agent 只校验未改动）：通过（0 阻塞、4 条非阻塞）；3 条已整改（workflow 注释二次编码、ci-local SQLite 参数对齐、并行路径失败归因 + 回归用例，见 C-280），1 条为环境限制（验收方无 PG 实例/未独立复跑 ci-local 与 canary，已由主 Agent 本地验证）。已知存量风险（非本批引入）：无 budget_turns 的 Codex 任务在 _run_buffered 中仍可能等待满 timeout，建议后续单独立项修复",
             },
             {
                 "type": "BUG",
