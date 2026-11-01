@@ -50,6 +50,20 @@ export interface ChatTask {
   result: string | null
   created_at: string
   updated_at: string
+  /** 群聊多 Agent 接力：按棒次排序的 Agent id；普通任务为空/缺省。 */
+  relay_agent_ids?: number[]
+}
+
+export type RelayHopStatus = "started" | "completed" | "passed" | "failed"
+
+export interface RelayProgressEvent {
+  task_id: number
+  conversation_id: number | null
+  hop_index: number
+  total_hops: number
+  agent_id: number
+  agent_name: string
+  status: RelayHopStatus
 }
 
 export interface MessageHubResult {
@@ -68,6 +82,7 @@ export type ChatApiResponse<T> = ApiResponse<T> | ApiErrorResponse
 export type ChatWorkspaceEvent =
   | { type: "message.created"; payload: ChatMessage }
   | { type: "task.status_changed"; payload: ChatTask }
+  | { type: "task.relay_progress"; payload: RelayProgressEvent }
   | {
       type: "agent.status_changed"
       payload: {

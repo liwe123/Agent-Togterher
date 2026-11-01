@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from app.core.relay import parse_relay_agent_ids
 from app.db.base import Base, utc_now
 from app.models.enums import TaskStatus, string_enum
 
@@ -57,6 +58,13 @@ class Task(Base):
         String(36), nullable=True, index=True
     )
     trace_id: Mapped[str | None] = mapped_column(String(36), nullable=True, index=True)
+    # 群聊多 Agent 接力：按棒次排序的 Agent id JSON 数组；NULL/空表示普通任务。
+    relay_agent_ids_json: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    @property
+    def relay_agent_ids(self) -> list[int]:
+        """Ordered relay chain (empty for a plain task); dirty data reads as []."""
+        return parse_relay_agent_ids(self.relay_agent_ids_json)
 
     workspace: Mapped["Workspace"] = relationship(back_populates="tasks")
     conversation: Mapped["Conversation | None"] = relationship(back_populates="tasks")

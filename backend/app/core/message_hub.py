@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.errors import AppError
 from app.api.persistence import commit_or_conflict
 from app.core.config import get_settings
+from app.core.relay import MAX_RELAY_AGENTS, dump_relay_agent_ids
 from app.core.trace_context import stamp_new_message, stamp_task
 from app.db.base import utc_now
 from app.db.session import AsyncSessionLocal
@@ -178,6 +179,18 @@ def parse_mentions(content: str) -> list[str]:
     return mentions
 
 
+def _dedupe_agents(agents: list[Agent]) -> list[Agent]:
+    """Keep the first occurrence of each Agent for an ordered relay chain."""
+    seen: set[int] = set()
+    unique: list[Agent] = []
+    for agent in agents:
+        if agent.id in seen:
+            continue
+        seen.add(agent.id)
+        unique.append(agent)
+    return unique
+
+
 @dataclass(frozen=True)
 class MessageHubResult:
     message: MessageRead
@@ -237,16 +250,28 @@ class MessageHub:
                 )
             )
         )
-        matched_target = self._resolve_mention_target(content, agents, nodes)
-        if isinstance(matched_target, IntegrationNode):
-            return await self._create_node_task(conversation, content, matched_target)
+        mention_targets = self._resolve_mention_targets(content, agents, nodes)
+        first_target = mention_targets[0] if mention_targets else None
+        if isinstance(first_target, IntegrationNode):
+            return await self._create_node_task(conversation, content, first_target)
 
         if not agents:
             raise AppError(400, "Workspace has no available agents")
 
+        # FR1：按 @ 出现顺序去重成接力链；仅当内部 Agent ≥ 2 时才启用接力。
+        relay_agents = _dedupe_agents(
+            [
+                target
+                for target in mention_targets
+                if isinstance(target, Agent)
+            ]
+        )[:MAX_RELAY_AGENTS]
+        relay_agent_ids_json = dump_relay_agent_ids(
+            [agent.id for agent in relay_agents]
+        )
         assigned_agent = (
-            matched_target
-            if isinstance(matched_target, Agent)
+            relay_agents[0]
+            if relay_agents
             else self._default_agent(agents)
         )
 
@@ -270,6 +295,7 @@ class MessageHub:
             status=TaskStatus.PENDING,
             priority="normal",
             input_message_id=message.id,
+            relay_agent_ids_json=relay_agent_ids_json,
         )
         stamp_task(task, source_message=message)
         self._session.add(task)
@@ -326,8 +352,107 @@ class MessageHub:
                 workspace_id,
             )
 
+    @staticmethod
+    def _mention_candidates(
+        agents: list[Agent], nodes: list[IntegrationNode]
+    ) -> list[tuple[str, int, Agent | IntegrationNode]]:
+        """Collect mentionable terms as (term, priority, target) candidates.
+
+        Priority 0 = internal Agent, 1 = integration node; on an equal-length
+        match the lower priority wins (internal Agent first).
+        """
+        candidates: list[tuple[str, int, Agent | IntegrationNode]] = []
+        for agent in agents:
+            terms = {agent.name, agent.role, getattr(agent, "model_name", None)}
+            terms.update(_ROLE_ALIASES.get(agent.role, ()))
+            for term in terms:
+                if term and term.strip():
+                    candidates.append((term.strip(), 0, agent))
+
+        for node in nodes:
+            terms = {node.name, getattr(node, "provider", None)}
+            for term in terms:
+                if term and term.strip():
+                    candidates.append((term.strip(), 1, node))
+        return candidates
+
+    @staticmethod
+    def _best_mention_at(
+        content: str,
+        at_idx: int,
+        candidates: list[tuple[str, int, Agent | IntegrationNode]],
+    ) -> tuple[int, Agent | IntegrationNode] | None:
+        """Return (term length, target) for the best match starting at at_idx."""
+        subtext = content[at_idx + 1:]
+        subtext_lower = subtext.lower()
+        best: tuple[int, int, Agent | IntegrationNode] | None = None
+        for term, priority, target in candidates:
+            term_lower = term.lower()
+            if not subtext_lower.startswith(term_lower):
+                continue
+
+            term_len = len(term_lower)
+            if term[-1] in _ASCII_WORD_CHARS:
+                if term_len < len(subtext) and subtext[term_len] in _ASCII_WORD_CHARS:
+                    continue
+
+            match_score = (term_len, -priority)
+            if best is None or match_score > (best[0], -best[1]):
+                best = (term_len, priority, target)
+        if best is None:
+            return None
+        return best[0], best[2]
+
     @classmethod
-    def _resolve_mention_target(  # noqa: C901 存量复杂度债（B1 门禁清零，重构另行立项）
+    def _resolve_mention_targets(
+        cls,
+        content: str,
+        agents: list[Agent],
+        nodes: list[IntegrationNode],
+    ) -> list[Agent | IntegrationNode]:
+        """Return every valid @mention target in first-occurrence order, deduped.
+
+        The first element is exactly the target the previous single-target
+        resolver returned, so existing routing semantics stay unchanged; the
+        remaining elements are the relays the user wrote after it.
+        """
+        if not content:
+            return []
+
+        candidates = cls._mention_candidates(agents, nodes)
+        if not candidates:
+            return []
+
+        targets: list[Agent | IntegrationNode] = []
+        seen: set[tuple[str, int]] = set()
+        position = 0
+        while position < len(content):
+            at_idx = -1
+            for index in range(position, len(content)):
+                if content[index] in ("@", "＠"):
+                    at_idx = index
+                    break
+            if at_idx < 0:
+                break
+            if at_idx > 0 and content[at_idx - 1] in _ASCII_WORD_CHARS:
+                position = at_idx + 1
+                continue
+
+            matched = cls._best_mention_at(content, at_idx, candidates)
+            if matched is None:
+                position = at_idx + 1
+                continue
+
+            term_len, target = matched
+            key = (type(target).__name__, target.id)
+            if key not in seen:
+                seen.add(key)
+                targets.append(target)
+            position = at_idx + 1 + term_len
+        return targets
+
+    @classmethod
+    def _resolve_mention_target(
         cls,
         content: str,
         agents: list[Agent],
@@ -345,53 +470,8 @@ class MessageHub:
         - Longest-match prioritization when candidate names share a prefix.
         - Internal Agent taking priority over IntegrationNode if both match at the same earliest position.
         """
-        if not content:
-            return None
-
-        candidates: list[tuple[str, int, Agent | IntegrationNode]] = []
-        for agent in agents:
-            terms = {agent.name, agent.role, getattr(agent, "model_name", None)}
-            terms.update(_ROLE_ALIASES.get(agent.role, ()))
-            for term in terms:
-                if term and term.strip():
-                    candidates.append((term.strip(), 0, agent))
-
-        for node in nodes:
-            terms = {node.name, getattr(node, "provider", None)}
-            for term in terms:
-                if term and term.strip():
-                    candidates.append((term.strip(), 1, node))
-
-        mention_positions = [
-            i for i, ch in enumerate(content) if ch == "@" or ch == "＠"
-        ]
-
-        for at_idx in mention_positions:
-            if at_idx > 0 and content[at_idx - 1] in _ASCII_WORD_CHARS:
-                continue
-
-            subtext = content[at_idx + 1:]
-            subtext_lower = subtext.lower()
-
-            best_match: tuple[int, int, Agent | IntegrationNode] | None = None
-            for term, priority, target in candidates:
-                term_lower = term.lower()
-                if not subtext_lower.startswith(term_lower):
-                    continue
-
-                term_len = len(term_lower)
-                if term[-1] in _ASCII_WORD_CHARS:
-                    if term_len < len(subtext) and subtext[term_len] in _ASCII_WORD_CHARS:
-                        continue
-
-                match_score = (term_len, -priority)
-                if best_match is None or match_score > (best_match[0], -best_match[1]):
-                    best_match = (term_len, priority, target)
-
-            if best_match is not None:
-                return best_match[2]
-
-        return None
+        targets = cls._resolve_mention_targets(content, agents, nodes)
+        return targets[0] if targets else None
 
     async def _match_integration_node(
         self, content: str, agents: list[Agent], conversation: Conversation

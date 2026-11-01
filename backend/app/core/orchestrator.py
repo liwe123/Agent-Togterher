@@ -12,8 +12,9 @@ from sqlalchemy import inspect as sqlalchemy_inspect, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import selectinload
 
-from app.agents import final_agent, manager_agent, review_agent, worker_agent
+from app.agents import final_agent, manager_agent, relay_agent, review_agent, worker_agent
 from app.core.config import get_settings
+from app.core.relay import is_pass_reply
 from app.core.execution_trace import (
     build_context_message,
     build_execution_trace,
@@ -154,6 +155,10 @@ class AgentOrchestrator:
             renew_task_lease(task.id, lease_token, on_lost=lambda _tid: cancel_event.set())
         )
         try:
+            # FR2：接力任务按用户 @ 顺序逐棒执行，优先于普通单/多 Agent 路径。
+            if len(task.relay_agent_ids) >= 2:
+                return await self._run_relay_task(task, task.relay_agent_ids)
+
             agent = (
                 await self._session.get(Agent, task.assigned_agent_id)
                 if task.assigned_agent_id is not None
@@ -322,6 +327,267 @@ class AgentOrchestrator:
                 step,
                 error_message,
             )
+
+    async def _run_relay_task(
+        self,
+        task: Task,
+        relay_agent_ids: list[int],
+    ) -> TaskRead:
+        """FR2: run the ordered relay chain, one Agent turn at a time.
+
+        Each hop reads the original task plus every earlier hop's output, so a
+        later member builds on earlier work instead of answering alone. A hop
+        that answers only the PASS marker stays silent in the conversation but
+        is still recorded as a completed TaskStep.
+        """
+        step: TaskStep | None = None
+        active_agent: Agent | None = None
+        step_name = "relay_prepare"
+        hop_index = 0
+        total_hops = len(relay_agent_ids)
+
+        try:
+            if task.conversation_id is None:
+                raise TaskNotRunnableError(
+                    f"Task {task.id} is not attached to a conversation"
+                )
+
+            chain = await self._load_relay_agents(task, relay_agent_ids)
+            total_hops = len(chain)
+            original_task = task.description
+            db_api_keys = await litellm_service.get_db_api_keys(self._session)
+            db_custom_models = await litellm_service.get_db_custom_models(
+                self._session
+            )
+            previous_outputs: list[tuple[str, str]] = []
+
+            for hop_index, agent in enumerate(chain, start=1):
+                active_agent = agent
+                step_name = f"relay_turn_{hop_index}"
+                hop_input = relay_agent.build_relay_prompt(
+                    original_task, chain, hop_index, previous_outputs
+                )
+                await self.update_agent_status(agent, "running")
+                step = await self.save_task_step(
+                    task,
+                    agent,
+                    step_name=step_name,
+                    status="running",
+                    input_text=self._clip_text(hop_input, 2000),
+                )
+                await self._broadcast_relay_progress(
+                    task,
+                    hop_index=hop_index,
+                    total_hops=total_hops,
+                    agent=agent,
+                    status="started",
+                )
+                context_messages = await self._build_task_context_messages(
+                    task,
+                    agent,
+                    stage=step_name,
+                    note=hop_input,
+                    recent_steps_limit=8,
+                    recent_calls_limit=8,
+                )
+
+                def call_factory(
+                    tools: list[dict] | None,
+                    extra_messages: list[dict] | None,
+                    context_messages: list[dict] | None,
+                    *,
+                    _agent: Agent = agent,
+                    _hop: int = hop_index,
+                ) -> Awaitable[ChatCompletionResult]:
+                    return relay_agent.execute_turn(
+                        _agent,
+                        original_task,
+                        chain,
+                        _hop,
+                        previous_outputs,
+                        api_keys=db_api_keys,
+                        custom_models=db_custom_models,
+                        tools=tools,
+                        extra_messages=extra_messages,
+                        context_messages=context_messages,
+                    )
+
+                if get_settings().agent_tools_enabled:
+                    plugin_tools = await load_active_plugin_tools(
+                        self._session, task.workspace_id
+                    )
+                    completion = await self._run_agent_with_tools(
+                        task,
+                        agent,
+                        call_factory=call_factory,
+                        tools=get_tools_spec() + build_plugin_tool_specs(plugin_tools),
+                        plugin_tools=plugin_tools,
+                        context_messages=context_messages,
+                    )
+                else:
+                    completion = await self._call_and_log(
+                        task,
+                        agent,
+                        call_factory(None, None, context_messages),
+                    )
+
+                if is_pass_reply(completion.content):
+                    await self.save_task_step(
+                        task,
+                        agent,
+                        step=step,
+                        status="completed",
+                        output=relay_agent.PASS_MARKER,
+                    )
+                    await self.update_agent_status(agent, "idle")
+                    await self._broadcast_relay_progress(
+                        task,
+                        hop_index=hop_index,
+                        total_hops=total_hops,
+                        agent=agent,
+                        status="passed",
+                    )
+                    step = None
+                    continue
+
+                await self.save_task_step(
+                    task,
+                    agent,
+                    step=step,
+                    status="completed",
+                    output=completion.content,
+                )
+                await self.send_result_message(task, agent, completion.content)
+                previous_outputs.append((agent.name, completion.content))
+                await self.update_agent_status(agent, "idle")
+                await self._broadcast_relay_progress(
+                    task,
+                    hop_index=hop_index,
+                    total_hops=total_hops,
+                    agent=agent,
+                    status="completed",
+                )
+                step = None
+
+            result_text = self._relay_result_text(previous_outputs)
+            await self.update_task_status(
+                task, TaskStatus.COMPLETED, result=result_text
+            )
+            await self._session.refresh(task)
+            task.result = result_text
+            task.execution_trace = build_execution_trace(
+                task,
+                current_stage="relay",
+                completed_steps=await self._load_task_steps(task.id),
+                model_calls=await self._load_task_model_calls(task.id),
+            )
+            task.trace_summary = build_trace_summary(
+                task,
+                current_stage="relay",
+                completed_steps=await self._load_task_steps(task.id),
+                model_calls=await self._load_task_model_calls(task.id),
+            )
+            return TaskRead.model_validate(task)
+        except _TaskLeaseLostError:
+            raise
+        except Exception as exc:
+            error_message = self._error_message(exc)
+            logger.warning(
+                "Relay task execution failed",
+                extra={
+                    "task_id": self._identity_id(task),
+                    "agent_id": self._identity_id(active_agent),
+                    "hop_index": hop_index,
+                },
+                exc_info=True,
+            )
+            if active_agent is not None:
+                try:
+                    await self._broadcast_relay_progress(
+                        task,
+                        hop_index=hop_index,
+                        total_hops=total_hops,
+                        agent=active_agent,
+                        status="failed",
+                    )
+                except Exception:  # noqa: BLE001 — never mask the real failure
+                    logger.exception(
+                        "Relay failure progress broadcast failed for task %s",
+                        task.id,
+                    )
+            return await self._mark_failed_resilient(
+                task,
+                active_agent,
+                step,
+                error_message,
+                step_name=step_name,
+            )
+
+    async def _load_relay_agents(
+        self, task: Task, relay_agent_ids: list[int]
+    ) -> list[Agent]:
+        """Resolve the relay chain in order and validate workspace ownership."""
+        agents = list(
+            await self._session.scalars(
+                select(Agent).where(Agent.id.in_(relay_agent_ids))
+            )
+        )
+        by_id = {agent.id: agent for agent in agents}
+        chain: list[Agent] = []
+        missing: list[int] = []
+        for agent_id in relay_agent_ids:
+            agent = by_id.get(agent_id)
+            if agent is None or agent.workspace_id != task.workspace_id:
+                missing.append(agent_id)
+                continue
+            chain.append(agent)
+        if missing:
+            raise TaskNotRunnableError(
+                f"Relay agents {missing} are not available in workspace "
+                f"{task.workspace_id}"
+            )
+        if len(chain) < 2:
+            raise TaskNotRunnableError(
+                f"Task {task.id} relay chain needs at least 2 agents"
+            )
+        return chain
+
+    async def _broadcast_relay_progress(
+        self,
+        task: Task,
+        *,
+        hop_index: int,
+        total_hops: int,
+        agent: Agent,
+        status: str,
+    ) -> None:
+        """FR3: broadcast one relay hop state change for live chat progress."""
+        await self._broadcaster.broadcast_to_workspace(
+            task.workspace_id,
+            create_event(
+                "task.relay_progress",
+                {
+                    "task_id": task.id,
+                    "conversation_id": task.conversation_id,
+                    "hop_index": hop_index,
+                    "total_hops": total_hops,
+                    "agent_id": agent.id,
+                    "agent_name": agent.name,
+                    "status": status,
+                },
+            ),
+        )
+
+    @staticmethod
+    def _relay_result_text(
+        previous_outputs: list[tuple[str, str]],
+    ) -> str:
+        """Summarize the relay result; all-PASS chains still finish successfully."""
+        if not previous_outputs:
+            return "接力完成：所有成员均未新增内容（PASS）"
+        return "\n\n".join(
+            f"{name}：\n{content}" for name, content in previous_outputs
+        )
 
     async def _run_multi_agent_task(
         self,

@@ -56,6 +56,8 @@ class WorkspaceSnapshotBuilder:
                     "priority": t.priority,
                     "conversation_id": t.conversation_id,
                     "assigned_agent_id": t.assigned_agent_id,
+                    # FR3：断线重连后接力链信息不丢。
+                    "relay_agent_ids": t.relay_agent_ids,
                     "result": t.result,
                     "created_at": t.created_at.isoformat() if t.created_at else None,
                     "updated_at": t.updated_at.isoformat() if t.updated_at else None,

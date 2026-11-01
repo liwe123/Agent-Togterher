@@ -56,6 +56,8 @@ class TaskRead(BaseModel):
     result: str | None
     created_at: datetime
     updated_at: datetime
+    # 群聊多 Agent 接力：按棒次排序的 Agent id；普通任务为空列表。
+    relay_agent_ids: list[int] = Field(default_factory=list)
 
 
 class TaskAgentRead(BaseModel):

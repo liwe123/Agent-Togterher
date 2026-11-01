@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { MessageBubble } from "@/components/chat/message-bubble"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { assignRelayHops, buildMessageTimeline } from "@/lib/relay-utils"
 import type { Agent } from "@/types/agent"
 import type { ChatMessage, ChatTask } from "@/types/chat"
 
@@ -44,12 +45,18 @@ export function MessageList({
     () => new Map(agents.map((agent, index) => [agent.id, index])),
     [agents],
   )
+  const relayHops = useMemo(
+    () => assignRelayHops(messages, tasks),
+    [messages, tasks],
+  )
+  const timeline = useMemo(
+    () => buildMessageTimeline(messages, { relayHops }),
+    [messages, relayHops],
+  )
 
   function scrollToBottom(behavior: ScrollBehavior = "smooth") {
     const viewport = viewportRef.current
-    if (!viewport) {
-      return
-    }
+    if (!viewport) return
     viewport.scrollTo({ top: viewport.scrollHeight, behavior })
     isAtBottomRef.current = true
     setShowScrollButton(false)
@@ -68,9 +75,7 @@ export function MessageList({
 
   function handleScroll() {
     const viewport = viewportRef.current
-    if (!viewport) {
-      return
-    }
+    if (!viewport) return
     const distanceFromBottom =
       viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight
     const isAtBottom = distanceFromBottom < 64
@@ -83,7 +88,7 @@ export function MessageList({
       <div
         ref={viewportRef}
         onScroll={handleScroll}
-        className="scrollbar-thin h-full overflow-y-auto overscroll-contain px-3 py-5 sm:px-5 sm:py-6 lg:px-8"
+        className="scrollbar-thin chat-transcript h-full overflow-y-auto overscroll-contain px-3 py-5 sm:px-5 sm:py-6 lg:px-8"
         aria-live="polite"
         aria-label="群聊消息"
       >
@@ -106,29 +111,40 @@ export function MessageList({
             <div className="space-y-1">
               <p className="text-base font-semibold text-foreground">开始第一次协作</p>
               <p className="max-w-sm text-xs leading-relaxed text-muted-foreground">
-                直接输入需求会交给项目总设计师，也可以输入 @ 指定一位 Agent 分工协同。
+                直接输入需求会交给项目总设计师；也可以 @ 一位 Agent 分工，或 @ 多位 Agent 让它们按顺序接力协作。
               </p>
             </div>
           </div>
         ) : (
-          <div className="mx-auto flex w-full max-w-4xl flex-col gap-5">
-            {messages.map((message) => {
+          <div className="mx-auto flex w-full max-w-4xl flex-col">
+            {timeline.map((entry) => {
+              const { message, relayHop } = entry
               const agent =
                 message.sender_id === null
                   ? undefined
                   : agentById.get(message.sender_id)
               return (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  agent={agent}
-                  agentIndex={
-                    message.sender_id === null
-                      ? 0
-                      : agentIndexById.get(message.sender_id)
-                  }
-                  task={taskByMessageId.get(message.id)}
-                />
+                <div key={message.id}>
+                  {entry.dayLabel ? (
+                    <div className="chat-time-divider" role="separator">
+                      <span>{entry.dayLabel}</span>
+                    </div>
+                  ) : null}
+                  <MessageBubble
+                    message={message}
+                    agent={agent}
+                    agentIndex={
+                      message.sender_id === null
+                        ? 0
+                        : agentIndexById.get(message.sender_id)
+                    }
+                    task={taskByMessageId.get(message.id)}
+                    groupStart={entry.groupStart}
+                    groupEnd={entry.groupEnd}
+                    showTime={entry.showTime}
+                    relayHop={relayHop}
+                  />
+                </div>
               )
             })}
           </div>

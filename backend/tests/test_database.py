@@ -59,6 +59,8 @@ def test_all_required_tables_and_columns_are_registered() -> None:
             "execution_token_expires_at",
             "correlation_id",
             "trace_id",
+            # 群聊多 Agent 接力（PRD-群聊多Agent接力协作）：接力棒次 JSON 列。
+            "relay_agent_ids_json",
         },
         "task_queue_items": {
             "id",

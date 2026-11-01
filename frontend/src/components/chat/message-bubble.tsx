@@ -79,6 +79,13 @@ interface MessageBubbleProps {
   agent?: Agent
   agentIndex?: number
   task?: ChatTask
+  /** 连续同发送者分组：是否分组首条（显示头像与名称）。 */
+  groupStart?: boolean
+  /** 是否分组末条（显示时间与完整圆角）。 */
+  groupEnd?: boolean
+  showTime?: boolean
+  /** 接力任务中的棒次（第 index/total 棒）。 */
+  relayHop?: { index: number; total: number } | null
 }
 
 export function MessageBubble({
@@ -86,6 +93,10 @@ export function MessageBubble({
   agent,
   agentIndex = 0,
   task,
+  groupStart = true,
+  groupEnd = true,
+  showTime = true,
+  relayHop = null,
 }: MessageBubbleProps) {
   const isUser = message.sender_type === "user"
   const isSystem = message.sender_type === "system"
@@ -128,78 +139,102 @@ export function MessageBubble({
       className={cn(
         "flex w-full items-start gap-3",
         isUser ? "justify-end" : "justify-start",
+        groupStart ? "mt-4 first:mt-0" : "mt-0.5",
       )}
       data-message-type={message.message_type}
     >
-      {!isUser && (
-        <Avatar className="agent-avatar size-9.5 shadow-sm rounded-full ring-2 ring-card" data-tone={agentIndex % 6}>
-          <AvatarFallback className="rounded-full">
-            {agent?.avatar ??
-              agentInitials[agent?.name ?? ""] ?? (
-                <Bot aria-hidden="true" className="size-4" />
-              )}
-          </AvatarFallback>
-        </Avatar>
-      )}
-
-      <div className={cn("flex max-w-[min(84%,48rem)] flex-col", isUser ? "items-end" : "items-start")}>
-        <div className="mb-1.5 flex min-w-0 items-center gap-2 px-1">
-          {isError && (
-            <AlertTriangle
-              aria-hidden="true"
-              className="size-3.5 shrink-0 text-destructive"
-            />
-          )}
-          <span
-            className={cn(
-              "truncate text-xs font-semibold",
-              isUser ? "text-primary font-bold" : "text-foreground",
-              isError && "text-destructive",
-            )}
+      {!isUser &&
+        (groupStart ? (
+          <Avatar
+            className="agent-avatar mt-0.5 size-9.5 shrink-0 rounded-full shadow-sm ring-2 ring-card"
+            data-tone={agentIndex % 6}
           >
-            {senderName}
-          </span>
-          {taskLabel && (
-            task ? (
-              <Link
-                href={`/tasks/${task.id}`}
-                title={`查看 Task #${task.id} 详情`}
-                className="group flex items-center gap-1 transition-opacity hover:opacity-85"
+            <AvatarFallback className="rounded-full">
+              {agent?.avatar ??
+                agentInitials[agent?.name ?? ""] ?? (
+                  <Bot aria-hidden="true" className="size-4" />
+                )}
+            </AvatarFallback>
+          </Avatar>
+        ) : (
+          <span className="chat-avatar-spacer" aria-hidden="true" />
+        ))}
+
+      <div
+        className={cn(
+          "flex max-w-[min(84%,48rem)] flex-col",
+          isUser ? "items-end" : "items-start",
+        )}
+      >
+        {groupStart && (
+          <div className="mb-1 flex min-w-0 items-center gap-2 px-1">
+            {isError && (
+              <AlertTriangle
+                aria-hidden="true"
+                className="size-3.5 shrink-0 text-destructive"
+              />
+            )}
+            <span
+              className={cn(
+                "truncate text-xs font-semibold",
+                isUser ? "text-primary font-bold" : "text-foreground",
+                isError && "text-destructive",
+              )}
+            >
+              {senderName}
+            </span>
+            {relayHop && !isUser && (
+              <span
+                className="chat-relay-badge"
+                title={`接力第 ${relayHop.index}/${relayHop.total} 棒`}
               >
+                接力 {relayHop.index}/{relayHop.total}
+              </span>
+            )}
+            {taskLabel &&
+              (task ? (
+                <Link
+                  href={`/tasks/${task.id}`}
+                  title={`查看 Task #${task.id} 详情`}
+                  className="group flex items-center gap-1 transition-opacity hover:opacity-85"
+                >
+                  <Badge
+                    variant={taskBadgeVariant}
+                    className={cn(
+                      "h-5 gap-1 rounded-full px-2 text-[10px] shadow-sm cursor-pointer",
+                      isUser &&
+                        task?.status !== "failed" &&
+                        "border-primary/30 bg-primary/15 text-primary",
+                    )}
+                  >
+                    <span>
+                      Task #{task.id} · {taskLabel}
+                    </span>
+                    <ExternalLink className="size-2.5 transition-transform group-hover:scale-110" />
+                  </Badge>
+                </Link>
+              ) : (
                 <Badge
                   variant={taskBadgeVariant}
                   className={cn(
-                    "h-5 rounded-full px-2 text-[10px] gap-1 cursor-pointer shadow-sm",
-                    isUser &&
-                      task?.status !== "failed" &&
-                      "border-primary/30 bg-primary/15 text-primary",
+                    "h-5 rounded-full px-2 text-[10px]",
+                    isUser && "border-primary/30 bg-primary/15 text-primary",
                   )}
                 >
-                  <span>Task #{task.id} · {taskLabel}</span>
-                  <ExternalLink className="size-2.5 transition-transform group-hover:scale-110" />
+                  {taskLabel}
                 </Badge>
-              </Link>
-            ) : (
-              <Badge
-                variant={taskBadgeVariant}
-                className={cn(
-                  "h-5 rounded-full px-2 text-[10px]",
-                  isUser && "border-primary/30 bg-primary/15 text-primary",
-                )}
-              >
-                {taskLabel}
-              </Badge>
-            )
-          )}
-        </div>
+              ))}
+          </div>
+        )}
 
-        {/* Pixel Messages Asymmetrical Rounded Bubble */}
         <div
           className={cn(
-            "px-4.5 py-3.5 text-foreground shadow-sm transition-all duration-200",
+            "chat-bubble px-4 py-3 text-foreground shadow-sm transition-colors duration-200",
             isUser
-              ? "rounded-3xl rounded-tr-md bg-primary/20 border border-primary/30 text-foreground"
-              : "rounded-3xl rounded-tl-md bg-secondary/60 border border-border/70 text-foreground",
+              ? "border border-primary/30 bg-primary/18"
+              : "border border-border/70 bg-secondary/55",
+            groupStart ? (isUser ? "rounded-3xl rounded-tr-md" : "rounded-3xl rounded-tl-md") : "rounded-3xl",
+            groupEnd ? (isUser ? "rounded-3xl rounded-br-md" : "rounded-3xl rounded-bl-md") : "rounded-3xl",
             isError && "bg-destructive/15 text-foreground border-destructive/40",
           )}
         >
@@ -208,21 +243,26 @@ export function MessageBubble({
           </div>
         </div>
 
-        <time
-          className="mt-1 px-1.5 font-mono text-[10px] text-muted-foreground/80"
-          dateTime={message.created_at}
-        >
-          {formatTime(message.created_at)}
-        </time>
+        {showTime && (
+          <time
+            className="mt-1 px-1.5 font-mono text-[10px] text-muted-foreground/80"
+            dateTime={message.created_at}
+          >
+            {formatTime(message.created_at)}
+          </time>
+        )}
       </div>
 
-      {isUser && (
-        <Avatar className="size-9.5 shadow-sm rounded-full ring-2 ring-card">
-          <AvatarFallback className="rounded-full bg-primary/20 text-primary font-bold">
-            <UserRound aria-hidden="true" className="size-4" />
-          </AvatarFallback>
-        </Avatar>
-      )}
+      {isUser &&
+        (groupEnd ? (
+          <Avatar className="mt-0.5 size-9.5 shrink-0 rounded-full shadow-sm ring-2 ring-card">
+            <AvatarFallback className="rounded-full bg-primary/20 font-bold text-primary">
+              <UserRound aria-hidden="true" className="size-4" />
+            </AvatarFallback>
+          </Avatar>
+        ) : (
+          <span className="chat-avatar-spacer" aria-hidden="true" />
+        ))}
     </article>
   )
 }

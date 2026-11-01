@@ -9,8 +9,13 @@ import type {
   ChatWorkspaceEvent,
   Conversation,
   MessageHubResult,
+  RelayProgressEvent,
   Workspace,
 } from "@/types/chat"
+import {
+  applyRelayProgress,
+  type RelayProgressReducer,
+} from "@/lib/relay-utils"
 import { requestData } from "@/lib/task-api"
 import { CONVERSATION_LIST_LIMIT, MESSAGE_LIST_LIMIT, TASK_LIST_LIMIT } from "@/lib/constants"
 import { shouldApplyTaskStatus } from "@/lib/task-utils"
@@ -60,6 +65,7 @@ export function useChat() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [relayProgress, setRelayProgress] = useState<RelayProgressReducer>({})
   const [requestVersion, setRequestVersion] = useState(0)
   const localErrorId = useRef(-1)
   const fetchedRef = useRef(false)
@@ -208,6 +214,14 @@ export function useChat() {
         return
       }
 
+      if (e.type === "task.relay_progress") {
+        const progress = e.payload as RelayProgressEvent
+        if (progress.conversation_id === conversationId) {
+          setRelayProgress((current) => applyRelayProgress(current, progress))
+        }
+        return
+      }
+
       if (e.type === "workspace.snapshot") {
         const snapshotTasks = e.payload.tasks as Array<Partial<ChatTask>>
         setTasks((current) =>
@@ -309,6 +323,7 @@ export function useChat() {
     isLoading,
     isSending,
     error,
+    relayProgress,
     retry,
     sendMessage,
   }

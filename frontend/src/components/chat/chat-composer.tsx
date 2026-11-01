@@ -1,6 +1,6 @@
 "use client"
 
-import { CornerDownLeft, Send, Sparkles, Trash2, Zap } from "lucide-react"
+import { ArrowRight, CornerDownLeft, Send, Sparkles, Trash2, Zap } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 
@@ -14,6 +14,7 @@ import {
   insertMention,
   type MentionMatch,
 } from "@/lib/mention-utils"
+import { buildRelayChainPreview } from "@/lib/relay-utils"
 import type { Agent } from "@/types/agent"
 import type { IntegrationNode } from "@/types/integration"
 
@@ -96,6 +97,12 @@ export function ChatComposer({
   )
 
   const isMentionOpen = mention !== null && filteredEntries.length > 0
+
+  // PRD FR4：输入多个 @ 时实时预览接力顺序（仅内部 Agent，按出现顺序去重）。
+  const relayPreview = useMemo(
+    () => buildRelayChainPreview(value, allMentionEntries),
+    [value, allMentionEntries],
+  )
 
   function updateMention(nextValue: string, caret: number | null) {
     const nextMention = findMention(nextValue, caret ?? nextValue.length)
@@ -231,7 +238,7 @@ export function ChatComposer({
 
         {/* Quick prompt templates & agent mention chips */}
         <div className="hidden items-center justify-between gap-2 overflow-x-auto scrollbar-thin pb-0.5 md:flex">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="flex shrink-0 items-center gap-1.5 whitespace-nowrap text-xs text-muted-foreground">
             <Sparkles className="size-3.5 text-primary" />
             <span className="font-medium text-foreground/80">快捷指令：</span>
             {promptTemplates.map((tmpl) => (
@@ -239,20 +246,20 @@ export function ChatComposer({
                 key={tmpl.label}
                 type="button"
                 onClick={() => appendTemplate(tmpl.text)}
-                className="rounded-full border border-border/70 bg-secondary/50 px-3 py-1 text-[11px] font-medium text-foreground/90 hover:border-primary/50 hover:bg-primary/15 hover:text-primary transition-all active:scale-95"
+                className="shrink-0 whitespace-nowrap rounded-full border border-border/70 bg-secondary/50 px-3 py-1 text-[11px] font-medium text-foreground/90 hover:border-primary/50 hover:bg-primary/15 hover:text-primary transition-all active:scale-95"
               >
                 {tmpl.label}
               </button>
             ))}
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex shrink-0 items-center gap-1.5">
             {allMentionEntries.map((entry) => (
               <button
                 key={entry.key}
                 type="button"
                 title={`@${entry.name} (${entry.roleLabel ?? entry.subtitle})`}
                 onClick={() => selectMention(entry)}
-                className="flex items-center gap-1 rounded-full border border-border/60 bg-secondary/40 px-2.5 py-0.5 text-[11px] text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-foreground transition-all active:scale-95"
+                className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-border/60 bg-secondary/40 px-2.5 py-0.5 text-[11px] text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-foreground transition-all active:scale-95"
               >
                 <span>{entry.avatar ?? entry.name.slice(0, 1)}</span>
                 <span>@{entry.name.slice(0, 4)}</span>
@@ -260,6 +267,28 @@ export function ChatComposer({
             ))}
           </div>
         </div>
+
+        {/* 接力顺序预览：多 @ 时提示本轮将由这些 Agent 依次接力（PRD FR4） */}
+        {relayPreview.length >= 2 ? (
+          <div className="chat-relay-preview" aria-label="接力顺序预览">
+            <span className="chat-relay-preview-label">接力顺序</span>
+            <ol className="chat-relay-preview-list">
+              {relayPreview.map((entry, index) => (
+                <li key={entry.key} className="chat-relay-preview-item">
+                  <span className="chat-relay-preview-index">{index + 1}</span>
+                  <span className="chat-relay-preview-name">{entry.name}</span>
+                  {index < relayPreview.length - 1 ? (
+                    <ArrowRight
+                      aria-hidden="true"
+                      className="chat-relay-preview-arrow"
+                    />
+                  ) : null}
+                </li>
+              ))}
+            </ol>
+            <span className="chat-relay-preview-hint">按顺序接力执行</span>
+          </div>
+        ) : null}
 
         {/* Dialogue box container with MentionMenu anchored directly above it */}
         <div ref={composerContainerRef} className="relative">
@@ -310,7 +339,7 @@ export function ChatComposer({
             <div className="flex shrink-0 items-center gap-3 md:w-full md:justify-between md:pt-2.5 md:border-t md:border-border/50">
               <p className="hidden items-center gap-1.5 px-2 text-[11px] text-muted-foreground md:flex">
                 <CornerDownLeft aria-hidden="true" className="size-3 text-primary" />
-                Enter 发送 · Shift + Enter 换行 · 输入 @ 召唤角色
+                Enter 发送 · Shift + Enter 换行 · 输入 @ 召唤角色 · 多 @ 顺序接力
               </p>
               <div className="ml-auto flex items-center gap-2">
                 <Button
