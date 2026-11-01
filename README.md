@@ -187,7 +187,7 @@ python scripts/migrate_sqlite_to_pg.py             # 实际迁移
 | 路由 | 干什么 |
 |---|---|
 | `/` | 集群总览：Agent 负载、外部节点心跳、Software Dock |
-| `/chats` | 群聊：@Agent 派活，Markdown 渲染，自动触发流水线 |
+| `/chats` | 群聊：@Agent 派活（可 @ 多个 Agent 顺序接力），Markdown 渲染，自动触发流水线或接力链 |
 | `/contacts` | Agent 花名册 |
 | `/tasks` | 任务列表 |
 | `/tasks/[id]` | 任务详情：执行轨迹、工具调用链、时序回放、断点恢复 |
@@ -220,6 +220,26 @@ Manager 汇总 → 写回群聊
 - 工具调用形成显式闭环：模型请求 → 执行 → 结果回灌下一轮
 - 超长上下文自动摘要裁剪，关键状态不丢
 - 失败后重试，模型能读到失败前上下文接着跑
+
+### 群聊多 Agent 接力（C-267）
+
+一条消息 @ 多个内部 Agent 时，按 @ 出现顺序去重成链（上限 6 棒），在同一个任务内逐棒执行：
+
+```
+用户 @A @B @C "完成需求"
+    │
+    ▼
+第 1 棒 A：原始任务 + 执行轨迹            → 产出写回群聊
+第 2 棒 B：原始任务 + A 产出 + 轨迹        → 产出写回群聊
+第 3 棒 C：原始任务 + A/B 产出 + 轨迹      → 产出写回群聊（无新增内容可回复 [PASS] 静默让位）
+    │
+    ▼
+Task 完成：result 汇总各棒产出（PASS 棒不产生群聊消息，仅留 TaskStep 可追溯）
+```
+
+- 任务数据：`tasks.relay_agent_ids_json`（按棒次排序的 Agent id JSON 数组）；每棒落 `task_steps(relay_turn_n)`
+- 实时事件：WebSocket `task.relay_progress`（`started` / `completed` / `passed` / `failed`），前端渲染接力链与棒次徽标
+- 语义边界：单 @ → 单 Agent 任务；无 @ → Manager 流水线；首个 @ 为外部节点 → 节点派发，均不受接力影响
 
 ---
 
@@ -386,11 +406,12 @@ python -m pytest tests/ -q
 # 前端
 cd frontend
 npm test
+npm run typecheck
 npm run lint
 npm run build
 ```
 
-当前：后端 270 tests passed（44 个测试文件），前端 35 tests / lint 0 errors / build pass。
+当前：后端 285 tests passed（45 个测试文件），前端 81 tests（7 个测试文件）/ typecheck 0 / lint 0 / build pass。
 
 ---
 
@@ -424,7 +445,7 @@ WORKER_CONCURRENCY=2
 │   │   ├── websocket/           # WebSocket manager / events / distributed
 │   │   └── worker.py            # 独立 Worker 入口
 │   ├── alembic/                # Alembic 迁移（env.py + versions）
-│   ├── tests/                   # 44 个测试文件（270+ tests）
+│   ├── tests/                   # 45 个测试文件（285 tests）
 │   └── requirements.txt
 ├── frontend/
 │   ├── src/
@@ -434,7 +455,7 @@ WORKER_CONCURRENCY=2
 │   │   └── app/                 # Next.js App Router 页面
 │   └── package.json
 ├── docs/
-│   ├── prd/                     # 31 份 PRD 文档
+│   ├── prd/                     # 34 份 PRD 文档
 │   ├── PRD.md                   # 变更追踪表（自动生成，由 generate_change_log.py 维护）
 │   ├── generate_change_log.py   # 从 git history 自动生成变更表
 │   └── build_prd_html.py        # 生成单页 PRD.html 阅读器
