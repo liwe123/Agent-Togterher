@@ -693,16 +693,26 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 回写独立验收结论并重生成（C-269）": {
+        "type": "Optimization",
+        "content": "重生成变更追踪表与 PRD.html：把独立验收子 Agent 的结论（通过 + 3 条非阻塞整改）回写 C-267 备注列，登记上一笔 regen 提交 C-268，并修正前端用例数（18→19）、迁移验证表述（收紧到开发库路径与 alembic_version）与取证行数（1047→1046）",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 268 行；xlsx 与 PRD.md 一致；PRD.html 由 34 份 PRD + 268 条记录生成",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）",
+    },
     "feat: 群聊多 Agent 接力协作与聊天信息架构升级（C-267）": {
         "type": "Requirement",
         "scope": "前端、后端、数据库、文档",
         "content": "学习 DS-Bot 群聊顺序发言范式，新增群聊多 Agent 接力协作与聊天信息架构升级：一条消息 @ 多个内部 Agent 时按出现顺序去重成链（上限 6 棒），在同一任务内逐棒执行，每棒读取原始任务 + 前序产出 + 执行轨迹，支持 [PASS] 静默让位，失败保留已完成棒并汇总结果；新增 task.relay_progress 实时事件与工作区快照 relay_agent_ids；前端新增接力链进度、输入区接力顺序预览、消息棒次徽标、群成员面板、消息按发送者分组、时间分隔、紧凑胶囊头部与聊天表面视觉收敛。单 @ / 无 @ / 首 @ 为外部节点的既有语义保持不变",
-        "frontend": "types/chat.ts、types/task.ts（任务/事件类型）、hooks/use-chat.ts（接力进度状态）、lib/relay-utils.ts（提及顺序提取/消息分组/时间分隔/棒次匹配纯函数）、components/chat/{relay-chain,chat-member-panel,chat-page,message-list,message-bubble,chat-composer}.tsx、app/globals.css（.chat-* 语义类）、tests/relay-utils.test.mjs（18 用例）",
+        "frontend": "types/chat.ts、types/task.ts（任务/事件类型）、hooks/use-chat.ts（接力进度状态）、lib/relay-utils.ts（提及顺序提取/消息分组/时间分隔/棒次匹配纯函数）、components/chat/{relay-chain,chat-member-panel,chat-page,message-list,message-bubble,chat-composer}.tsx、app/globals.css（.chat-* 语义类）、tests/relay-utils.test.mjs（19 用例）",
         "backend": "models/task.py 新增 relay_agent_ids_json 列与只读属性；schemas/task.py 暴露 relay_agent_ids；core/relay.py（链序列化与 PASS 判定）；core/message_hub.py 多 @ 有序解析成链；core/orchestrator.py 新增 _run_relay_task/_load_relay_agents/_broadcast_relay_progress；agents/relay_agent.py（接力提示词）；websocket/events.py 新增 task.relay_progress；websocket/snapshot.py 补快照字段；tests/test_relay_handoff.py（11 用例）；test_database.py 契约列更新",
         "db": "是（tasks 新增 relay_agent_ids_json TEXT 可空列；Alembic d5e6f7a8b9c0，batch_alter_table 支持 SQLite/PG 双库与回滚）",
         "breaking": "是（一条消息 @ 多个内部 Agent 时由「只取首个 @」改为「按 @ 顺序接力」；单 @ / 无 @ / 首 @ 为外部节点语义不变）",
-        "verify": "后端 pytest 全量 285 passed（含新增接力 11 例、迁移 3 例）；flake8 严格参数 0；前端 81 passed + typecheck 0 + lint 0 + next build 16 路由成功；Alembic 在真实 SQLite 开发库 upgrade 成功；A/B 截图 7 张（docs/ab-20261101）",
-        "notes": "PRD: docs/prd/PRD-群聊多Agent接力协作.md（FR1-FR7 / AC1-AC8）；对标分析: docs/DS-Bot对标分析与改造方案.md；原始取证: docs/DS-Bot分析报告/（1047 行 + 630 行）；独立验收：待回写",
+        "verify": "后端 pytest 全量 285 passed（含新增接力 11 例、迁移 3 例）；flake8 严格参数 0；前端 81 passed + typecheck 0 + lint 0 + next build 16 路由成功；Alembic 在开发库 backend/data/agent_console.db upgrade 成功（alembic_version=d5e6f7a8b9c0，relay_agent_ids_json 已建列）；A/B 截图 7 张（docs/ab-20261101）",
+        "notes": "PRD: docs/prd/PRD-群聊多Agent接力协作.md（FR1-FR7 / AC1-AC8）；对标分析: docs/DS-Bot对标分析与改造方案.md；原始取证: docs/DS-Bot分析报告/（1046 行 + 630 行）。独立验收（2026-11-01，子 Agent 只校验未改动）：通过（0 阻塞，3 条非阻塞已整改：前端用例数 19、迁移表述收紧到开发库路径与版本、取证行数 1046/630）；复测后端全量 285 passed + 定向 16 passed + flake8 0、前端 81 passed + typecheck 0 + lint 0 + build 16 路由；重跑两脚本生成 268 行 / 34 份 PRD 且回滚后工作区干净",
     },
     "docs: 登记群聊接力批次与对标分析并重生成（C-268）": {
         "type": "Optimization",

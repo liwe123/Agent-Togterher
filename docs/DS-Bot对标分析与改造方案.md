@@ -12,7 +12,7 @@
 | 审查对象 | 范围 | 方法 |
 |---|---|---|
 | Agent Console 本仓库 | 后端 `backend/app`（API / models / services / core / websocket / worker）、前端 `frontend/src`（页面 / 组件 / hooks / lib / types）、文档体系（PRD、变更追踪表、架构治理基线、HANDOFF） | 逐模块阅读 + 抽样运行（pytest / npm test / build / lint / typecheck 基线） |
-| DS-Bot 参考项目 | host 逻辑（群聊调度、交接、记忆、上下文治理、权限、用量、事件协议）、client UI（设计系统、信息架构、关键组件、交互模式） | 两个只读分析子 Agent 并行取证，产出 1047 行 / 630 行带 `文件:行号` 证据的报告（`.tmp/analysis/`），本文做收敛与差距映射 |
+| DS-Bot 参考项目 | host 逻辑（群聊调度、交接、记忆、上下文治理、权限、用量、事件协议）、client UI（设计系统、信息架构、关键组件、交互模式） | 两个只读分析子 Agent 并行取证，产出 1046 行 / 630 行带 `文件:行号` 证据的报告（归档于 `docs/DS-Bot分析报告/`），本文做收敛与差距映射 |
 | 质量基线 | 后端 274 passed / 44 文件；前端 62 passed + typecheck 0 + lint 0 + build 通过（改动前） | 直接复跑 |
 
 ---
@@ -180,7 +180,7 @@
 | 前端消息分组与事件行 | `client.js:7549-7647,7939` |
 | 前端胶囊头与详情面板 | `client.js:2524-2546,2729-2757` |
 | 前端角色状态机 | `client.js:1383-1493,2394-2481,3592-3626` |
-| 分析子 Agent 原始报告 | [DS-Bot后端交互逻辑分析.md](DS-Bot分析报告/DS-Bot后端交互逻辑分析.md)（1047 行）、[DS-Bot前端UI与交互模式分析.md](DS-Bot分析报告/DS-Bot前端UI与交互模式分析.md)（630 行） |
+| 分析子 Agent 原始报告 | [DS-Bot后端交互逻辑分析.md](DS-Bot分析报告/DS-Bot后端交互逻辑分析.md)（1046 行）、[DS-Bot前端UI与交互模式分析.md](DS-Bot分析报告/DS-Bot前端UI与交互模式分析.md)（630 行） |
 
 ---
 
