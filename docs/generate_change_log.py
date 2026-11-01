@@ -693,6 +693,26 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: README 补齐群聊接力能力与质量基线（C-270）": {
+        "type": "Optimization",
+        "content": "README 同步本批改动：页面表补充群聊多 Agent 接力说明；编排流程新增「群聊多 Agent 接力」小节（链路、tasks.relay_agent_ids_json / task_steps 数据字段、task.relay_progress 事件、PASS 语义与「单 @ / 无 @ / 外部节点」边界）；测试基线更新为后端 285 tests / 45 文件、前端 81 tests / 7 文件 + typecheck/lint/build，PRD 份数更新为 34",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "纯文档改动；数字与实测一致（后端 285 passed / 45 个 test_*.py、前端 81 passed / 7 个 test 文件、docs/prd 34 份）；不涉及代码运行路径",
+        "notes": "依据 docs/prd/PRD-群聊多Agent接力协作.md 与 docs/DS-Bot对标分析与改造方案.md；不改变任何运行时行为",
+    },
+    "docs: 登记 README 同步并重生成（C-271）": {
+        "type": "Optimization",
+        "content": "重生成变更追踪表与 PRD.html：登记 README 同步提交 C-270 与上一笔 regen 提交 C-269，xlsx 与 PRD.md 保持一致",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 270 行；xlsx 与 PRD.md 一致；PRD.html 由 34 份 PRD + 270 条记录生成",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）",
+    },
     "docs: 回写独立验收结论并重生成（C-269）": {
         "type": "Optimization",
         "content": "重生成变更追踪表与 PRD.html：把独立验收子 Agent 的结论（通过 + 3 条非阻塞整改）回写 C-267 备注列，登记上一笔 regen 提交 C-268，并修正前端用例数（18→19）、迁移验证表述（收紧到开发库路径与 alembic_version）与取证行数（1047→1046）",

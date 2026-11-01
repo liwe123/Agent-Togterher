@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>34</b> 份</span>
-        <span>变更记录 <b>268</b> 条</span>
-        <span>生成于 2026-11-01 11:25</span>
+        <span>变更记录 <b>270</b> 条</span>
+        <span>生成于 2026-11-01 11:29</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -4575,6 +4575,38 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否</td>
 <td>生成 267 行；xlsx 与 PRD.md 一致；PRD.html 由 34 份 PRD + 267 条记录生成</td>
 <td>本次提交自身行滞后一行属预期（守则 4 豁免）</td>
+</tr>
+<tr>
+<td>2026-11-01 11:25</td>
+<td>C-269</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/c8ab8e3">c8ab8e3</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>重生成变更追踪表与 PRD.html：把独立验收子 Agent 的结论（通过 + 3 条非阻塞整改）回写 C-267 备注列，登记上一笔 regen 提交 C-268，并修正前端用例数（18→19）、迁移验证表述（收紧到开发库路径与 alembic_version）与取证行数（1047→1046）</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>生成 268 行；xlsx 与 PRD.md 一致；PRD.html 由 34 份 PRD + 268 条记录生成</td>
+<td>本次提交自身行滞后一行属预期（守则 4 豁免）</td>
+</tr>
+<tr>
+<td>2026-11-01 11:29</td>
+<td>C-270</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/9517d32">9517d32</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>文档</td>
+<td>README 同步本批改动：页面表补充群聊多 Agent 接力说明；编排流程新增「群聊多 Agent 接力」小节（链路、tasks.relay_agent_ids_json / task_steps 数据字段、task.relay_progress 事件、PASS 语义与「单 @ / 无 @ / 外部节点」边界）；测试基线更新为后端 285 tests / 45 文件、前端 81 tests / 7 文件 + typecheck/lint/build，PRD 份数更新为 34</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>纯文档改动；数字与实测一致（后端 285 passed / 45 个 test_*.py、前端 81 passed / 7 个 test 文件、docs/prd 34 份）；不涉及代码运行路径</td>
+<td>依据 docs/prd/PRD-群聊多Agent接力协作.md 与 docs/DS-Bot对标分析与改造方案.md；不改变任何运行时行为</td>
 </tr>
 </tbody>
 </table></div>
