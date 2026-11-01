@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>35</b> 份</span>
-        <span>变更记录 <b>280</b> 条</span>
-        <span>生成于 2026-11-01 17:32</span>
+        <span>变更记录 <b>281</b> 条</span>
+        <span>生成于 2026-11-01 17:35</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -4767,6 +4767,22 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否</td>
 <td>pytest tests/test_budget_redaction.py 9 passed、test_multi_agent_workflow + test_codex_bridge 35 passed；flake8 两条命令 0；workflow YAML 4 job/4 trigger 且无乱码/BOM；docs 一致性 OK</td>
 <td>来源：Batch1 独立验收（HEAD 76e78d6）的 4 条非阻塞问题；环境限制项（PG 全量/ci-local/canary 无法由验收方独立复跑）已如实保留在 C-275 备注</td>
+</tr>
+<tr>
+<td>2026-11-01 17:46</td>
+<td>C-281</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/82a585e">82a585e</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>重生成变更追踪表与 PRD.html：把独立验收结论回写 C-275 备注，登记验收整改 C-280 与上一笔 regen 提交 C-279</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>生成 280 行；xlsx 与 PRD.md 一致；PRD.html 由 35 份 PRD + 280 条记录生成</td>
+<td>本次提交自身行滞后一行属预期（守则 4 豁免）；至此 Batch1 代码/文档/验收/改动表闭环，待推送与 CI 复验</td>
 </tr>
 </tbody>
 </table></div>

@@ -693,6 +693,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 回写 Batch1 CI 复验结果并重生成（C-282）": {
+        "type": "Optimization",
+        "content": "回写 Batch1 真实 CI 复验结果：run 41293616230（head 82a585e，2026-11-01）三 job 全绿——build-linux success、test-postgres success、test-frontend success；dependency-canary 按 push 事件规则跳过（仅 schedule/workflow_dispatch 触发，首次真跑需 merge 后手动 dispatch）",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 281 行；xlsx 与 PRD.md 一致；PRD.html 由 35 份 PRD + 281 条记录生成；CI run 41293616230 三 job success",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）；Batch1（C-275~C-282）至此含真实 CI 证据闭环",
+    },
     "fix: 回写验收整改：workflow 注释编码、ci-local 参数与并行失败归因（C-280）": {
         "type": "BUG",
         "scope": "后端、CI、文档",
