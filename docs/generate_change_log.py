@@ -693,6 +693,27 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "fix: 修复 CI 依赖漂移假红与接力失败步进收敛（C-272）": {
+        "type": "BUG",
+        "scope": "后端、前端、CI",
+        "content": "修复 CI 三 job 全红与接力失败步进收敛：①依赖漂移：CI 新装 pytest 9.2.0 + pytest-asyncio 1.4.1，在未配置 asyncio_default_fixture_loop_scope 时于 pytest_configure 发出 PytestDeprecationWarning，被仓库 filterwarnings=error 升级为 INTERNALERROR，build-linux / test-postgres 在 1 秒内退出；pytest.ini 显式声明 function 作用域，并对 anyio 4.14.x 仍导入 _pytest.python.CallSpec2 的 PytestRemovedIn10Warning 做第三方精确放行。②前端单测时区依赖：时间用例硬编码 +08:00 字面量，CI 以 UTC 运行时跨天/今天昨天断言失败；改为本地时间构造后 toISOString 回灌。③接力 _run_relay_task 复杂度 12 超 CI flake8 C901 门限，拆分为 _run_relay_hop / _call_relay_model / _finish_relay_task / _fail_relay_task 并降低复杂度；同时修复单棒异常时未把 in-flight TaskStep 传给失败收敛、导致 relay_turn_n 停留 running 的问题（新增 _RelayHopFailure 携带 step）；另消除 W391 文件尾空行。",
+        "frontend": "frontend/tests/relay-utils.test.mjs 时间相关用例改为时区无关构造（localDate/iso 助手），Node 22/24 × UTC/America/New_York 均 81 passed；类型检查、lint 与生产构建在 Node 22 下复验通过",
+        "backend": "backend/pytest.ini 新增 asyncio_default_fixture_loop_scope=function 与 anyio CallSpec2 精确放行；backend/app/core/orchestrator.py 拆分接力执行方法降低复杂度并新增 _RelayHopFailure 携带 in-flight TaskStep；backend/tests/test_relay_handoff.py 去除文件尾空行",
+        "db": "否",
+        "breaking": "否",
+        "verify": "本地对齐 CI 依赖版本：SQLite 全量 285 passed、PostgreSQL 全量 285 passed、flake8 两条命令（严格参数 / max-complexity=10 + max-line-length=127）均 0；前端 Node 22 下 81 passed + typecheck 0 + lint 0 + next build 16 路由成功；真实 CI 复验结果见 C-274 备注",
+        "notes": "来源：CI run 41269487154 三 job 全红（build-linux flake8 C901/W391、test-postgres pytest INTERNALERROR、test-frontend Node22 UTC 时区断言）；根因取证来自该 run 的 test-postgres 日志（pytest-asyncio 1.4.1 的 PytestDeprecationWarning）",
+    },
+    "docs: 登记 CI 假红修复并重生成（C-273）": {
+        "type": "Optimization",
+        "content": "重生成变更追踪表与 PRD.html：登记 CI 依赖漂移假红与接力失败步进收敛修复（C-272）与上一笔 regen 提交 C-271",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 272 行；xlsx 与 PRD.md 一致；PRD.html 由 34 份 PRD + 272 条记录生成",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）",
+    },
     "docs: README 补齐群聊接力能力与质量基线（C-270）": {
         "type": "Optimization",
         "content": "README 同步本批改动：页面表补充群聊多 Agent 接力说明；编排流程新增「群聊多 Agent 接力」小节（链路、tasks.relay_agent_ids_json / task_steps 数据字段、task.relay_progress 事件、PASS 语义与「单 @ / 无 @ / 外部节点」边界）；测试基线更新为后端 285 tests / 45 文件、前端 81 tests / 7 文件 + typecheck/lint/build，PRD 份数更新为 34",
