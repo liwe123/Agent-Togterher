@@ -33,8 +33,11 @@ import { AppSidebar } from "@/components/console/app-sidebar"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { Skeleton } from "@/components/ui/skeleton"
 import { useSettings } from "@/hooks/use-settings"
+import { useWorkspaceConnection } from "@/hooks/use-workspace-connection"
+import { useWorkspaces } from "@/hooks/use-workspaces"
 import { cn } from "@/lib/utils"
 import type { CustomModelConfig, ModelConfig, TestState } from "@/types/settings"
 
@@ -101,6 +104,8 @@ export function SettingsPage() {
     addCustomModel,
     deleteCustomModel,
   } = useSettings()
+  const { activeWorkspace } = useWorkspaces()
+  const connectionStatus = useWorkspaceConnection(activeWorkspace?.id ?? null)
 
   // Local state for API key editor
   const [keyInputs, setKeyInputs] = useState<Record<string, string>>({})
@@ -119,6 +124,10 @@ export function SettingsPage() {
   const [savingModel, setSavingModel] = useState(false)
   const [deletingModels, setDeletingModels] = useState<Record<string, boolean>>({})
   const [modelFormError, setModelFormError] = useState<string | null>(null)
+  // 删除自定义模型的确认弹层与错误提示（替代原生 confirm）
+  const [pendingDeleteModel, setPendingDeleteModel] = useState<CustomModelConfig | null>(null)
+  const [isDeletingModel, setIsDeletingModel] = useState(false)
+  const [deleteModelError, setDeleteModelError] = useState<string | null>(null)
   const [modelForm, setModelForm] = useState({
     name: "",
     provider: "openai",
@@ -164,19 +173,27 @@ export function SettingsPage() {
     }
   }
 
-  const handleDeleteCustomModel = async (model: CustomModelConfig) => {
-    if (
-      !window.confirm(
-        `确定删除自定义模型「${model.name}」吗？该操作不可撤销。`,
-      )
-    ) {
-      return
-    }
+  const handleDeleteCustomModel = (model: CustomModelConfig) => {
+    setDeleteModelError(null)
+    setPendingDeleteModel(model)
+  }
+
+  const confirmDeleteCustomModel = async () => {
+    if (!pendingDeleteModel) return
+    const model = pendingDeleteModel
+    setIsDeletingModel(true)
+    setDeleteModelError(null)
     setDeletingModels((prev) => ({ ...prev, [model.name]: true }))
     try {
       await deleteCustomModel(model.name)
+    } catch (err) {
+      setDeleteModelError(
+        err instanceof Error ? err.message : "删除自定义模型失败",
+      )
     } finally {
       setDeletingModels((prev) => ({ ...prev, [model.name]: false }))
+      setIsDeletingModel(false)
+      setPendingDeleteModel(null)
     }
   }
 
@@ -334,7 +351,7 @@ export function SettingsPage() {
 
   return (
     <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[76px_minmax(0,1fr)]">
-      <AppSidebar connectionStatus="online" activeItem="settings" />
+      <AppSidebar connectionStatus={connectionStatus} activeItem="settings" />
 
       <ErrorBoundary>
         <main className="console-main px-4 py-5 sm:px-6 md:px-8 md:py-8 xl:px-10">
@@ -728,6 +745,26 @@ export function SettingsPage() {
                 <span className="rounded-full bg-secondary/60 px-3 py-1 font-mono text-[11px] text-muted-foreground font-medium">{displayModels.length} MODELS</span>
               </div>
 
+              {deleteModelError && (
+                <div
+                  role="alert"
+                  className="flex items-start justify-between gap-3 rounded-2xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive shadow-sm"
+                >
+                  <div className="flex items-start gap-2">
+                    <AlertCircle aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
+                    <p className="min-w-0 flex-1">{deleteModelError}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteModelError(null)}
+                    aria-label="关闭错误提示"
+                    className="shrink-0 rounded-full p-1 text-destructive/80 transition-colors hover:bg-destructive/15 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+                  >
+                    <XCircle aria-hidden="true" className="size-4" />
+                  </button>
+                </div>
+              )}
+
               <div className="console-panel overflow-hidden rounded-3xl border border-border/70 bg-card/90 shadow-sm">
                 {isLoading ? (
                   <ModelListSkeleton />
@@ -959,6 +996,17 @@ export function SettingsPage() {
           </div>
         </main>
       </ErrorBoundary>
+
+      <ConfirmDialog
+        open={pendingDeleteModel !== null}
+        title="删除自定义模型"
+        description={`确定删除自定义模型「${pendingDeleteModel?.name ?? ""}」吗？该操作不可撤销。`}
+        confirmLabel="删除"
+        tone="destructive"
+        busy={isDeletingModel}
+        onConfirm={() => void confirmDeleteCustomModel()}
+        onCancel={() => setPendingDeleteModel(null)}
+      />
     </div>
   )
 }

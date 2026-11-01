@@ -173,10 +173,18 @@ async def refresh_token(body: RefreshRequest, db: AsyncSession = Depends(get_db)
         raise AppError(status_code=401, message="refresh_token 无效或已过期")
 
     jti = get_jti_from_token(body.refresh_token)
-    if jti is not None:
-        record = await db.scalar(select(RefreshToken).where(RefreshToken.jti == jti))
-        if record is not None and record.revoked_at is not None:
-            raise AppError(status_code=401, message="refresh_token 已失效，请重新登录")
+    # 安全修复（20260925 基线 P1）：签名合法但服务端无记录的 refresh token 不得放行。
+    if jti is None:
+        raise AppError(status_code=401, message="refresh_token 无效或已过期")
+    record = await db.scalar(select(RefreshToken).where(RefreshToken.jti == jti))
+    if record is None or record.revoked_at is not None:
+        raise AppError(status_code=401, message="refresh_token 已失效，请重新登录")
+    expires_at = getattr(record, "expires_at", None)
+    if expires_at is not None:
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at < datetime.now(timezone.utc):
+            raise AppError(status_code=401, message="refresh_token 已过期，请重新登录")
 
     user = await get_user_by_id(db, user_id)
     if user is None or not user.is_active:

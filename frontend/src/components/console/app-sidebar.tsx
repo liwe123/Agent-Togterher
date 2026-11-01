@@ -18,8 +18,10 @@ import {
   Workflow,
 } from "lucide-react"
 
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { useWorkspaces } from "@/hooks/use-workspaces"
-import { clearTokens } from "@/lib/auth"
+import { clearTokens, getRefreshToken } from "@/lib/auth"
+import { apiBaseUrl } from "@/lib/task-api"
 import { cn } from "@/lib/utils"
 import type { ConnectionStatus } from "@/types/agent"
 import type { WorkspaceRole } from "@/types/membership"
@@ -68,9 +70,38 @@ export function AppSidebar({
   const [joinCode, setJoinCode] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const handleLogout = () => {
-    if (confirm("确定要退出登录吗？")) {
+  // 自绘弹层状态：替换原生 alert/confirm
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [createError, setCreateError] = useState<string | null>(null)
+  const [joinError, setJoinError] = useState<string | null>(null)
+
+  const handleLogout = async () => {
+    if (isLoggingOut) return
+    setIsLoggingOut(true)
+    const refreshToken = getRefreshToken()
+    const controller = new AbortController()
+    // 后端无响应时不阻塞本地登出，最长等待 5 秒
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+    try {
+      // 先吊销后端 refresh token；网络/后端异常不阻塞本地登出
+      if (refreshToken) {
+        await fetch(`${apiBaseUrl}/api/v1/auth/logout`, {
+          method: "POST",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh_token: refreshToken }),
+          keepalive: true,
+          signal: controller.signal,
+        })
+      }
+    } catch {
+      // 忽略：无论后端是否可用都必须清除本地会话
+    } finally {
+      clearTimeout(timeoutId)
       clearTokens()
+      setIsLoggingOut(false)
+      setShowLogoutConfirm(false)
       router.push("/login")
     }
   }
@@ -79,13 +110,14 @@ export function AppSidebar({
     e.preventDefault()
     if (!newWsName.trim()) return
     setIsSubmitting(true)
+    setCreateError(null)
     try {
       await createWorkspace(newWsName.trim(), newWsDesc.trim())
       setShowCreateModal(false)
       setNewWsName("")
       setNewWsDesc("")
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "创建工作区失败")
+      setCreateError(err instanceof Error ? err.message : "创建工作区失败")
     } finally {
       setIsSubmitting(false)
     }
@@ -95,12 +127,13 @@ export function AppSidebar({
     e.preventDefault()
     if (!joinCode.trim()) return
     setIsSubmitting(true)
+    setJoinError(null)
     try {
       await joinWorkspace(joinCode.trim())
       setShowJoinModal(false)
       setJoinCode("")
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "加入工作区失败")
+      setJoinError(err instanceof Error ? err.message : "加入工作区失败")
     } finally {
       setIsSubmitting(false)
     }
@@ -169,9 +202,11 @@ export function AppSidebar({
         <div className="flex flex-col items-center gap-2 py-4 border-t border-sidebar-border/60 w-full">
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={() => setShowLogoutConfirm(true)}
             title="退出登录"
-            className="flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/15 hover:text-destructive transition-colors"
+            aria-label="退出登录"
+            disabled={isLoggingOut}
+            className="flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/15 hover:text-destructive transition-colors disabled:opacity-50"
           >
             <LogOut className="size-4" />
           </button>
@@ -235,6 +270,7 @@ export function AppSidebar({
                 type="button"
                 onClick={() => {
                   setShowWorkspaceMenu(false)
+                  setCreateError(null)
                   setShowCreateModal(true)
                 }}
                 className="w-full flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
@@ -247,6 +283,7 @@ export function AppSidebar({
                 type="button"
                 onClick={() => {
                   setShowWorkspaceMenu(false)
+                  setJoinError(null)
                   setShowJoinModal(true)
                 }}
                 className="w-full flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
@@ -270,18 +307,45 @@ export function AppSidebar({
 
       {/* Create Workspace Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl space-y-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isSubmitting) {
+              setShowCreateModal(false)
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && !isSubmitting) {
+              setShowCreateModal(false)
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="create-workspace-title"
+            className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl space-y-4"
+          >
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <h2 className="text-lg font-bold">创建新协作工作区</h2>
+              <h2 id="create-workspace-title" className="text-lg font-bold">创建新协作工作区</h2>
               <button
                 type="button"
+                aria-label="关闭创建弹窗"
                 onClick={() => setShowCreateModal(false)}
-                className="text-muted-foreground hover:text-foreground text-sm"
+                className="rounded-md p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 ✕
               </button>
             </div>
+
+            {createError && (
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/30 bg-destructive/15 px-3 py-2 text-xs font-medium text-destructive"
+              >
+                {createError}
+              </div>
+            )}
 
             <form onSubmit={handleCreateSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -290,6 +354,7 @@ export function AppSidebar({
                   id="ws-name"
                   type="text"
                   required
+                  autoFocus
                   placeholder="如：智能体研发团队"
                   value={newWsName}
                   onChange={(e) => setNewWsName(e.target.value)}
@@ -332,18 +397,45 @@ export function AppSidebar({
 
       {/* Join Workspace Modal */}
       {showJoinModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150">
-          <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl space-y-4">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget && !isSubmitting) {
+              setShowJoinModal(false)
+            }
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" && !isSubmitting) {
+              setShowJoinModal(false)
+            }
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="join-workspace-title"
+            className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl space-y-4"
+          >
             <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <h2 className="text-lg font-bold">加入协作工作区</h2>
+              <h2 id="join-workspace-title" className="text-lg font-bold">加入协作工作区</h2>
               <button
                 type="button"
+                aria-label="关闭加入弹窗"
                 onClick={() => setShowJoinModal(false)}
-                className="text-muted-foreground hover:text-foreground text-sm"
+                className="rounded-md p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               >
                 ✕
               </button>
             </div>
+
+            {joinError && (
+              <div
+                role="alert"
+                className="rounded-lg border border-destructive/30 bg-destructive/15 px-3 py-2 text-xs font-medium text-destructive"
+              >
+                {joinError}
+              </div>
+            )}
 
             <form onSubmit={handleJoinSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -352,6 +444,7 @@ export function AppSidebar({
                   id="join-code"
                   type="text"
                   required
+                  autoFocus
                   placeholder="粘贴团队成员发给您的邀请码"
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value)}
@@ -413,6 +506,17 @@ export function AppSidebar({
           })}
         </nav>
       ) : null}
+
+      {/* Logout confirm dialog (replaces native confirm) */}
+      <ConfirmDialog
+        open={showLogoutConfirm}
+        title="退出登录"
+        description="退出后将清除本地登录状态，需要重新登录才能继续使用工作区。"
+        confirmLabel="退出登录"
+        busy={isLoggingOut}
+        onConfirm={() => void handleLogout()}
+        onCancel={() => setShowLogoutConfirm(false)}
+      />
     </>
   )
 }

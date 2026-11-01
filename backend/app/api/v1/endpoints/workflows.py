@@ -373,7 +373,8 @@ async def run_workflow_template(  # noqa: C901 存量复杂度债（B1 门禁清
             task_id=task.id,
             workflow_id=tpl.id,
             title=task.title,
-            status="pending",
+            # 不再写死 pending：DAG 后台执行可能已把任务推进到 running。
+            status=task.status.value if hasattr(task.status, "value") else str(task.status),
             message=f"已基于工作流「{tpl.display_name}」成功创建 DAG 任务 #{task.id}（共 {len(nodes_data)} 个节点 / {len(layers)} 层），等待调度执行",
         )
     )

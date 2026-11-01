@@ -19,6 +19,5 @@ export function usePermissions(role: WorkspaceRole = "viewer") {
     canCreateTasks: isMember,
     canChat: isMember,
     canViewAudit: isAdmin,
-    canManageQuota: isOwner,
   }
 }

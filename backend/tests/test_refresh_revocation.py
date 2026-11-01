@@ -128,10 +128,10 @@ def test_refresh_token_has_jti(auth_client: TestClient) -> None:
     assert get_jti_from_token(data["refresh_token"]) is not None
 
 
-def test_legacy_refresh_token_without_jti_still_accepted(
+def test_legacy_refresh_token_without_jti_is_rejected(
     auth_client: TestClient,
 ) -> None:
-    """无 jti 的历史 token（本特性上线前签发）仍可用，直至过期。"""
+    """签名合法但服务端无 jti 记录的 token 一律拒绝（安全收紧，替代旧的兼容放行）。"""
     data = register_user(auth_client, "legacy@example.com")
     user_id = data["user"]["id"]
 
@@ -149,4 +149,6 @@ def test_legacy_refresh_token_without_jti_still_accepted(
     response = auth_client.post(
         "/api/v1/auth/refresh", json={"refresh_token": legacy_token}
     )
-    assert response.status_code == 200
+    # 2026-11-01 安全收紧：服务端无 RefreshToken 记录（无 jti）即拒绝，防止
+    # 已吊销/伪造的旧 token 绕过吊销表。
+    assert response.status_code == 401

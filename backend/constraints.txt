@@ -1,0 +1,51 @@
+# backend dependency constraints (pin file) -- WP1.6 / C-272 follow-up
+#
+# WHY: CI installs the floating ranges in requirements*.txt on every run, so an
+#      upstream release can turn a green branch red without any code change.
+#      Run 41269487154 was exactly that: pytest 9.2.0 + pytest-asyncio 1.4.1
+#      emitted a PytestDeprecationWarning during pytest_configure, pytest.ini's
+#      filterwarnings=error escalated it to INTERNALERROR, and every pytest job
+#      failed. The config side was fixed in C-272; this file pins the version side.
+#
+# HOW TO USE: pip install -r requirements-dev.txt -c constraints.txt
+#             (CI does this in build-linux and test-postgres; locally use
+#              scripts/ci-local.ps1 so the pinned versions are exercised first.)
+#
+# HOW TO UPDATE: after upgrading anything, rebuild the venv, get the new set with
+#             .venv\Scripts\python.exe -m pip freeze, run scripts/ci-local.ps1
+#             (full pytest + -WithPostgres) until green, let CI pass once, and only
+#             then sync the versions below. Editing this file without a green CI
+#             run means "unverified"; editing requirements without this file means
+#             "still drifting". Add a line here for every new direct dependency.
+#
+# SCOPE: direct dependencies only. Transitive dependencies still float within
+#        their upstream ranges -- this is a pin list, not a full freeze snapshot.
+#        Versions below come from .venv (Python 3.11.9) and all have cp311
+#        manylinux wheels or are pure Python, so ubuntu-latest resolves them too.
+#
+# NOTE: ASCII only on purpose -- pip decodes requirement files with the *locale*
+#       codec (GBK on Chinese Windows) unless a UTF-8 BOM is present, so non-ASCII
+#       comments here would break "pip install -c constraints.txt" on Windows.
+#
+# --- backend/requirements.txt ---
+fastapi==0.141.1
+uvicorn==0.52.0
+pydantic-settings==2.14.2
+SQLAlchemy==2.0.51
+aiosqlite==0.22.1
+asyncpg==0.31.0
+alembic==1.19.1
+redis==7.4.1
+litellm==1.94.1
+PyYAML==6.0.3
+PyJWT==2.13.0
+cryptography==49.0.0
+httpx==0.28.1
+#
+# --- backend/requirements-dev.txt ---
+pytest==9.2.0
+pytest-asyncio==1.4.1
+pytest-timeout==2.4.0
+#
+# --- installed separately by CI (pip install -c constraints.txt flake8) ---
+flake8==7.4.1

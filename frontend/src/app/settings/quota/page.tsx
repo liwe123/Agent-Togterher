@@ -17,6 +17,7 @@ import {
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { usePermissions } from "@/hooks/use-permissions"
+import { useWorkspaceConnection } from "@/hooks/use-workspace-connection"
 import { useWorkspaces } from "@/hooks/use-workspaces"
 import { formatCost, formatTokens } from "@/lib/task-format"
 import { requestData } from "@/lib/task-api"
@@ -26,6 +27,7 @@ import type { QuotaUsage } from "@/types/quota"
 export default function QuotaSettingsPage() {
   const { activeWorkspace, currentUserRole } = useWorkspaces()
   const { isAdmin } = usePermissions(currentUserRole)
+  const connectionStatus = useWorkspaceConnection(activeWorkspace?.id ?? null)
 
   const [usage, setUsage] = useState<QuotaUsage | null>(null)
   const [budgetUsd, setBudgetUsd] = useState<number>(100)
@@ -94,7 +96,7 @@ export default function QuotaSettingsPage() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <AppSidebar connectionStatus="online" activeItem="settings" />
+      <AppSidebar connectionStatus={connectionStatus} activeItem="settings" />
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-4xl space-y-6">

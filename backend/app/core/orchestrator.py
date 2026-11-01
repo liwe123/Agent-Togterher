@@ -14,6 +14,7 @@ from sqlalchemy.orm import selectinload
 
 from app.agents import final_agent, manager_agent, relay_agent, review_agent, worker_agent
 from app.core.config import get_settings
+from app.core.redaction import redact_content
 from app.core.relay import is_pass_reply
 from app.core.execution_trace import (
     build_context_message,
@@ -271,6 +272,7 @@ class AgentOrchestrator:
                     tools=get_tools_spec() + build_plugin_tool_specs(plugin_tools),
                     plugin_tools=plugin_tools,
                     context_messages=context_messages,
+                    max_iterations=get_settings().agent_max_tool_iterations,
                 )
             else:
                 try:
@@ -301,7 +303,8 @@ class AgentOrchestrator:
             await self.update_agent_status(agent, "idle")
             await self.send_result_message(task, agent, completion.content)
             await self._session.refresh(task)
-            task.result = completion.content
+            # REQ-D6：内存态回填同样使用脱敏值，避免覆盖已脱敏的落库结果。
+            task.result = redact_content(completion.content) or ""
             task.execution_trace = build_execution_trace(
                 task,
                 current_stage="single_agent",
@@ -548,6 +551,7 @@ class AgentOrchestrator:
             tools=get_tools_spec() + build_plugin_tool_specs(plugin_tools),
             plugin_tools=plugin_tools,
             context_messages=context_messages,
+            max_iterations=get_settings().agent_max_tool_iterations,
         )
 
     async def _finish_relay_task(
@@ -561,7 +565,8 @@ class AgentOrchestrator:
             task, TaskStatus.COMPLETED, result=result_text
         )
         await self._session.refresh(task)
-        task.result = result_text
+        # REQ-D6：内存态回填同样使用脱敏值。
+        task.result = redact_content(result_text) or ""
         steps = await self._load_task_steps(task.id)
         calls = await self._load_task_model_calls(task.id)
         task.execution_trace = build_execution_trace(
@@ -704,6 +709,12 @@ class AgentOrchestrator:
         active_agent: Agent | None = manager
         step: TaskStep | None = None
         step_name = "manager_plan"
+        # 子任务执行在独立方法内进行；用可变上下文把失败时的 agent/step 传回外层。
+        hop_ctx: dict[str, object] = {
+            "active_agent": None,
+            "step": None,
+            "step_name": "worker_execute",
+        }
 
         try:
             if task.conversation_id is None:
@@ -766,103 +777,31 @@ class AgentOrchestrator:
             )
             await self.update_agent_status(manager, "idle")
 
-            # TODO: When migrating to PostgreSQL + Redis queue, replace this
-            # sequential worker loop with asyncio.gather() using independent
-            # DB sessions per worker.  SQLite does not support concurrent
-            # writes, so workers must run sequentially for now.
-            worker_results: list[dict[str, object]] = []
-            for subtask in plan.subtasks:
-                step = None
-                step_name = f"worker_execute_{subtask.id}"
-                active_agent = self._find_agent(
+            # OPT-5：工具关闭时子任务模型调用可并发（持久化仍串行）；默认并行度 1 保持旧行为。
+            active_agent = None
+            step = None
+            if (
+                get_settings().agent_worker_parallelism > 1
+                and not get_settings().agent_tools_enabled
+                and len(plan.subtasks) > 1
+            ):
+                worker_results = await self._run_worker_subtasks_parallel(
+                    task,
+                    plan,
                     workspace_agents,
-                    name=worker_agent.worker_name_for_task_type(subtask.task_type),
-                    role=WORKER_ROLES[subtask.agent],
+                    db_api_keys,
+                    db_custom_models,
+                    hop_ctx,
                 )
-                if active_agent is None:
-                    raise TaskNotRunnableError(
-                        f'Required worker agent "{subtask.agent}" is not configured '
-                        f"in workspace {task.workspace_id}"
-                    )
-
-                worker_context_messages = await self._build_task_context_messages(
+            else:
+                worker_results = await self._run_worker_subtasks_sequential(
                     task,
-                    active_agent,
-                    stage=step_name,
-                    note=subtask.model_dump_json(indent=2),
-                    recent_steps_limit=8,
-                    recent_calls_limit=8,
+                    plan,
+                    workspace_agents,
+                    db_api_keys,
+                    db_custom_models,
+                    hop_ctx,
                 )
-                await self.update_agent_status(active_agent, "running")
-                step = await self.save_task_step(
-                    task,
-                    active_agent,
-                    step_name=step_name,
-                    status="running",
-                    input_text=subtask.model_dump_json(indent=2),
-                )
-                if get_settings().agent_tools_enabled:
-                    # Tools are enabled ONLY on the worker execution stage;
-                    # manager/review/final stay tool-free.
-                    plugin_tools = await load_active_plugin_tools(
-                        self._session, task.workspace_id
-                    )
-                    worker_completion = await self._run_agent_with_tools(
-                        task,
-                        active_agent,
-                        call_factory=lambda tools, extra_messages, context_messages: worker_agent.execute_subtask(
-                            active_agent,
-                            task.description,
-                            plan,
-                            subtask,
-                            api_keys=db_api_keys,
-                            custom_models=db_custom_models,
-                            tools=tools,
-                            extra_messages=extra_messages,
-                            context_messages=context_messages,
-                        ),
-                        tools=get_tools_spec() + build_plugin_tool_specs(plugin_tools),
-                        plugin_tools=plugin_tools,
-                        context_messages=worker_context_messages,
-                    )
-                else:
-                    worker_completion = await self._call_and_log(
-                        task,
-                        active_agent,
-                        worker_agent.execute_subtask(
-                            active_agent,
-                            task.description,
-                            plan,
-                            subtask,
-                            api_keys=db_api_keys,
-                            custom_models=db_custom_models,
-                            context_messages=worker_context_messages,
-                        ),
-                    )
-                result = {
-                    "id": subtask.id,
-                    "title": subtask.title,
-                    "task_type": subtask.task_type,
-                    "agent": active_agent.name,
-                    "result": worker_completion.content,
-                }
-                worker_results.append(result)
-                await self.save_task_step(
-                    task,
-                    active_agent,
-                    step=step,
-                    status="completed",
-                    output=worker_completion.content,
-                )
-                await self.send_result_message(
-                    task,
-                    active_agent,
-                    (
-                        f"【Agent 执行结果 {subtask.id}/{len(plan.subtasks)}】\n"
-                        f"{worker_completion.content}"
-                    ),
-                )
-                await self.update_agent_status(active_agent, "idle")
 
             step = None
             step_name = "review_results"
@@ -990,13 +929,241 @@ class AgentOrchestrator:
                 },
                 exc_info=True,
             )
+            failure_agent = hop_ctx.get("active_agent") or active_agent
+            failure_step = hop_ctx.get("step") or step
+            failure_step_name = str(hop_ctx.get("step_name") or step_name)
             return await self._mark_failed_resilient(
                 task,
-                active_agent,
-                step,
+                failure_agent,
+                failure_step,
                 error_message,
-                step_name=step_name,
+                step_name=failure_step_name,
             )
+
+    async def _run_worker_subtasks_sequential(
+        self,
+        task: Task,
+        plan: manager_agent.ManagerPlan,
+        workspace_agents: list[Agent],
+        db_api_keys: dict[str, str],
+        db_custom_models: dict[str, dict],
+        hop_ctx: dict[str, object],
+    ) -> list[dict[str, object]]:
+        """Run worker subtasks one by one (default; tools or SQLite safety)."""
+        worker_results: list[dict[str, object]] = []
+        for subtask in plan.subtasks:
+            step = None
+            step_name = f"worker_execute_{subtask.id}"
+            active_agent = self._find_agent(
+                workspace_agents,
+                name=worker_agent.worker_name_for_task_type(subtask.task_type),
+                role=WORKER_ROLES[subtask.agent],
+            )
+            if active_agent is None:
+                raise TaskNotRunnableError(
+                    f'Required worker agent "{subtask.agent}" is not configured '
+                    f"in workspace {task.workspace_id}"
+                )
+
+            worker_context_messages = await self._build_task_context_messages(
+                task,
+                active_agent,
+                stage=step_name,
+                note=subtask.model_dump_json(indent=2),
+                recent_steps_limit=8,
+                recent_calls_limit=8,
+            )
+            hop_ctx["active_agent"] = active_agent
+            hop_ctx["step_name"] = step_name
+            hop_ctx["step"] = None
+            await self.update_agent_status(active_agent, "running")
+            step = await self.save_task_step(
+                task,
+                active_agent,
+                step_name=step_name,
+                status="running",
+                input_text=subtask.model_dump_json(indent=2),
+            )
+            hop_ctx["step"] = step
+            if get_settings().agent_tools_enabled:
+                # Tools are enabled ONLY on the worker execution stage;
+                # manager/review/final stay tool-free.
+                plugin_tools = await load_active_plugin_tools(
+                    self._session, task.workspace_id
+                )
+                worker_completion = await self._run_agent_with_tools(
+                    task,
+                    active_agent,
+                    call_factory=lambda tools, extra_messages, context_messages: worker_agent.execute_subtask(
+                        active_agent,
+                        task.description,
+                        plan,
+                        subtask,
+                        api_keys=db_api_keys,
+                        custom_models=db_custom_models,
+                        tools=tools,
+                        extra_messages=extra_messages,
+                        context_messages=context_messages,
+                    ),
+                    tools=get_tools_spec() + build_plugin_tool_specs(plugin_tools),
+                    plugin_tools=plugin_tools,
+                    context_messages=worker_context_messages,
+                    max_iterations=get_settings().agent_max_tool_iterations,
+                )
+            else:
+                worker_completion = await self._call_and_log(
+                    task,
+                    active_agent,
+                    worker_agent.execute_subtask(
+                        active_agent,
+                        task.description,
+                        plan,
+                        subtask,
+                        api_keys=db_api_keys,
+                        custom_models=db_custom_models,
+                        context_messages=worker_context_messages,
+                    ),
+                )
+            result = {
+                "id": subtask.id,
+                "title": subtask.title,
+                "task_type": subtask.task_type,
+                "agent": active_agent.name,
+                "result": worker_completion.content,
+            }
+            worker_results.append(result)
+            await self.save_task_step(
+                task,
+                active_agent,
+                step=step,
+                status="completed",
+                output=worker_completion.content,
+            )
+            await self.send_result_message(
+                task,
+                active_agent,
+                (
+                    f"【Agent 执行结果 {subtask.id}/{len(plan.subtasks)}】\n"
+                    f"{worker_completion.content}"
+                ),
+            )
+            await self.update_agent_status(active_agent, "idle")
+        return worker_results
+
+    async def _run_worker_subtasks_parallel(
+        self,
+        task: Task,
+        plan: manager_agent.ManagerPlan,
+        workspace_agents: list[Agent],
+        db_api_keys: dict[str, str],
+        db_custom_models: dict[str, dict],
+        hop_ctx: dict[str, object],
+    ) -> list[dict[str, object]]:
+        """Run worker model calls concurrently while persisting strictly in order.
+
+        Only used when tools are disabled and agent_worker_parallelism > 1:
+        model calls run outside any DB session, so the shared AsyncSession is
+        never used concurrently (SQLite safe); steps/messages/model calls are
+        written sequentially in plan order after all calls return.
+        """
+        parallelism = max(1, get_settings().agent_worker_parallelism)
+        prepared: list[tuple[object, Agent, TaskStep, list[dict[str, str]]]] = []
+        for subtask in plan.subtasks:
+            step_name = f"worker_execute_{subtask.id}"
+            active_agent = self._find_agent(
+                workspace_agents,
+                name=worker_agent.worker_name_for_task_type(subtask.task_type),
+                role=WORKER_ROLES[subtask.agent],
+            )
+            if active_agent is None:
+                raise TaskNotRunnableError(
+                    f'Required worker agent "{subtask.agent}" is not configured '
+                    f"in workspace {task.workspace_id}"
+                )
+            context_messages = await self._build_task_context_messages(
+                task,
+                active_agent,
+                stage=step_name,
+                note=subtask.model_dump_json(indent=2),
+                recent_steps_limit=8,
+                recent_calls_limit=8,
+            )
+            hop_ctx["active_agent"] = active_agent
+            hop_ctx["step_name"] = step_name
+            await self.update_agent_status(active_agent, "running")
+            step = await self.save_task_step(
+                task,
+                active_agent,
+                step_name=step_name,
+                status="running",
+                input_text=subtask.model_dump_json(indent=2),
+            )
+            hop_ctx["step"] = step
+            prepared.append((subtask, active_agent, step, context_messages))
+
+        semaphore = asyncio.Semaphore(parallelism)
+
+        async def call_worker(item) -> ChatCompletionResult:
+            subtask, agent, _step, context_messages = item
+            async with semaphore:
+                return await worker_agent.execute_subtask(
+                    agent,
+                    task.description,
+                    plan,
+                    subtask,
+                    api_keys=db_api_keys,
+                    custom_models=db_custom_models,
+                    context_messages=context_messages,
+                )
+
+        outcomes = await asyncio.gather(
+            *(call_worker(item) for item in prepared),
+            return_exceptions=True,
+        )
+
+        worker_results: list[dict[str, object]] = []
+        first_error: BaseException | None = None
+        for item, outcome in zip(prepared, outcomes):
+            subtask, agent, step, _context = item
+            if isinstance(outcome, BaseException):
+                await self.save_model_call(task, agent, error=outcome)
+                await self.save_task_step(
+                    task,
+                    agent,
+                    step=step,
+                    status="failed",
+                    output=self._error_message(outcome),
+                )
+                await self.update_agent_status(agent, "failed")
+                if first_error is None:
+                    first_error = outcome
+                continue
+            await self.save_model_call(task, agent, completion=outcome)
+            await self.save_task_step(
+                task,
+                agent,
+                step=step,
+                status="completed",
+                output=outcome.content,
+            )
+            await self.send_result_message(
+                task,
+                agent,
+                f"【Agent 执行结果 {subtask.id}/{len(plan.subtasks)}】\n{outcome.content}",
+            )
+            await self.update_agent_status(agent, "idle")
+            worker_results.append(
+                {
+                    "id": subtask.id,
+                    "title": subtask.title,
+                    "task_type": subtask.task_type,
+                    "agent": agent.name,
+                    "result": outcome.content,
+                }
+            )
+        if first_error is not None:
+            raise first_error
+        return worker_results
 
     async def _task_requires_approval(self, task: Task) -> bool:
         """C-184: 判断任务是否来自含 human_approval 节点的工作流模板。
@@ -1187,7 +1354,8 @@ class AgentOrchestrator:
         if status in {TaskStatus.COMPLETED, TaskStatus.FAILED}:
             release_task_lease(task)
         if result is not None:
-            task.result = result
+            # REQ-D6：结果落库与广播前统一脱敏。
+            task.result = redact_content(result)
         await self._session.commit()
         await self._session.refresh(task)
         task_data = TaskRead.model_validate(task)
@@ -1370,6 +1538,9 @@ class AgentOrchestrator:
         # A4 Step 4：写入边界守卫——租约丢失后不再追加 step。
         self._raise_if_lease_lost()
         now = utc_now()
+        # REQ-D6：步骤输入/输出落库与广播前统一脱敏。
+        input_text = redact_content(input_text)
+        output = redact_content(output)
         if step is None:
             step = TaskStep(
                 task_id=task.id,
@@ -1440,7 +1611,7 @@ class AgentOrchestrator:
             prompt_tokens = 0
             completion_tokens = 0
             call_status = "failed"
-            error_message = self._error_message(error)
+            error_message = redact_content(self._error_message(error))
             call_cost = Decimal("0")
 
         model_call = ModelCall(
@@ -1498,7 +1669,8 @@ class AgentOrchestrator:
             conversation_id=task.conversation_id,
             sender_type=SenderType.AGENT if agent is not None else SenderType.SYSTEM,
             sender_id=agent.id if agent is not None else None,
-            content=content,
+            # REQ-D6：消息落库与广播前统一脱敏。
+            content=redact_content(content) or "",
             message_type=MessageType.ERROR if is_error else MessageType.NORMAL,
         )
         inherit_from_task(message, task)

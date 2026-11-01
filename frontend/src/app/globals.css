@@ -154,31 +154,6 @@
     border-color: color-mix(in oklch, var(--primary) 30%, var(--border));
   }
 
-  /* Pixel M3 Interactive Card */
-  .agent-card {
-    border-radius: 1.25rem;
-    transition:
-      border-color 220ms cubic-bezier(0.2, 0, 0, 1),
-      background-color 220ms cubic-bezier(0.2, 0, 0, 1),
-      transform 220ms cubic-bezier(0.2, 0, 0, 1),
-      box-shadow 220ms cubic-bezier(0.2, 0, 0, 1);
-  }
-
-  .agent-card:hover {
-    border-color: color-mix(in oklch, var(--primary) 45%, var(--border));
-    background: color-mix(in oklch, var(--card) 88%, var(--primary) 12%);
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px -4px color-mix(in oklch, var(--primary) 18%, transparent);
-  }
-
-  .agent-card[data-agent-status="running"] {
-    border-color: color-mix(in oklch, var(--status-running) 50%, var(--border));
-  }
-
-  .agent-card[data-agent-status="failed"] {
-    border-color: color-mix(in oklch, var(--destructive) 55%, var(--border));
-  }
-
   .agent-avatar[data-tone="0"] { --avatar-tone: var(--avatar-1); }
   .agent-avatar[data-tone="1"] { --avatar-tone: var(--avatar-2); }
   .agent-avatar[data-tone="2"] { --avatar-tone: var(--avatar-3); }
@@ -811,9 +786,5 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
-  }
-
-  .agent-card {
-    transition: none;
   }
 }

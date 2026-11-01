@@ -21,8 +21,10 @@ import {
 } from "lucide-react"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { DagCanvas } from "@/components/workflows/dag-canvas"
 import { usePermissions } from "@/hooks/use-permissions"
+import { useWorkspaceConnection } from "@/hooks/use-workspace-connection"
 import { useWorkspaces } from "@/hooks/use-workspaces"
 import { requestData } from "@/lib/task-api"
 import { cn } from "@/lib/utils"
@@ -65,6 +67,7 @@ export default function WorkflowsPage() {
   const router = useRouter()
   const { activeWorkspace, currentUserRole } = useWorkspaces()
   const { isAdmin } = usePermissions(currentUserRole)
+  const connectionStatus = useWorkspaceConnection(activeWorkspace?.id ?? null)
 
   const [templates, setTemplates] = useState<WorkflowTemplateItem[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -91,6 +94,10 @@ export default function WorkflowsPage() {
   const [newNodes, setNewNodes] = useState<WorkflowNode[]>(initialDraftNodes)
   const [newVariables, setNewVariables] = useState<WorkflowVariable[]>(initialDraftVariables)
   const [isCreating, setIsCreating] = useState(false)
+
+  // 删除确认弹层状态（替代原生 confirm）
+  const [pendingDelete, setPendingDelete] = useState<WorkflowTemplateItem | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   const loadedWsIdRef = useRef<number | null>(null)
 
@@ -194,9 +201,15 @@ export default function WorkflowsPage() {
     }
   }
 
-  const handleDelete = async (tpl: WorkflowTemplateItem) => {
+  const requestDelete = (tpl: WorkflowTemplateItem) => {
     if (!activeWorkspace || !isAdmin || tpl.is_system) return
-    if (!confirm(`确认删除自定义工作流模板「${tpl.display_name}」吗？`)) return
+    setPendingDelete(tpl)
+  }
+
+  const handleDelete = async () => {
+    if (!activeWorkspace || !pendingDelete) return
+    const tpl = pendingDelete
+    setIsDeleting(true)
     try {
       await requestData(`/api/v1/workspaces/${activeWorkspace.id}/workflows/${tpl.id}`, {
         method: "DELETE",
@@ -205,6 +218,9 @@ export default function WorkflowsPage() {
       void loadWorkflows(activeWorkspace.id)
     } catch (err: unknown) {
       setMessage({ type: "error", text: err instanceof Error ? err.message : "删除失败" })
+    } finally {
+      setIsDeleting(false)
+      setPendingDelete(null)
     }
   }
 
@@ -322,7 +338,7 @@ export default function WorkflowsPage() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <AppSidebar connectionStatus="online" activeItem="workflows" />
+      <AppSidebar connectionStatus={connectionStatus} activeItem="workflows" />
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-5xl space-y-6">
@@ -480,7 +496,7 @@ export default function WorkflowsPage() {
                       {!tpl.is_system && isAdmin && (
                         <button
                           type="button"
-                          onClick={() => handleDelete(tpl)}
+                          onClick={() => requestDelete(tpl)}
                           className="text-xs text-muted-foreground hover:text-destructive transition-colors"
                         >
                           <Trash2 className="size-3.5" />
@@ -972,6 +988,17 @@ export default function WorkflowsPage() {
           )}
         </div>
       </main>
+
+      <ConfirmDialog
+        open={pendingDelete !== null}
+        title="删除工作流模板"
+        description={`确认删除自定义工作流模板「${pendingDelete?.display_name ?? ""}」吗？该操作不可撤销。`}
+        confirmLabel="删除"
+        tone="destructive"
+        busy={isDeleting}
+        onConfirm={() => void handleDelete()}
+        onCancel={() => setPendingDelete(null)}
+      />
     </div>
   )
 }

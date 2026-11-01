@@ -22,6 +22,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import get_settings
+from app.core.redaction import redact_content
 from app.core.trace_context import inherit_from_task
 from app.db.base import utc_now
 from app.models.enums import TaskStatus
@@ -317,7 +318,8 @@ async def dispatch_task_to_node(
         )
 
     step.status = "completed" if result.success else "failed"
-    step.output = result.message
+    # REQ-D6：桥接结果落库与广播前统一脱敏。
+    step.output = redact_content(result.message)
     step.finished_at = utc_now()
     await session.commit()
     await session.refresh(step)
@@ -340,7 +342,7 @@ async def dispatch_task_to_node(
     )
 
     task.status = TaskStatus.COMPLETED if result.success else TaskStatus.FAILED
-    task.result = result.message
+    task.result = redact_content(result.message)
     task.updated_at = utc_now()
     await session.commit()
     await session.refresh(task)

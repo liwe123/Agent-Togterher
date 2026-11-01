@@ -16,6 +16,7 @@ import {
 } from "lucide-react"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
+import { useWorkspaceConnection } from "@/hooks/use-workspace-connection"
 import { useWorkspaces } from "@/hooks/use-workspaces"
 import { formatCost, formatTokens } from "@/lib/task-format"
 import { requestData } from "@/lib/task-api"
@@ -29,6 +30,7 @@ import type {
 
 export default function CostDashboardPage() {
   const { activeWorkspace } = useWorkspaces()
+  const connectionStatus = useWorkspaceConnection(activeWorkspace?.id ?? null)
   const [days, setDays] = useState<number>(30)
 
   const [summary, setSummary] = useState<CostSummary | null>(null)
@@ -80,7 +82,7 @@ export default function CostDashboardPage() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <AppSidebar connectionStatus="online" activeItem="settings" />
+      <AppSidebar connectionStatus={connectionStatus} activeItem="settings" />
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-6xl space-y-6">

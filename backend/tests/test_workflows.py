@@ -120,7 +120,7 @@ def test_workflow_lifecycle(workflow_client: TestClient) -> None:
     )
     assert run_res.status_code == 200
     run_data = run_res.json()["data"]
-    assert run_data["status"] == "pending"
+    assert run_data["status"] in {"pending", "running"}
     assert run_data["workflow_id"] == custom_id
     assert "orders" in run_data["title"]
     # 原为 task_id = run_data["task_id"] 的隐式键存在性检查（F841 清理时被一并

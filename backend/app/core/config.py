@@ -27,6 +27,13 @@ class Settings(BaseSettings):
     models_config_path: str = ""
     model_request_timeout_seconds: float = Field(default=60.0, gt=0)
     agent_tools_enabled: bool = True
+    # REQ-D4 执行级预算之一：内部 Agent 工具调用循环的轮次上限（1~20）。
+    agent_max_tool_iterations: int = Field(default=5, ge=1, le=20)
+    # OPT-5：关闭工具调用时，多 Worker 子任务的模型调用并发上限（1~4）。
+    # 默认 1 保持串行；持久化始终按顺序进行，不并发使用 AsyncSession。
+    agent_worker_parallelism: int = Field(default=1, ge=1, le=4)
+    # REQ-D6 内容级脱敏：落库与广播前替换 Key/Token/密码等敏感值。
+    content_redaction_enabled: bool = True
     # "queue"  = 任务入持久化队列，由独立 Worker 进程消费（默认，C-170）
     # "inline" = 在 API 进程内直接执行（保留作回退与单机调试路径）
     task_execution_mode: str = "queue"

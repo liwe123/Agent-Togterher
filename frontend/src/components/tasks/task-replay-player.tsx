@@ -11,6 +11,7 @@ import {
   RefreshCw,
   RotateCcw,
   Sparkles,
+  X,
 } from "lucide-react"
 
 import { formatCost, formatDuration, formatTokens, stepLabel } from "@/lib/task-format"
@@ -30,6 +31,7 @@ export function TaskReplayPlayer({ taskId, onTaskResumed }: TaskReplayPlayerProp
   const [speed, setSpeed] = useState<1 | 2 | 5>(1)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
   const [isResuming, setIsResuming] = useState(false)
 
   const loadedIdRef = useRef<number | null>(null)
@@ -74,6 +76,7 @@ export function TaskReplayPlayer({ taskId, onTaskResumed }: TaskReplayPlayerProp
 
   const handleResumeStep = async (stepId: number) => {
     setIsResuming(true)
+    setActionError(null)
     try {
       await requestData(`/api/v1/tasks/${taskId}/resume-from-step`, {
         method: "POST",
@@ -82,7 +85,7 @@ export function TaskReplayPlayer({ taskId, onTaskResumed }: TaskReplayPlayerProp
       if (onTaskResumed) onTaskResumed()
       void loadReplayData(taskId)
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "恢复任务失败")
+      setActionError(err instanceof Error ? err.message : "恢复任务失败")
     } finally {
       setIsResuming(false)
     }
@@ -176,6 +179,27 @@ export function TaskReplayPlayer({ taskId, onTaskResumed }: TaskReplayPlayerProp
           </button>
         </div>
       </div>
+
+      {/* 恢复失败等操作错误：内联提示，替代原生 alert */}
+      {actionError && (
+        <div
+          role="alert"
+          className="flex items-start justify-between gap-3 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive animate-in fade-in duration-150"
+        >
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+            <span className="font-medium">{actionError}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setActionError(null)}
+            aria-label="关闭错误提示"
+            className="shrink-0 rounded-md p-1 text-destructive/80 transition-colors hover:bg-destructive/15 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+          >
+            <X className="size-3.5" />
+          </button>
+        </div>
+      )}
 
       {/* Timeline Scrub Track */}
       <div className="space-y-2">

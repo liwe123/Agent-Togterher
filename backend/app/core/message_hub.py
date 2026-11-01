@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.errors import AppError
 from app.api.persistence import commit_or_conflict
 from app.core.config import get_settings
+from app.core.redaction import redact_content
 from app.core.relay import MAX_RELAY_AGENTS, dump_relay_agent_ids
 from app.core.trace_context import stamp_new_message, stamp_task
 from app.db.base import utc_now
@@ -214,9 +215,11 @@ class MessageHub:
     async def receive_user_message(
         self, conversation_id: int, content: str
     ) -> MessageHubResult:
-        content = content.strip()
-        if not content:
+        raw_content = content.strip()
+        if not raw_content:
             raise AppError(422, "Message content cannot be empty")
+        # REQ-D6：存储与广播用脱敏内容；@ 路由仍按原文解析，避免脱敏影响派发。
+        content = redact_content(raw_content) or ""
 
         conversation = await self._get_conversation(conversation_id)
         await self._enforce_quota(conversation.workspace_id)
@@ -250,7 +253,7 @@ class MessageHub:
                 )
             )
         )
-        mention_targets = self._resolve_mention_targets(content, agents, nodes)
+        mention_targets = self._resolve_mention_targets(raw_content, agents, nodes)
         first_target = mention_targets[0] if mention_targets else None
         if isinstance(first_target, IntegrationNode):
             return await self._create_node_task(conversation, content, first_target)

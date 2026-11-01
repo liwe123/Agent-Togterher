@@ -10,6 +10,7 @@ import {
 } from "lucide-react"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
+import { useWorkspaceConnection } from "@/hooks/use-workspace-connection"
 import { useWorkspaces } from "@/hooks/use-workspaces"
 import { requestData } from "@/lib/task-api"
 import { cn } from "@/lib/utils"
@@ -30,6 +31,7 @@ const ACTION_MAP: Record<string, { label: string; color: string; category: strin
 
 export default function AuditLogsPage() {
   const { activeWorkspace } = useWorkspaces()
+  const connectionStatus = useWorkspaceConnection(activeWorkspace?.id ?? null)
   const [logs, setLogs] = useState<AuditLogItem[]>([])
   const [total, setTotal] = useState(0)
   const [offset, setOffset] = useState(0)
@@ -83,7 +85,7 @@ export default function AuditLogsPage() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <AppSidebar connectionStatus="online" activeItem="settings" />
+      <AppSidebar connectionStatus={connectionStatus} activeItem="settings" />
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-6xl space-y-6">

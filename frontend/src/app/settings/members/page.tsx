@@ -12,10 +12,13 @@ import {
   Trash2,
   UserPlus,
   Users,
+  X,
 } from "lucide-react"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 import { usePermissions } from "@/hooks/use-permissions"
+import { useWorkspaceConnection } from "@/hooks/use-workspace-connection"
 import { useWorkspaces } from "@/hooks/use-workspaces"
 import { requestData } from "@/lib/task-api"
 import type {
@@ -34,10 +37,17 @@ const ROLE_LABELS: Record<WorkspaceRole, { label: string; color: string }> = {
 export default function MembersSettingsPage() {
   const { activeWorkspace, currentUserRole } = useWorkspaces()
   const permissions = usePermissions(currentUserRole)
+  const connectionStatus = useWorkspaceConnection(activeWorkspace?.id ?? null)
 
   const [members, setMembers] = useState<WorkspaceMember[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // 操作反馈（替代原生 alert）
+  const [feedback, setFeedback] = useState<string | null>(null)
+  const [inviteError, setInviteError] = useState<string | null>(null)
+  // 移除成员确认弹层（替代原生 confirm）
+  const [pendingMember, setPendingMember] = useState<WorkspaceMember | null>(null)
+  const [isRemovingMember, setIsRemovingMember] = useState(false)
 
   // Modals state
   const [showInviteModal, setShowInviteModal] = useState(false)
@@ -70,6 +80,7 @@ export default function MembersSettingsPage() {
 
   const handleUpdateRole = async (userId: number, newRole: WorkspaceRole) => {
     if (!activeWorkspace) return
+    setFeedback(null)
     try {
       await requestData(`/api/v1/workspaces/${activeWorkspace.id}/members/${userId}/role`, {
         method: "PUT",
@@ -77,25 +88,38 @@ export default function MembersSettingsPage() {
       })
       await loadMembers(activeWorkspace.id)
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "更新角色失败")
+      setFeedback(err instanceof Error ? err.message : "更新角色失败")
     }
   }
 
-  const handleRemoveMember = async (userId: number) => {
-    if (!activeWorkspace || !confirm("确定要将该成员从工作区移除吗？")) return
+  const requestRemoveMember = (member: WorkspaceMember) => {
+    if (!activeWorkspace) return
+    setFeedback(null)
+    setPendingMember(member)
+  }
+
+  const handleRemoveMember = async () => {
+    if (!activeWorkspace || !pendingMember) return
+    const member = pendingMember
+    setIsRemovingMember(true)
+    setFeedback(null)
     try {
-      await requestData(`/api/v1/workspaces/${activeWorkspace.id}/members/${userId}`, {
+      await requestData(`/api/v1/workspaces/${activeWorkspace.id}/members/${member.user_id}`, {
         method: "DELETE",
       })
       await loadMembers(activeWorkspace.id)
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "移除成员失败")
+      setFeedback(err instanceof Error ? err.message : "移除成员失败")
+    } finally {
+      setIsRemovingMember(false)
+      setPendingMember(null)
     }
   }
 
   const handleCreateInvite = async () => {
     if (!activeWorkspace) return
     setIsInviting(true)
+    setInviteError(null)
     try {
       const result = await requestData<InviteResult>(
         `/api/v1/workspaces/${activeWorkspace.id}/members/invite`,
@@ -106,7 +130,7 @@ export default function MembersSettingsPage() {
       )
       setInviteResult(result)
     } catch (err: unknown) {
-      alert(err instanceof Error ? err.message : "生成邀请码失败")
+      setInviteError(err instanceof Error ? err.message : "生成邀请码失败")
     } finally {
       setIsInviting(false)
     }
@@ -121,7 +145,7 @@ export default function MembersSettingsPage() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <AppSidebar connectionStatus="online" activeItem="settings" />
+      <AppSidebar connectionStatus={connectionStatus} activeItem="settings" />
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-5xl space-y-6">
@@ -168,6 +192,24 @@ export default function MembersSettingsPage() {
           {error && (
             <div className="rounded-lg border border-destructive/30 bg-destructive/15 p-4 text-sm text-destructive">
               {error}
+            </div>
+          )}
+
+          {/* 操作失败提示（替代原生 alert） */}
+          {feedback && (
+            <div
+              role="alert"
+              className="flex items-start justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/15 p-4 text-sm text-destructive"
+            >
+              <span className="min-w-0 flex-1">{feedback}</span>
+              <button
+                type="button"
+                onClick={() => setFeedback(null)}
+                aria-label="关闭错误提示"
+                className="shrink-0 rounded-md p-1 transition-colors hover:bg-destructive/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           )}
 
@@ -253,7 +295,7 @@ export default function MembersSettingsPage() {
                             {permissions.canManageMembers && !isTargetOwner && (
                               <button
                                 type="button"
-                                onClick={() => handleRemoveMember(m.user_id)}
+                                onClick={() => requestRemoveMember(m)}
                                 className="rounded p-1 text-muted-foreground hover:bg-destructive/15 hover:text-destructive transition-colors"
                                 title="移除成员"
                               >
@@ -301,6 +343,15 @@ export default function MembersSettingsPage() {
                     <option value="viewer">观察者（只读浏览）</option>
                   </select>
                 </div>
+
+                {inviteError && (
+                  <div
+                    role="alert"
+                    className="rounded-lg border border-destructive/30 bg-destructive/15 px-3 py-2 text-xs font-medium text-destructive"
+                  >
+                    {inviteError}
+                  </div>
+                )}
 
                 <div className="flex justify-end gap-2 pt-2">
                   <button
@@ -356,6 +407,17 @@ export default function MembersSettingsPage() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={pendingMember !== null}
+        title="移除成员"
+        description={`确定要将「${pendingMember?.display_name ?? "该成员"}」从工作区移除吗？移除后其将失去该工作区的访问权限。`}
+        confirmLabel="移除"
+        tone="destructive"
+        busy={isRemovingMember}
+        onConfirm={() => void handleRemoveMember()}
+        onCancel={() => setPendingMember(null)}
+      />
     </div>
   )
 }

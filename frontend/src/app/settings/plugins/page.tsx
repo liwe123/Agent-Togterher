@@ -22,6 +22,7 @@ import {
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { usePermissions } from "@/hooks/use-permissions"
+import { useWorkspaceConnection } from "@/hooks/use-workspace-connection"
 import { useWorkspaces } from "@/hooks/use-workspaces"
 import { requestData } from "@/lib/task-api"
 import { cn } from "@/lib/utils"
@@ -30,6 +31,7 @@ import type { PluginItem, WorkspacePluginResponse } from "@/types/plugin"
 export default function PluginsSettingsPage() {
   const { activeWorkspace, currentUserRole } = useWorkspaces()
   const { isAdmin } = usePermissions(currentUserRole)
+  const connectionStatus = useWorkspaceConnection(activeWorkspace?.id ?? null)
 
   const [plugins, setPlugins] = useState<PluginItem[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -218,7 +220,7 @@ export default function PluginsSettingsPage() {
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
-      <AppSidebar connectionStatus="online" activeItem="settings" />
+      <AppSidebar connectionStatus={connectionStatus} activeItem="settings" />
 
       <main className="flex-1 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-5xl space-y-6">
