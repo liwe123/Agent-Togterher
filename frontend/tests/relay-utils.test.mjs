@@ -6,6 +6,13 @@ import { loadTsModule } from "./load-ts-module.mjs"
 const plain = (value) => JSON.parse(JSON.stringify(value))
 const deep = (actual, expected) => assert.deepEqual(plain(actual), plain(expected))
 
+// 时间相关用例必须与运行机器时区无关：先构造本地时间，再转成 ISO 绝对时刻回灌，
+// 这样无论 CI 在 UTC 还是本地时区运行，日期分隔与分组结论都一致。
+const localDate = (year, monthIndex, day, hour, minute) =>
+  new Date(year, monthIndex, day, hour, minute, 0, 0)
+const iso = (year, monthIndex, day, hour, minute) =>
+  localDate(year, monthIndex, day, hour, minute).toISOString()
+
 const makeEntries = () => [
   {
     key: "agent-1",
@@ -60,7 +67,7 @@ const message = (overrides) => ({
   sender_id: 2,
   content: "内容",
   message_type: "normal",
-  created_at: "2026-11-01T10:00:00+08:00",
+  created_at: iso(2026, 10, 1, 10, 0),
   ...overrides,
 })
 
@@ -135,25 +142,25 @@ describe("relay-utils", () => {
   })
 
   describe("formatDayDivider", () => {
-    const now = new Date("2026-11-01T12:00:00+08:00")
+    const now = localDate(2026, 10, 1, 12, 0)
     it("今天与昨天", () => {
-      assert.equal(mod.formatDayDivider("2026-11-01T09:00:00+08:00", now), "今天")
-      assert.equal(mod.formatDayDivider("2026-10-31T23:00:00+08:00", now), "昨天")
+      assert.equal(mod.formatDayDivider(localDate(2026, 10, 1, 9, 0), now), "今天")
+      assert.equal(mod.formatDayDivider(localDate(2026, 9, 31, 23, 0), now), "昨天")
     })
     it("更早日期显示月日，跨年补年份", () => {
-      assert.equal(mod.formatDayDivider("2026-06-24T10:00:00+08:00", now), "6月24日")
-      assert.equal(mod.formatDayDivider("2025-12-31T10:00:00+08:00", now), "2025年12月31日")
+      assert.equal(mod.formatDayDivider(localDate(2026, 5, 24, 10, 0), now), "6月24日")
+      assert.equal(mod.formatDayDivider(localDate(2025, 11, 31, 10, 0), now), "2025年12月31日")
     })
   })
 
   describe("buildMessageTimeline", () => {
-    const now = new Date("2026-11-01T12:00:00+08:00")
+    const now = localDate(2026, 10, 1, 12, 0)
 
     it("连续同发送者消息合并分组，仅末条展示时间", () => {
       const messages = [
-        message({ id: 1, sender_id: 2, created_at: "2026-11-01T10:00:00+08:00" }),
-        message({ id: 2, sender_id: 2, created_at: "2026-11-01T10:01:00+08:00" }),
-        message({ id: 3, sender_id: 2, created_at: "2026-11-01T10:02:00+08:00" }),
+        message({ id: 1, sender_id: 2, created_at: iso(2026, 10, 1, 10, 0) }),
+        message({ id: 2, sender_id: 2, created_at: iso(2026, 10, 1, 10, 1) }),
+        message({ id: 3, sender_id: 2, created_at: iso(2026, 10, 1, 10, 2) }),
       ]
       const timeline = mod.buildMessageTimeline(messages, { now })
       deep(timeline.map((entry) => entry.groupStart), [true, false, false])
@@ -163,9 +170,9 @@ describe("relay-utils", () => {
 
     it("不同发送者或超时消息另起分组", () => {
       const messages = [
-        message({ id: 1, sender_id: 2, created_at: "2026-11-01T10:00:00+08:00" }),
-        message({ id: 2, sender_id: 3, created_at: "2026-11-01T10:00:30+08:00" }),
-        message({ id: 3, sender_id: 3, created_at: "2026-11-01T10:40:00+08:00" }),
+        message({ id: 1, sender_id: 2, created_at: iso(2026, 10, 1, 10, 0) }),
+        message({ id: 2, sender_id: 3, created_at: iso(2026, 10, 1, 10, 0) }),
+        message({ id: 3, sender_id: 3, created_at: iso(2026, 10, 1, 10, 40) }),
       ]
       const timeline = mod.buildMessageTimeline(messages, { now })
       deep(timeline.map((entry) => entry.groupStart), [true, true, true])
@@ -174,8 +181,8 @@ describe("relay-utils", () => {
 
     it("跨天插入时间分隔且首条带分隔", () => {
       const messages = [
-        message({ id: 1, created_at: "2026-10-31T23:50:00+08:00" }),
-        message({ id: 2, created_at: "2026-11-01T00:10:00+08:00" }),
+        message({ id: 1, created_at: iso(2026, 9, 31, 23, 50) }),
+        message({ id: 2, created_at: iso(2026, 10, 1, 0, 10) }),
       ]
       const timeline = mod.buildMessageTimeline(messages, { now })
       assert.equal(timeline[0].dayLabel, "昨天")
@@ -184,8 +191,8 @@ describe("relay-utils", () => {
 
     it("系统与错误消息独立成组", () => {
       const messages = [
-        message({ id: 1, sender_type: "system", sender_id: null, created_at: "2026-11-01T10:00:00+08:00" }),
-        message({ id: 2, sender_type: "system", sender_id: null, created_at: "2026-11-01T10:01:00+08:00" }),
+        message({ id: 1, sender_type: "system", sender_id: null, created_at: iso(2026, 10, 1, 10, 0) }),
+        message({ id: 2, sender_type: "system", sender_id: null, created_at: iso(2026, 10, 1, 10, 1) }),
       ]
       const timeline = mod.buildMessageTimeline(messages, { now })
       deep(timeline.map((entry) => entry.groupStart), [true, true])
@@ -197,14 +204,14 @@ describe("relay-utils", () => {
     it("按任务时间窗把链上成员回复匹配到棒次", () => {
       const task = {
         id: 10,
-        created_at: "2026-11-01T10:00:00+08:00",
-        updated_at: "2026-11-01T10:10:00+08:00",
+        created_at: iso(2026, 10, 1, 10, 0),
+        updated_at: iso(2026, 10, 1, 10, 10),
         relay_agent_ids: [2, 3, 4],
       }
       const messages = [
-        message({ id: 1, sender_id: null, sender_type: "user", created_at: "2026-11-01T10:00:00+08:00" }),
-        message({ id: 2, sender_id: 2, created_at: "2026-11-01T10:01:00+08:00" }),
-        message({ id: 3, sender_id: 4, created_at: "2026-11-01T10:05:00+08:00" }),
+        message({ id: 1, sender_id: null, sender_type: "user", created_at: iso(2026, 10, 1, 10, 0) }),
+        message({ id: 2, sender_id: 2, created_at: iso(2026, 10, 1, 10, 1) }),
+        message({ id: 3, sender_id: 4, created_at: iso(2026, 10, 1, 10, 5) }),
       ]
       const hops = mod.assignRelayHops(messages, [task])
       deep(hops.get(2), { index: 1, total: 3 })
@@ -215,10 +222,10 @@ describe("relay-utils", () => {
     it("普通任务不参与棒次匹配", () => {
       const task = {
         id: 11,
-        created_at: "2026-11-01T10:00:00+08:00",
-        updated_at: "2026-11-01T10:10:00+08:00",
+        created_at: iso(2026, 10, 1, 10, 0),
+        updated_at: iso(2026, 10, 1, 10, 10),
       }
-      const messages = [message({ id: 2, sender_id: 2, created_at: "2026-11-01T10:01:00+08:00" })]
+      const messages = [message({ id: 2, sender_id: 2, created_at: iso(2026, 10, 1, 10, 1) })]
       assert.equal(mod.assignRelayHops(messages, [task]).size, 0)
     })
   })

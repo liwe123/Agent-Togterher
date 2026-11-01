@@ -518,4 +518,3 @@ async def test_workspace_snapshot_carries_relay_chain(relay_session) -> None:
     )
     payload = next(item for item in snapshot["tasks"] if item["id"] == task.id)
     assert payload["relay_agent_ids"] == chain
-

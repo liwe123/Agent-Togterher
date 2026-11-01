@@ -89,6 +89,14 @@ class _TaskLeaseLostError(OrchestratorError):
     """Internal: task-level lease lost mid-flight; execution must stop writing."""
 
 
+class _RelayHopFailure(Exception):
+    """Internal: a relay hop failed; carries the in-flight TaskStep for收敛."""
+
+    def __init__(self, step: TaskStep | None) -> None:
+        super().__init__("relay hop failed")
+        self.step = step
+
+
 class AgentOrchestrator:
     """Execute one persisted task and publish its lifecycle events.
 
@@ -354,7 +362,6 @@ class AgentOrchestrator:
 
             chain = await self._load_relay_agents(task, relay_agent_ids)
             total_hops = len(chain)
-            original_task = task.description
             db_api_keys = await litellm_service.get_db_api_keys(self._session)
             db_custom_models = await litellm_service.get_db_custom_models(
                 self._session
@@ -364,164 +371,256 @@ class AgentOrchestrator:
             for hop_index, agent in enumerate(chain, start=1):
                 active_agent = agent
                 step_name = f"relay_turn_{hop_index}"
-                hop_input = relay_agent.build_relay_prompt(
-                    original_task, chain, hop_index, previous_outputs
-                )
-                await self.update_agent_status(agent, "running")
-                step = await self.save_task_step(
-                    task,
-                    agent,
-                    step_name=step_name,
-                    status="running",
-                    input_text=self._clip_text(hop_input, 2000),
-                )
-                await self._broadcast_relay_progress(
-                    task,
-                    hop_index=hop_index,
-                    total_hops=total_hops,
-                    agent=agent,
-                    status="started",
-                )
-                context_messages = await self._build_task_context_messages(
-                    task,
-                    agent,
-                    stage=step_name,
-                    note=hop_input,
-                    recent_steps_limit=8,
-                    recent_calls_limit=8,
-                )
-
-                def call_factory(
-                    tools: list[dict] | None,
-                    extra_messages: list[dict] | None,
-                    context_messages: list[dict] | None,
-                    *,
-                    _agent: Agent = agent,
-                    _hop: int = hop_index,
-                ) -> Awaitable[ChatCompletionResult]:
-                    return relay_agent.execute_turn(
-                        _agent,
-                        original_task,
+                try:
+                    step, content = await self._run_relay_hop(
+                        task,
+                        agent,
                         chain,
-                        _hop,
+                        hop_index,
+                        total_hops,
                         previous_outputs,
-                        api_keys=db_api_keys,
-                        custom_models=db_custom_models,
-                        tools=tools,
-                        extra_messages=extra_messages,
-                        context_messages=context_messages,
+                        db_api_keys,
+                        db_custom_models,
                     )
-
-                if get_settings().agent_tools_enabled:
-                    plugin_tools = await load_active_plugin_tools(
-                        self._session, task.workspace_id
-                    )
-                    completion = await self._run_agent_with_tools(
+                except _RelayHopFailure as failure:
+                    return await self._fail_relay_task(
                         task,
-                        agent,
-                        call_factory=call_factory,
-                        tools=get_tools_spec() + build_plugin_tool_specs(plugin_tools),
-                        plugin_tools=plugin_tools,
-                        context_messages=context_messages,
-                    )
-                else:
-                    completion = await self._call_and_log(
-                        task,
-                        agent,
-                        call_factory(None, None, context_messages),
-                    )
-
-                if is_pass_reply(completion.content):
-                    await self.save_task_step(
-                        task,
-                        agent,
-                        step=step,
-                        status="completed",
-                        output=relay_agent.PASS_MARKER,
-                    )
-                    await self.update_agent_status(agent, "idle")
-                    await self._broadcast_relay_progress(
-                        task,
+                        active_agent,
+                        failure.step,
+                        step_name=step_name,
                         hop_index=hop_index,
                         total_hops=total_hops,
-                        agent=agent,
-                        status="passed",
+                        error=failure.__cause__ or failure,
                     )
-                    step = None
-                    continue
+                if content is not None:
+                    previous_outputs.append((agent.name, content))
+                step = None
 
+            return await self._finish_relay_task(task, previous_outputs)
+        except _TaskLeaseLostError:
+            raise
+        except Exception as exc:
+            return await self._fail_relay_task(
+                task,
+                active_agent,
+                step,
+                step_name=step_name,
+                hop_index=hop_index,
+                total_hops=total_hops,
+                error=exc,
+            )
+
+    async def _run_relay_hop(
+        self,
+        task: Task,
+        agent: Agent,
+        chain: list[Agent],
+        hop_index: int,
+        total_hops: int,
+        previous_outputs: list[tuple[str, str]],
+        db_api_keys: dict[str, str],
+        db_custom_models: dict[str, dict],
+    ) -> tuple[TaskStep, str | None]:
+        """Run one relay hop; return (step, content) with content None for PASS."""
+        step_name = f"relay_turn_{hop_index}"
+        hop_input = relay_agent.build_relay_prompt(
+            task.description, chain, hop_index, previous_outputs
+        )
+        await self.update_agent_status(agent, "running")
+        step = await self.save_task_step(
+            task,
+            agent,
+            step_name=step_name,
+            status="running",
+            input_text=self._clip_text(hop_input, 2000),
+        )
+        try:
+            await self._broadcast_relay_progress(
+                task,
+                hop_index=hop_index,
+                total_hops=total_hops,
+                agent=agent,
+                status="started",
+            )
+            context_messages = await self._build_task_context_messages(
+                task,
+                agent,
+                stage=step_name,
+                note=hop_input,
+                recent_steps_limit=8,
+                recent_calls_limit=8,
+            )
+            completion = await self._call_relay_model(
+                task,
+                agent,
+                chain,
+                hop_index,
+                previous_outputs,
+                db_api_keys,
+                db_custom_models,
+                context_messages,
+            )
+
+            if is_pass_reply(completion.content):
                 await self.save_task_step(
                     task,
                     agent,
                     step=step,
                     status="completed",
-                    output=completion.content,
+                    output=relay_agent.PASS_MARKER,
                 )
-                await self.send_result_message(task, agent, completion.content)
-                previous_outputs.append((agent.name, completion.content))
                 await self.update_agent_status(agent, "idle")
                 await self._broadcast_relay_progress(
                     task,
                     hop_index=hop_index,
                     total_hops=total_hops,
                     agent=agent,
-                    status="completed",
+                    status="passed",
                 )
-                step = None
+                return step, None
 
-            result_text = self._relay_result_text(previous_outputs)
-            await self.update_task_status(
-                task, TaskStatus.COMPLETED, result=result_text
-            )
-            await self._session.refresh(task)
-            task.result = result_text
-            task.execution_trace = build_execution_trace(
+            await self.save_task_step(
                 task,
-                current_stage="relay",
-                completed_steps=await self._load_task_steps(task.id),
-                model_calls=await self._load_task_model_calls(task.id),
+                agent,
+                step=step,
+                status="completed",
+                output=completion.content,
             )
-            task.trace_summary = build_trace_summary(
+            await self.send_result_message(task, agent, completion.content)
+            await self.update_agent_status(agent, "idle")
+            await self._broadcast_relay_progress(
                 task,
-                current_stage="relay",
-                completed_steps=await self._load_task_steps(task.id),
-                model_calls=await self._load_task_model_calls(task.id),
+                hop_index=hop_index,
+                total_hops=total_hops,
+                agent=agent,
+                status="completed",
             )
-            return TaskRead.model_validate(task)
+            return step, completion.content
         except _TaskLeaseLostError:
             raise
         except Exception as exc:
-            error_message = self._error_message(exc)
-            logger.warning(
-                "Relay task execution failed",
-                extra={
-                    "task_id": self._identity_id(task),
-                    "agent_id": self._identity_id(active_agent),
-                    "hop_index": hop_index,
-                },
-                exc_info=True,
+            raise _RelayHopFailure(step) from exc
+
+    async def _call_relay_model(
+        self,
+        task: Task,
+        agent: Agent,
+        chain: list[Agent],
+        hop_index: int,
+        previous_outputs: list[tuple[str, str]],
+        db_api_keys: dict[str, str],
+        db_custom_models: dict[str, dict],
+        context_messages: list[dict[str, str]],
+    ) -> ChatCompletionResult:
+        """Call one relay hop model, reusing the classic tool loop when enabled."""
+
+        def call_factory(
+            tools: list[dict] | None,
+            extra_messages: list[dict] | None,
+            context_messages: list[dict] | None,
+        ) -> Awaitable[ChatCompletionResult]:
+            return relay_agent.execute_turn(
+                agent,
+                task.description,
+                chain,
+                hop_index,
+                previous_outputs,
+                api_keys=db_api_keys,
+                custom_models=db_custom_models,
+                tools=tools,
+                extra_messages=extra_messages,
+                context_messages=context_messages,
             )
-            if active_agent is not None:
-                try:
-                    await self._broadcast_relay_progress(
-                        task,
-                        hop_index=hop_index,
-                        total_hops=total_hops,
-                        agent=active_agent,
-                        status="failed",
-                    )
-                except Exception:  # noqa: BLE001 — never mask the real failure
-                    logger.exception(
-                        "Relay failure progress broadcast failed for task %s",
-                        task.id,
-                    )
-            return await self._mark_failed_resilient(
+
+        if not get_settings().agent_tools_enabled:
+            return await self._call_and_log(
                 task,
-                active_agent,
-                step,
-                error_message,
-                step_name=step_name,
+                agent,
+                call_factory(None, None, context_messages),
             )
+        plugin_tools = await load_active_plugin_tools(
+            self._session, task.workspace_id
+        )
+        return await self._run_agent_with_tools(
+            task,
+            agent,
+            call_factory=call_factory,
+            tools=get_tools_spec() + build_plugin_tool_specs(plugin_tools),
+            plugin_tools=plugin_tools,
+            context_messages=context_messages,
+        )
+
+    async def _finish_relay_task(
+        self,
+        task: Task,
+        previous_outputs: list[tuple[str, str]],
+    ) -> TaskRead:
+        """Complete the relay task and refresh its execution trace artifacts."""
+        result_text = self._relay_result_text(previous_outputs)
+        await self.update_task_status(
+            task, TaskStatus.COMPLETED, result=result_text
+        )
+        await self._session.refresh(task)
+        task.result = result_text
+        steps = await self._load_task_steps(task.id)
+        calls = await self._load_task_model_calls(task.id)
+        task.execution_trace = build_execution_trace(
+            task,
+            current_stage="relay",
+            completed_steps=steps,
+            model_calls=calls,
+        )
+        task.trace_summary = build_trace_summary(
+            task,
+            current_stage="relay",
+            completed_steps=steps,
+            model_calls=calls,
+        )
+        return TaskRead.model_validate(task)
+
+    async def _fail_relay_task(
+        self,
+        task: Task,
+        active_agent: Agent | None,
+        step: TaskStep | None,
+        *,
+        step_name: str,
+        hop_index: int,
+        total_hops: int,
+        error: Exception,
+    ) -> TaskRead:
+        """Mark a relay task failed while keeping earlier hops' output."""
+        error_message = self._error_message(error)
+        logger.warning(
+            "Relay task execution failed",
+            extra={
+                "task_id": self._identity_id(task),
+                "agent_id": self._identity_id(active_agent),
+                "hop_index": hop_index,
+            },
+            exc_info=True,
+        )
+        if active_agent is not None:
+            try:
+                await self._broadcast_relay_progress(
+                    task,
+                    hop_index=hop_index,
+                    total_hops=total_hops,
+                    agent=active_agent,
+                    status="failed",
+                )
+            except Exception:  # noqa: BLE001 — never mask the real failure
+                logger.exception(
+                    "Relay failure progress broadcast failed for task %s",
+                    task.id,
+                )
+        return await self._mark_failed_resilient(
+            task,
+            active_agent,
+            step,
+            error_message,
+            step_name=step_name,
+        )
 
     async def _load_relay_agents(
         self, task: Task, relay_agent_ids: list[int]
