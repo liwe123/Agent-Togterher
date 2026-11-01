@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>34</b> 份</span>
-        <span>变更记录 <b>272</b> 条</span>
-        <span>生成于 2026-11-01 11:58</span>
+        <span>变更记录 <b>273</b> 条</span>
+        <span>生成于 2026-11-01 12:01</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -4637,8 +4637,24 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>backend/pytest.ini 新增 asyncio_default_fixture_loop_scope=function 与 anyio CallSpec2 精确放行；backend/app/core/orchestrator.py 拆分接力执行方法降低复杂度并新增 _RelayHopFailure 携带 in-flight TaskStep；backend/tests/test_relay_handoff.py 去除文件尾空行</td>
 <td>否</td>
 <td>否</td>
-<td>本地对齐 CI 依赖版本：SQLite 全量 285 passed、PostgreSQL 全量 285 passed、flake8 两条命令（严格参数 / max-complexity=10 + max-line-length=127）均 0；前端 Node 22 下 81 passed + typecheck 0 + lint 0 + next build 16 路由成功；真实 CI 复验结果见 C-274 备注</td>
-<td>来源：CI run 41269487154 三 job 全红（build-linux flake8 C901/W391、test-postgres pytest INTERNALERROR、test-frontend Node22 UTC 时区断言）；根因取证来自该 run 的 test-postgres 日志（pytest-asyncio 1.4.1 的 PytestDeprecationWarning）</td>
+<td>本地对齐 CI 依赖版本：SQLite 全量 285 passed、PostgreSQL 全量 285 passed、flake8 两条命令（严格参数 / max-complexity=10 + max-line-length=127）均 0；前端 Node 22 下 81 passed + typecheck 0 + lint 0 + next build 16 路由成功；真实 CI run 41271272994（commit ca66c9d）三 job 全绿：build-linux / test-frontend / test-postgres 均 success</td>
+<td>来源：CI run 41269487154 三 job 全红（build-linux flake8 C901/W391、test-postgres pytest INTERNALERROR、test-frontend Node22 UTC 时区断言）；根因取证来自该 run 的 test-postgres 日志（pytest-asyncio 1.4.1 的 PytestDeprecationWarning）；修复推送后真实 CI 复验通过（run 41271272994，三 job 全绿）</td>
+</tr>
+<tr>
+<td>2026-11-01 11:59</td>
+<td>C-273</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/ca66c9d">ca66c9d</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>其他、文档</td>
+<td>重生成变更追踪表与 PRD.html：登记 CI 依赖漂移假红与接力失败步进收敛修复（C-272）与上一笔 regen 提交 C-271</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>生成 272 行；xlsx 与 PRD.md 一致；PRD.html 由 34 份 PRD + 272 条记录生成</td>
+<td>本次提交自身行滞后一行属预期（守则 4 豁免）</td>
 </tr>
 </tbody>
 </table></div>

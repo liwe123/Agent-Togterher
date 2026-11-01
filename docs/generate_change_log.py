@@ -693,6 +693,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 回写 CI 复验结果并重生成（C-274）": {
+        "type": "Optimization",
+        "content": "重生成变更追踪表与 PRD.html：把修复后真实 CI run 41271272994（commit ca66c9d）三 job 全绿的复验结果回写 C-272 的验证结果与备注列，并登记上一笔 regen 提交 C-273",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 273 行；xlsx 与 PRD.md 一致；PRD.html 由 34 份 PRD + 273 条记录生成",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）；依据 CI run 41271272994 三 job 全绿（build-linux / test-frontend / test-postgres）",
+    },
     "fix: 修复 CI 依赖漂移假红与接力失败步进收敛（C-272）": {
         "type": "BUG",
         "scope": "后端、前端、CI",
@@ -701,8 +711,8 @@ CURATED_BY_SUBJECT = {
         "backend": "backend/pytest.ini 新增 asyncio_default_fixture_loop_scope=function 与 anyio CallSpec2 精确放行；backend/app/core/orchestrator.py 拆分接力执行方法降低复杂度并新增 _RelayHopFailure 携带 in-flight TaskStep；backend/tests/test_relay_handoff.py 去除文件尾空行",
         "db": "否",
         "breaking": "否",
-        "verify": "本地对齐 CI 依赖版本：SQLite 全量 285 passed、PostgreSQL 全量 285 passed、flake8 两条命令（严格参数 / max-complexity=10 + max-line-length=127）均 0；前端 Node 22 下 81 passed + typecheck 0 + lint 0 + next build 16 路由成功；真实 CI 复验结果见 C-274 备注",
-        "notes": "来源：CI run 41269487154 三 job 全红（build-linux flake8 C901/W391、test-postgres pytest INTERNALERROR、test-frontend Node22 UTC 时区断言）；根因取证来自该 run 的 test-postgres 日志（pytest-asyncio 1.4.1 的 PytestDeprecationWarning）",
+        "verify": "本地对齐 CI 依赖版本：SQLite 全量 285 passed、PostgreSQL 全量 285 passed、flake8 两条命令（严格参数 / max-complexity=10 + max-line-length=127）均 0；前端 Node 22 下 81 passed + typecheck 0 + lint 0 + next build 16 路由成功；真实 CI run 41271272994（commit ca66c9d）三 job 全绿：build-linux / test-frontend / test-postgres 均 success",
+        "notes": "来源：CI run 41269487154 三 job 全红（build-linux flake8 C901/W391、test-postgres pytest INTERNALERROR、test-frontend Node22 UTC 时区断言）；根因取证来自该 run 的 test-postgres 日志（pytest-asyncio 1.4.1 的 PytestDeprecationWarning）；修复推送后真实 CI 复验通过（run 41271272994，三 job 全绿）",
     },
     "docs: 登记 CI 假红修复并重生成（C-273）": {
         "type": "Optimization",
