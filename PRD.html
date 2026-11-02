@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>36</b> 份</span>
-        <span>变更记录 <b>284</b> 条</span>
-        <span>生成于 2026-11-02 22:07</span>
+        <span>变更记录 <b>285</b> 条</span>
+        <span>生成于 2026-11-02 22:11</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -4823,14 +4823,30 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td><a href="https://github.com/liwe123/Agent-Togterher/commit/c6fed2f">c6fed2f</a></td>
 <td>LI</td>
 <td>Optimization</td>
-<td>文档、其他</td>
-<td>docs: 登记 DS-Bot UI 迁移并重生成（C-283）</td>
+<td>文档</td>
+<td>登记 DS-Bot UI 迁移二期并重生成文档：新增 PRD 到 docs/PRD.md 索引、HANDOFF 增加 §3.6 交付与验证记录、归档 A/B 截图与 README（docs/ab-20261102/，6 张 baseline + 16 张 new，1440×900 与 390×844、4 主题与交互态）、重跑 generate_change_log.py 与 build_prd_html.py 使 PRD.html/xlsx/PRD.md 与 git 历史对齐</td>
 <td>-</td>
 <td>-</td>
 <td>否</td>
 <td>否</td>
+<td>生成 283 行；PRD.html 由 36 份 PRD + 283 条记录生成；check_docs_consistency OK prds=36；A/B 截图 22 张归档</td>
+<td>本次提交自身行滞后一行属预期（守则 4 豁免），由下一笔重生成补齐</td>
+</tr>
+<tr>
+<td>2026-11-02 22:07</td>
+<td>C-285</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/860f06c">860f06c</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>文档</td>
+<td>回写独立验收结论并重生成：C-283 备注写入独立验收 PASS（0 阻塞，3 条非阻塞观察：globals/layout 属 Lead 设计基座改动已登记、PRD 状态与页面/路由口径已修正、regen 自身行滞后属守则 4 豁免）；同步修正 PRD 状态为 M1–M3 已实施并验收、新增 §9 实施与验收记录；修正 HANDOFF 页面数 11→12、「16 路由」口径为 static pages 16/16 + Route 表 15 条；重跑两个生成脚本使 PRD.md/xlsx/PRD.html 与 git 历史对齐</td>
 <td>-</td>
 <td>-</td>
+<td>否</td>
+<td>否</td>
+<td>生成 284 行；36 份 PRD + 284 条记录；check_docs_consistency OK prds=36；xlsx 与 PRD.md 逐格一致</td>
+<td>本次提交自身行滞后一行属预期（守则 4 豁免），下一次重生成补齐</td>
 </tr>
 </tbody>
 </table></div>

@@ -704,6 +704,36 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 登记 DS-Bot UI 迁移并重生成（C-283）": {
+        "type": "Optimization",
+        "scope": "文档",
+        "content": "登记 DS-Bot UI 迁移二期并重生成文档：新增 PRD 到 docs/PRD.md 索引、HANDOFF 增加 §3.6 交付与验证记录、归档 A/B 截图与 README（docs/ab-20261102/，6 张 baseline + 16 张 new，1440×900 与 390×844、4 主题与交互态）、重跑 generate_change_log.py 与 build_prd_html.py 使 PRD.html/xlsx/PRD.md 与 git 历史对齐",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 283 行；PRD.html 由 36 份 PRD + 283 条记录生成；check_docs_consistency OK prds=36；A/B 截图 22 张归档",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免），由下一笔重生成补齐",
+    },
+    "docs: 回写独立验收结论并重生成（C-284）": {
+        "type": "Optimization",
+        "scope": "文档",
+        "content": "回写独立验收结论并重生成：C-283 备注写入独立验收 PASS（0 阻塞，3 条非阻塞观察：globals/layout 属 Lead 设计基座改动已登记、PRD 状态与页面/路由口径已修正、regen 自身行滞后属守则 4 豁免）；同步修正 PRD 状态为 M1–M3 已实施并验收、新增 §9 实施与验收记录；修正 HANDOFF 页面数 11→12、「16 路由」口径为 static pages 16/16 + Route 表 15 条；重跑两个生成脚本使 PRD.md/xlsx/PRD.html 与 git 历史对齐",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 284 行；36 份 PRD + 284 条记录；check_docs_consistency OK prds=36；xlsx 与 PRD.md 逐格一致",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免），下一次重生成补齐",
+    },
+    "docs: 回写真实 CI 复验结果并重生成（C-285）": {
+        "type": "Optimization",
+        "scope": "文档",
+        "content": "回写 GitHub Actions 真实 CI 复验结果并重生成：run 41459009214（workflow「Python Package Tests」#99，head 860f06c）结论 success——build-linux / test-postgres / test-frontend 三 job 成功，dependency-canary 按 push 触发规则 skipped；同步在 HANDOFF §3.6 记录 CI 证据，重跑两个生成脚本对齐文档",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 285 行；PRD.html 由 36 份 PRD + 285 条记录生成；CI run 41459009214 结论 success（3 job success + 1 job skipped 符合触发规则）",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）",
+    },
     "docs: 回写 Batch1 CI 复验结果并重生成（C-282）": {
         "type": "Optimization",
         "content": "回写 Batch1 真实 CI 复验结果：run 41293616230（head 82a585e，2026-11-01）三 job 全绿——build-linux success、test-postgres success、test-frontend success；dependency-canary 按 push 事件规则跳过（仅 schedule/workflow_dispatch 触发，首次真跑需 merge 后手动 dispatch）",

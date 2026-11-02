@@ -129,6 +129,7 @@
 | 页面外壳 | 12 个页面文件外框改 `md:grid-cols-[auto_minmax(0,1fr)]` + `overflow-x-clip`（保持侧栏 sticky），任务/通讯录/工作流/设置子页同步换肤 |
 
 - **验证**：`npm test` 130 passed（新增 design-tokens 9 / motion 5 / mention-utils +12 / action-cards 14 / bot-shapes 9）；`npx tsc --noEmit` 0；`npx eslint` 0；`next build` static pages 16/16、Route 表 15 条全部成功。
+- **CI 证据**：GitHub Actions run 41459009214（workflow「Python Package Tests」#99，head 860f06c）：build-linux / test-postgres / test-frontend 三 job success，dependency-canary 按 push 触发规则 skipped（仅 schedule/workflow_dispatch 运行，规则未变）。
 - **A/B 取证**：`docs/ab-20261102/`（HEAD `255cd29` worktree 生产构建 vs 本次生产构建；1440×900 / 390×844；deepseek 深色 + paper 浅色 / mono / moonlight；含命令面板、详情面板、设置外观、用量页），结论见该目录 `README.md`。
 - **留待后续**：记忆面板（依赖 Phase 2 记忆能力）、relay 暂停/继续（缺后端暂停语义）、自定义 emoji 头像与 BotMark 共存、HITL 卡片的服务端备注字段。
 
