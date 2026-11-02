@@ -58,6 +58,17 @@ PREFIX_TYPE = {
 
 # Curated rows: keyed by short commit sha. Fields override git inference.
 CURATED = {
+    "19ace12": {
+        "type": "Requirement",
+        "scope": "前端、文档",
+        "content": "DS-Bot 图标设计体系全量迁移：把全站 lucide-react 图标与 emoji 图标（95 个语义名 / 239 处 / 33 个文件）替换为 DS-Bot 自绘图标体系——新增 89 个图标纯数据注册表（20×20 网格、1.5/1.6/1.8 线宽、圆头圆角、currentColor、7 个填充、1 个虚线；28 个路径与 DS-Bot client.js 逐字一致）与 Icon 渲染器（95 个历史语义同名导出 + 扩展 Plug）；新增 AgentGlyph 统一聊天成员条/成员面板/提及候选/快捷 @ 芯片/任务负责人头像为角色形状或 Plug 图标；✕ 文本关闭按钮与 🤖 emoji 图标清零；从 package.json/lockfile 移除 lucide-react 依赖",
+        "frontend": "lib/icon-paths.ts（89 图标注册表）；components/ui/icons.tsx（Icon 渲染器 + 95 具名导出 + Plug）；components/console/agent-glyph.tsx（新增）；33 个产品文件 import 切换与 emoji 头像替换；tests/icons.test.mjs（11 例：网格/线宽/颜色/具名覆盖/0 lucide/0 emoji）",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "前端 npm test 141 passed（新增 11 例）/ npm run typecheck 0 / npx eslint 0 / next build 16 路由全部成功；lucide-react 已从依赖移除（npm ls 为空）；独立视觉 QA PASS（0 阻塞，12 条非阻塞已整改 10 条）；A/B 截图 22 张归档 docs/ab-20261102-icons/（含全图标预览大图与明暗主题）",
+        "notes": "PRD: docs/prd/PRD-DS-Bot图标设计体系迁移.md（PRD.md 索引已登记，PRD.html 由本批脚本重建）；A/B 与 QA 结论见 docs/ab-20261102-icons/README.md；独立验收结论见后续回写；未改后端与数据库",
+    },
     "88dfd27": {
         "type": "Requirement",
         "scope": "前端、文档",

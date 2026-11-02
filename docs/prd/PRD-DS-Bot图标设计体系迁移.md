@@ -117,7 +117,7 @@ IconDefinition = { prims: IconPrimitive[]; sw?: 1.5 | 1.6 | 1.8; dash?: string }
 - **质量门禁**：`npm test` **141 passed**（新增 icons 用例 11 项，覆盖注册表网格/线宽/颜色、95 具名导出、0 lucide 引用、0 emoji 残留）；`npm run typecheck` 0；`npx eslint` 0；`npm run build` 16 条路由全部成功（临时预览路由已删除）。
 - **A/B 取证**：`docs/ab-20261102-icons/`（22 张 PNG：图标全量预览大图 + 控制台/群聊/设置/成本/任务/工作流/通讯录/移动端/命令面板/明暗主题；baseline 为 HEAD `00af490` 生产构建），结论见该目录 `README.md`。
 - **独立视觉 QA**：PASS（0 阻塞）。12 条非阻塞问题中 10 条已整改（wrench/server-cog 越界、key/gauge/coins 可读性、sparkles/palette/calendar-clock/flame/cursor-click 细节、blocks 与 layout-dashboard 区分度）；留待后续：quota 页个别硬编码 amber 色（非本批引入）、自定义 emoji 头像与形状共存。
-- **提交**：见《改动表》C-286（feat）与 C-287（docs 登记）；独立验收结论见改动表备注。
+- **提交**：见《改动表》C-287（feat）与 C-288（docs 登记）；独立验收结论见改动表备注。
 
 ## 10. 系统关系
 

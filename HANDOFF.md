@@ -133,11 +133,22 @@
 - **A/B 取证**：`docs/ab-20261102/`（HEAD `255cd29` worktree 生产构建 vs 本次生产构建；1440×900 / 390×844；deepseek 深色 + paper 浅色 / mono / moonlight；含命令面板、详情面板、设置外观、用量页），结论见该目录 `README.md`。
 - **留待后续**：记忆面板（依赖 Phase 2 记忆能力）、relay 暂停/继续（缺后端暂停语义）、自定义 emoji 头像与 BotMark 共存、HITL 卡片的服务端备注字段。
 
+## 3.7 Phase 5 UI 迁移第三批（DS-Bot 图标设计体系迁移，2026-11-02）
+
+- **PRD**：`docs/prd/PRD-DS-Bot图标设计体系迁移.md`（目标/用户故事/FR1-FR5/AC1-AC6；已登记 `docs/PRD.md` 索引）。对应改动表：C-287（feat）/ C-288（docs 登记）。
+- **落地**：把全站 lucide-react 图标与 emoji 图标（95 语义 / 239 处 / 33 文件）完整迁移为 DS-Bot 自绘图标体系：
+  - `frontend/src/lib/icon-paths.ts`：89 个图标纯数据注册表（20×20 网格、1.5/1.6/1.8 线宽、圆头圆角、currentColor、7 个填充、1 个虚线；28 个路径与 DS-Bot `client.js` 逐字一致）。
+  - `frontend/src/components/ui/icons.tsx`：`<Icon name/>` 渲染器 + 95 个历史语义同名导出（替换只改 import 路径）+ 扩展 `Plug`；图标颜色全部继承 `--console-*`。
+  - `components/console/agent-glyph.tsx`：聊天成员条/成员面板/提及候选/快捷 @ 芯片/任务负责人头像统一为角色形状或 Plug 图标，emoji 头像渲染归零。
+  - `lucide-react` 依赖移除；`✕` 文本关闭按钮与 `🤖` emoji 图标清零；`icons.test.mjs` 强制校验注册表网格/线宽/颜色、95 具名导出、0 lucide 引用、0 emoji 残留。
+- **验证**：前端 141 tests passed（新增 11）/ typecheck 0 / eslint 0 / next build 16 路由成功；独立视觉 QA PASS（0 阻塞，12 条非阻塞已整改 10 条，证据 `.tmp/qa-icons/` 不入库）；A/B 截图归档 `docs/ab-20261102-icons/`（22 张，含全图标预览大图与明暗主题）。
+- **留待后续**：quota 页个别硬编码 amber 色在 paper 主题下偏弱（非本批引入）、自定义 emoji 头像与角色形状共存方案、blocks 与 layout-dashboard 进一步区分。
+
 ## 4. 质量与验证基准
 
 - **后端自动化测试**：44 个测试模块，共计 **270 tests passed**（100% 通过；测试用一次性 SQLite 文件库跑测，CI 另有 `test-postgres` job 覆盖 PG 方言，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性；2026-08-29 compose 容器实跑 AC1/AC2/AC4/AC7/AC8 通过；2026-09-26 本机复跑 270 passed / PG 复跑 270 passed）。
 - **CI 稳定性修复（2026-09-26）**：`test-postgres` 跨事件循环 Redis 客户端（配额限流单例）改为随循环重建；`build-linux` aiosqlite 取消期关闭竞争（WS 会话取消中断 DB 操作 → invalidate → terminate 双 stop 挂死）通过「WS 快照与会话释放前移到握手 accept 之前」根除；CI 增加 job `timeout-minutes`、pytest-timeout、无进展看门狗（dump 线程栈 + asyncio 任务栈）与 `-s` 诊断。修复后连续 3 次复跑三 job 全绿。
-- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 130 passed（2026-11-02；新增 design-tokens/motion/mention-utils/action-cards/bot-shapes 用例），`next build` static pages 16/16、Route 表 15 条全部编译成功；UI 改动 A/B 与冒烟记录见 `docs/ab-20261102/`。
+- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` **141 passed**（2026-11-02；新增 design-tokens/motion/mention-utils/action-cards/bot-shapes/icons 用例），`next build` static pages 16/16、Route 表 15 条全部编译成功；UI 改动 A/B 与冒烟记录见 `docs/ab-20261102/` 与 `docs/ab-20261102-icons/`。
 - **文档自动化体系**：14 列变更记录全量无空值，`PRD.md`、`Agent_Console_变更追踪.xlsx` 与 `PRD.html` 自动化生成并与 Git 历史完全同步。
 
 ---
