@@ -337,10 +337,10 @@ export default function WorkflowsPage() {
   )
 
   return (
-    <div className="flex min-h-screen bg-background text-foreground">
+    <div className="console-shell grid min-h-screen grid-cols-[minmax(0,1fr)] overflow-x-clip text-foreground md:grid-cols-[auto_minmax(0,1fr)]">
       <AppSidebar connectionStatus={connectionStatus} activeItem="workflows" />
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-8">
+      <main className="min-w-0 overflow-y-auto p-4 md:p-8">
         <div className="mx-auto max-w-5xl space-y-6">
           {/* Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-6">

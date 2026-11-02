@@ -168,3 +168,174 @@ export function insertMention(
   const nextCaret = prefix.length + replacement.length
   return { nextValue, nextCaret }
 }
+
+/** @ 前后允许出现的字符：邮箱 / 路径等标识符语境直接跳过，避免误伤。 */
+const ADDRESS_BEFORE = /[A-Za-z0-9_./]/
+const NAME_GOES_ON = /[A-Za-z0-9_]/
+/** 群发语义不转成个人链接（DS-Bot 只处理具名 Agent）。 */
+const RESERVED_MENTION_NAMES = new Set(["all", "everyone", "所有人", "全体"])
+
+interface MentionTarget {
+  id: number
+  name: string
+  lowerName: string
+}
+
+function markRange(mask: Uint8Array, start: number, end: number) {
+  for (let index = start; index < end; index += 1) {
+    mask[index] = 1
+  }
+}
+
+/**
+ * 标记不应识别 @ 的「字面量区」：围栏代码块、行内代码、Markdown 链接。
+ * 这样 `@Name` 出现在代码或链接里时保持原样，不会破坏 Markdown 结构。
+ */
+function buildLiteralMask(text: string): Uint8Array {
+  const mask = new Uint8Array(text.length)
+
+  // 1) 围栏代码块：成对的 ``` 之间全部视为字面量；未闭合时剩余正文都算代码。
+  let cursor = 0
+  while (cursor < text.length) {
+    const open = text.indexOf("```", cursor)
+    if (open === -1) break
+    const close = text.indexOf("```", open + 3)
+    if (close === -1) {
+      markRange(mask, open, text.length)
+      break
+    }
+    markRange(mask, open, close + 3)
+    cursor = close + 3
+  }
+
+  // 2) 行内代码：单行内成对的单个反引号。
+  const inlineCode = /`[^`\n]*`/g
+  for (const match of text.matchAll(inlineCode)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    let overlapped = false
+    for (let index = start; index < end; index += 1) {
+      if (mask[index]) {
+        overlapped = true
+        break
+      }
+    }
+    if (!overlapped) {
+      markRange(mask, start, end)
+    }
+  }
+
+  // 3) Markdown 链接 / 图片：`[文案](地址)` 内部不做 @ 识别。
+  const markdownLink = /!?\[[^\]]*\]\([^)]*\)/g
+  for (const match of text.matchAll(markdownLink)) {
+    const start = match.index ?? 0
+    const end = start + match[0].length
+    let overlapped = false
+    for (let index = start; index < end; index += 1) {
+      if (mask[index]) {
+        overlapped = true
+        break
+      }
+    }
+    if (!overlapped) {
+      markRange(mask, start, end)
+    }
+  }
+
+  return mask
+}
+
+/**
+ * 把正文里的已知 Agent 提及转成行内引用 Markdown：`@Name` → `[Name](mention://<id>)`。
+ *
+ * 对齐 DS-Bot 的 @ 解析口径（分析报告 §4.1）：
+ * - 只识别已知 Agent 名（含中文名），按名字长度降序匹配，短名不会抢长名的前缀；
+ * - 跳过围栏代码块 / 行内代码 / Markdown 链接内部；
+ * - 排除邮箱、路径前缀（前一个字符是 `[A-Za-z0-9_./]`）与名字后紧跟标识符的误匹配；
+ * - `@所有人` 等群发语义保持纯文本；
+ * - selfId 命中的 Agent 不转链接（避免消息里自指）；
+ * - 其余文本原样保留，可安全交给 ReactMarkdown 渲染。
+ */
+export function linkMentions(
+  text: string,
+  agents: Array<{ id: number; name: string }>,
+  selfId?: number | null,
+): string {
+  if (!text || agents.length === 0) return text
+
+  const targets: MentionTarget[] = []
+  const seenNames = new Set<string>()
+  for (const agent of agents) {
+    if (!agent || typeof agent.name !== "string") continue
+    const name = agent.name.trim()
+    if (!name) continue
+    const lowerName = name.toLowerCase()
+    if (RESERVED_MENTION_NAMES.has(lowerName)) continue
+    if (seenNames.has(lowerName)) continue
+    seenNames.add(lowerName)
+    targets.push({ id: agent.id, name, lowerName })
+  }
+  if (targets.length === 0) return text
+  targets.sort(
+    (left, right) =>
+      right.name.length - left.name.length || left.id - right.id,
+  )
+
+  const mask = buildLiteralMask(text)
+  let result = ""
+  let copied = 0
+  let index = 0
+
+  while (index < text.length) {
+    const marker = text[index]
+    if ((marker !== "@" && marker !== "＠") || mask[index]) {
+      index += 1
+      continue
+    }
+
+    if (index > 0 && ADDRESS_BEFORE.test(text[index - 1])) {
+      index += 1
+      continue
+    }
+
+    const rest = text.slice(index + 1)
+    const restLower = rest.toLowerCase()
+    let matched: MentionTarget | null = null
+    for (const target of targets) {
+      if (!restLower.startsWith(target.lowerName)) continue
+      const end = index + 1 + target.name.length
+      const after = text.charAt(end)
+      if (after && NAME_GOES_ON.test(after)) continue
+      let literal = false
+      for (let position = index + 1; position < end; position += 1) {
+        if (mask[position]) {
+          literal = true
+          break
+        }
+      }
+      if (literal) continue
+      matched = target
+      break
+    }
+
+    if (!matched) {
+      index += 1
+      continue
+    }
+
+    const end = index + 1 + matched.name.length
+    const display = text.slice(index + 1, end)
+    result += text.slice(copied, index)
+    if (selfId !== undefined && selfId !== null && matched.id === selfId) {
+      // 自指保持纯文本，但仍消费掉这段，避免被更短的名字二次匹配。
+      result += `${marker}${display}`
+    } else {
+      result += `[${display}](mention://${matched.id})`
+    }
+    copied = end
+    index = end
+  }
+
+  result += text.slice(copied)
+  return result
+}

@@ -46,6 +46,34 @@
   --radius-2xl: calc(var(--radius) * 1.5);
   --radius-3xl: calc(var(--radius) * 1.75);
   --radius-4xl: calc(var(--radius) * 2.25);
+
+  /* DS-Bot 语义令牌 → Tailwind 工具类映射（PRD FR1） */
+  --color-console-bg: var(--console-bg);
+  --color-console-surface: var(--console-surface);
+  --color-console-surface-2: var(--console-surface-2);
+  --color-console-sidebar: var(--console-sidebar);
+  --color-console-raised: var(--console-raised);
+  --color-console-ink: var(--console-ink);
+  --color-console-ink-2: var(--console-ink-2);
+  --color-console-ink-3: var(--console-ink-3);
+  --color-console-line: var(--console-line);
+  --color-console-line-2: var(--console-line-2);
+  --color-console-hover: var(--console-hover);
+  --color-console-active: var(--console-active);
+  --color-console-accent: var(--console-accent);
+  --color-console-accent-ink: var(--console-accent-ink);
+  --color-console-user: var(--console-user);
+  --color-console-user-ink: var(--console-user-ink);
+  --color-console-tag: var(--console-tag-bg);
+  --color-console-tag-ink: var(--console-tag-ink);
+  --color-console-danger: var(--console-danger);
+  --color-console-success: var(--console-success);
+  --color-console-warn: var(--console-warn);
+  --radius-console-xs: 6px;
+  --radius-console-sm: 8px;
+  --radius-console-md: 10px;
+  --radius-console-lg: 16px;
+  --radius-console-xl: 18px;
 }
 
 :root,
@@ -102,6 +130,213 @@
   --avatar-6: oklch(0.70 0.13 195); /* Pixel Ice Teal */
 }
 
+/* ============================================================================
+   DS-Bot 设计基座（PRD FR1/FR2/FR3）
+   4 主题 × 8 颜色键（bg/sidebar/bubble/card/text/user/userText/accent）
+   → 语义令牌 --console-* → 既有 M3 token 重映射，保证未改造组件同步换肤。
+   ============================================================================ */
+
+/* SSR 首屏兜底：未拿到用户偏好前按 deepseek 深色渲染 */
+:root {
+  --t-bg: #141414;
+  --t-sidebar: #1b1b1b;
+  --t-bubble: #262626;
+  --t-card: #1f1f1f;
+  --t-text: #f2f2f2;
+  --t-user: #f2f2f2;
+  --t-user-ink: #141414;
+  --t-accent: #5b7bff;
+  --t-accent-ink: #141414;
+}
+
+html[data-theme="deepseek"] {
+  --t-bg: #141414;
+  --t-sidebar: #1b1b1b;
+  --t-bubble: #262626;
+  --t-card: #1f1f1f;
+  --t-text: #f2f2f2;
+  --t-user: #f2f2f2;
+  --t-user-ink: #141414;
+  --t-accent: #5b7bff;
+  --t-accent-ink: #141414;
+}
+html[data-theme="deepseek"]:not(.dark) {
+  --t-bg: #fcfcfc;
+  --t-sidebar: #f7f7f7;
+  --t-bubble: #eeeeee;
+  --t-card: #ffffff;
+  --t-text: #141414;
+  --t-user: #070707;
+  --t-user-ink: #fcfcfc;
+  --t-accent: #4d6bfe;
+  --t-accent-ink: #ffffff;
+}
+
+html[data-theme="mono"] {
+  --t-bg: #0f0f0f;
+  --t-sidebar: #171717;
+  --t-bubble: #242424;
+  --t-card: #1c1c1c;
+  --t-text: #f4f4f4;
+  --t-user: #f4f4f4;
+  --t-user-ink: #0f0f0f;
+  --t-accent: #f4f4f4;
+  --t-accent-ink: #141414;
+}
+html[data-theme="mono"]:not(.dark) {
+  --t-bg: #ffffff;
+  --t-sidebar: #f9f9f9;
+  --t-bubble: #f0f0f0;
+  --t-card: #ffffff;
+  --t-text: #0d0d0d;
+  --t-user: #0d0d0d;
+  --t-user-ink: #ffffff;
+  --t-accent: #0d0d0d;
+  --t-accent-ink: #ffffff;
+}
+
+html[data-theme="paper"] {
+  --t-bg: #1f1e1b;
+  --t-sidebar: #262521;
+  --t-bubble: #34322d;
+  --t-card: #2a2925;
+  --t-text: #f3f0e8;
+  --t-user: #f3f0e8;
+  --t-user-ink: #1f1e1b;
+  --t-accent: #e08a6d;
+  --t-accent-ink: #141414;
+}
+html[data-theme="paper"]:not(.dark) {
+  --t-bg: #faf9f5;
+  --t-sidebar: #f3f0e8;
+  --t-bubble: #ebe7dc;
+  --t-card: #ffffff;
+  --t-text: #1f1e1b;
+  --t-user: #2b2a26;
+  --t-user-ink: #faf9f5;
+  --t-accent: #d97757;
+  --t-accent-ink: #141414;
+}
+
+html[data-theme="moonlight"] {
+  --t-bg: #0b1020;
+  --t-sidebar: #10172a;
+  --t-bubble: #1a2340;
+  --t-card: #141c33;
+  --t-text: #e8edf7;
+  --t-user: #3b6fd8;
+  --t-user-ink: #ffffff;
+  --t-accent: #4f9dff;
+  --t-accent-ink: #141414;
+}
+html[data-theme="moonlight"]:not(.dark) {
+  --t-bg: #f7f9fc;
+  --t-sidebar: #eef2f8;
+  --t-bubble: #e5ebf5;
+  --t-card: #ffffff;
+  --t-text: #121826;
+  --t-user: #1e3a8a;
+  --t-user-ink: #ffffff;
+  --t-accent: #1e86ff;
+  --t-accent-ink: #141414;
+}
+
+/* ---- 语义令牌层（由颜色键派生；组件只消费这一层） ---- */
+:root,
+.dark {
+  --console-bg: var(--t-bg);
+  --console-surface: var(--t-card);
+  --console-surface-2: var(--t-bubble);
+  --console-sidebar: var(--t-sidebar);
+  --console-raised: var(--t-card);
+  --console-ink: var(--t-text);
+  --console-ink-2: color-mix(in srgb, var(--t-text) 60%, transparent);
+  --console-ink-3: color-mix(in srgb, var(--t-text) 36%, transparent);
+  --console-line: color-mix(in srgb, var(--t-text) 8%, transparent);
+  --console-line-2: color-mix(in srgb, var(--t-text) 15%, transparent);
+  --console-hover: rgba(119, 119, 119, 0.09);
+  --console-active: rgba(119, 119, 119, 0.17);
+  --console-accent: var(--t-accent);
+  --console-accent-ink: var(--t-accent-ink);
+  --console-user: var(--t-user);
+  --console-user-ink: var(--t-user-ink);
+  --console-tag-bg: color-mix(in srgb, var(--t-text) 6%, transparent);
+  --console-tag-ink: color-mix(in srgb, var(--t-text) 58%, transparent);
+  --console-danger: oklch(0.70 0.19 25);
+  --console-success: oklch(0.78 0.15 150);
+  --console-warn: oklch(0.82 0.14 82);
+  --console-msg-w: 80%;
+  --console-panel-w: 320px;
+  --console-row-h: 64px;
+  /* 弹簧曲线：与 DS-Bot springEasing(stiffness,damping) 同算法生成（25 采样点 linear()） */
+  --console-ease-shape: linear(0.0000,0.0510,0.1692,0.3153,0.4639,0.6001,0.7163,0.8102,0.8823,0.9350,0.9717,0.9955,1.0098,1.0171,1.0198,1.0195,1.0175,1.0147,1.0117,1.0089,1.0064,1.0044,1.0028,1.0016,1.0000);
+  --console-dur-shape: 420ms;
+  --console-ease-tap: linear(0.0000,0.0541,0.1776,0.3279,0.4784,0.6141,0.7281,0.8187,0.8874,0.9369,0.9709,0.9928,1.0057,1.0124,1.0150,1.0149,1.0134,1.0112,1.0089,1.0067,1.0048,1.0033,1.0021,1.0013,1.0000);
+  --console-dur-tap: 290ms;
+  --console-ease-list: linear(0.0000,0.0138,0.0503,0.1030,0.1666,0.2367,0.3099,0.3836,0.4556,0.5244,0.5891,0.6489,0.7034,0.7525,0.7962,0.8347,0.8681,0.8969,0.9215,0.9421,0.9592,0.9733,0.9846,0.9936,1.0000);
+  --console-dur-list: 190ms;
+  --console-ease-pop: linear(0.0000,0.0698,0.2385,0.4520,0.6677,0.8566,1.0027,1.1009,1.1539,1.1695,1.1578,1.1293,1.0931,1.0566,1.0245,0.9997,0.9830,0.9740,0.9713,0.9732,0.9781,0.9842,0.9904,0.9958,1.0000);
+  --console-dur-pop: 430ms;
+  --console-ease-stretch: linear(0.0000,0.0740,0.2474,0.4594,0.6666,0.8422,0.9740,1.0602,1.1060,1.1202,1.1126,1.0924,1.0670,1.0419,1.0204,1.0042,0.9934,0.9875,0.9856,0.9863,0.9887,0.9917,0.9947,0.9974,1.0000);
+  --console-dur-stretch: 560ms;
+  --console-ease-lead: linear(0.0000,0.0563,0.1818,0.3309,0.4774,0.6075,0.7158,0.8017,0.8670,0.9149,0.9487,0.9717,0.9867,0.9959,1.0012,1.0038,1.0048,1.0049,1.0044,1.0037,1.0030,1.0023,1.0017,1.0012,1.0000);
+  --console-dur-lead: 320ms;
+  --console-ease-trail: linear(0.0000,0.0200,0.0708,0.1411,0.2223,0.3079,0.3935,0.4757,0.5526,0.6228,0.6858,0.7413,0.7896,0.8311,0.8663,0.8957,0.9201,0.9400,0.9561,0.9689,0.9790,0.9868,0.9927,0.9971,1.0000);
+  --console-dur-trail: 300ms;
+  --console-ease-glide: linear(0.0000,0.0569,0.1787,0.3185,0.4527,0.5706,0.6690,0.7484,0.8109,0.8592,0.8960,0.9237,0.9443,0.9596,0.9708,0.9790,0.9849,0.9892,0.9923,0.9945,0.9961,0.9973,0.9981,0.9986,1.0000);
+  --console-dur-glide: 290ms;
+
+  /* ---- 兼容层：既有 M3 token 全部重映射到主题键 ---- */
+  --background: var(--console-bg);
+  --foreground: var(--console-ink);
+  --card: var(--console-surface);
+  --card-foreground: var(--console-ink);
+  --popover: var(--console-raised);
+  --popover-foreground: var(--console-ink);
+  --primary: var(--console-accent);
+  --primary-foreground: var(--console-accent-ink);
+  --secondary: color-mix(in srgb, var(--console-ink) 8%, var(--console-bg));
+  --secondary-foreground: var(--console-ink);
+  --muted: color-mix(in srgb, var(--console-ink) 6%, var(--console-bg));
+  --muted-foreground: var(--console-ink-2);
+  --accent: color-mix(in srgb, var(--console-ink) 10%, var(--console-bg));
+  --accent-foreground: var(--console-ink);
+  --destructive: var(--console-danger);
+  --border: var(--console-line-2);
+  --input: color-mix(in srgb, var(--console-ink) 8%, var(--console-bg));
+  --ring: var(--console-accent);
+  --sidebar: var(--console-sidebar);
+  --sidebar-foreground: var(--console-ink-2);
+  --sidebar-primary: var(--console-accent);
+  --sidebar-primary-foreground: var(--console-accent-ink);
+  --sidebar-accent: var(--console-active);
+  --sidebar-accent-foreground: var(--console-ink);
+  --sidebar-border: var(--console-line);
+  --sidebar-ring: var(--console-accent);
+  --status-running: var(--console-success);
+  --status-idle: var(--console-ink-3);
+  --status-pending: var(--console-warn);
+  --status-failed: var(--console-danger);
+  --chart-1: var(--console-accent);
+  --chart-2: var(--console-success);
+  --chart-3: var(--console-warn);
+  --chart-4: var(--console-danger);
+  --chart-5: oklch(0.74 0.12 300);
+}
+
+.dark {
+  --console-hover: rgba(160, 160, 160, 0.12);
+  --console-active: rgba(160, 160, 160, 0.2);
+  --console-tag-bg: color-mix(in srgb, var(--t-text) 9%, transparent);
+}
+
+html:not(.dark) {
+  color-scheme: light;
+  --console-danger: oklch(0.52 0.20 25);
+  --console-success: oklch(0.50 0.14 150);
+  --console-warn: oklch(0.58 0.14 70);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -142,16 +377,19 @@
                 var(--background);
   }
 
-  /* Pixel M3 Surface Container Panel */
+  /* DS-Bot 平面层级：surface + 0.5px 内描边，不再用大阴影 */
   .console-panel {
-    border-radius: 1.5rem;
-    background: var(--card);
-    border: 1px solid var(--border);
-    box-shadow: 0 4px 24px -4px oklch(0 0 0 / 30%);
-    transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s ease;
+    border-radius: 16px;
+    background: var(--console-surface);
+    border: 1px solid transparent;
+    box-shadow: inset 0 0 0 0.5px var(--console-line-2);
+    transition:
+      background-color var(--console-dur-list) var(--console-ease-list),
+      box-shadow var(--console-dur-list) var(--console-ease-list);
   }
   .console-panel:hover {
-    border-color: color-mix(in oklch, var(--primary) 30%, var(--border));
+    background: color-mix(in srgb, var(--console-surface) 95%, var(--console-ink) 5%);
+    box-shadow: inset 0 0 0 0.5px var(--console-line-2);
   }
 
   .agent-avatar[data-tone="0"] { --avatar-tone: var(--avatar-1); }
@@ -291,7 +529,158 @@
   .m3-pill-input:focus-within {
     background: var(--card);
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 20%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--console-accent) 20%, transparent);
+  }
+
+  /* ---------- DS-Bot 设计语言工具类（PRD FR1/FR3） ---------- */
+  .console-card {
+    border-radius: 16px;
+    background: var(--console-surface);
+    box-shadow: inset 0 0 0 0.5px var(--console-line-2);
+    transition:
+      background-color var(--console-dur-list) var(--console-ease-list),
+      box-shadow var(--console-dur-list) var(--console-ease-list);
+  }
+  .console-card-hover:hover {
+    background: color-mix(in srgb, var(--console-surface) 95%, var(--console-ink) 5%);
+  }
+  .console-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: var(--console-row-h);
+    padding: 0 10px;
+    border-radius: 10px;
+    color: var(--console-ink-2);
+    transition:
+      background-color var(--console-dur-list) ease,
+      color var(--console-dur-list) ease;
+  }
+  .console-row:hover {
+    background: var(--console-hover);
+    color: var(--console-ink);
+  }
+  .console-row[data-active="true"],
+  .console-row[aria-current="page"],
+  .console-row[aria-selected="true"] {
+    background: var(--console-active);
+    color: var(--console-ink);
+  }
+  .console-pill {
+    border-radius: 9999px;
+    border: 0.5px solid var(--console-line-2);
+    background: var(--console-raised);
+  }
+  .console-hairline {
+    box-shadow: inset 0 0 0 0.5px var(--console-line-2);
+  }
+  .console-hairline-b {
+    box-shadow: 0 0.5px 0 var(--console-line);
+  }
+  .console-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .console-meta {
+    font-size: 11px;
+    line-height: 16px;
+    color: var(--console-ink-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .console-section-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--console-ink-2);
+  }
+  .console-kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    border-radius: 6px;
+    border: 0.5px solid var(--console-line-2);
+    background: var(--console-tag-bg);
+    color: var(--console-ink-2);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .console-grip {
+    cursor: col-resize;
+  }
+  .console-grip:hover {
+    background: color-mix(in srgb, var(--console-accent) 30%, transparent);
+  }
+  .console-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--console-ink) 16%, transparent) transparent;
+  }
+  .console-scroll::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .console-scroll::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--console-ink) 16%, transparent);
+    border-radius: 9999px;
+  }
+  .console-stagger > * {
+    animation: consoleSlideUp var(--console-dur-list) var(--console-ease-list) both;
+  }
+  .console-stagger > *:nth-child(1) { animation-delay: 0ms; }
+  .console-stagger > *:nth-child(2) { animation-delay: 30ms; }
+  .console-stagger > *:nth-child(3) { animation-delay: 60ms; }
+  .console-stagger > *:nth-child(4) { animation-delay: 90ms; }
+  .console-stagger > *:nth-child(5) { animation-delay: 120ms; }
+  .console-stagger > *:nth-child(6) { animation-delay: 150ms; }
+  .console-stagger > *:nth-child(7) { animation-delay: 180ms; }
+  .console-stagger > *:nth-child(8) { animation-delay: 210ms; }
+  .console-fade-in {
+    animation: consoleFadeIn var(--console-dur-list) ease-out both;
+  }
+  .console-slide-up {
+    animation: consoleSlideUp var(--console-dur-list) var(--console-ease-list) both;
+  }
+  .console-shimmer {
+    background-image: linear-gradient(
+      100deg,
+      transparent 30%,
+      color-mix(in srgb, var(--console-ink) 16%, transparent) 50%,
+      transparent 70%
+    );
+    background-size: 200% 100%;
+    animation: consoleShimmer 1.4s linear infinite;
+  }
+  .console-state-bob {
+    animation: consoleBob 1.6s ease-in-out infinite;
+  }
+  .console-state-sway {
+    animation: consoleSway 2.2s ease-in-out infinite;
+  }
+  .console-state-hop {
+    animation: consoleHop 1.1s ease-in-out 2;
+  }
+  .console-state-blink {
+    animation: consoleBlink 5.4s steps(1, end) infinite;
+  }
+  html[data-motion="lively"] .console-state-blink {
+    animation-duration: 5.4s;
+  }
+  html[data-motion="quiet"] .console-state-blink {
+    animation: none;
+  }
+  html[data-motion="quiet"] .console-shimmer {
+    animation: none;
+    background: none;
+  }
+  html[data-motion="quiet"] .console-stagger > *,
+  html[data-motion="quiet"] .console-fade-in,
+  html[data-motion="quiet"] .console-slide-up,
+  html[data-motion="quiet"] .console-state-bob,
+  html[data-motion="quiet"] .console-state-sway,
+  html[data-motion="quiet"] .console-state-hop {
+    animation: none !important;
   }
 
   /* ---------- 群聊信息架构（对齐 DS-Bot 的克制型聊天表面，PRD FR4-FR7） ---------- */
@@ -787,4 +1176,51 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ============================================================================
+   DS-Bot 动效原语（PRD FR3）
+   ============================================================================ */
+@keyframes consoleFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes consoleSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+    filter: blur(2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes consoleShimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@keyframes consoleBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@keyframes consoleSway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+
+@keyframes consoleHop {
+  0%, 100% { transform: translateY(0) scale(1); }
+  35% { transform: translateY(-6px) scale(1.03); }
+  70% { transform: translateY(0) scale(0.99); }
+}
+
+@keyframes consoleBlink {
+  0%, 92%, 100% { opacity: 1; }
+  94%, 97% { opacity: 0.35; }
 }

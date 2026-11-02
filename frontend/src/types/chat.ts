@@ -12,6 +12,9 @@ export type TaskStatus =
   | "cancelled"
   | string
 
+/** 人工审批决策：通过 / 驳回（POST /api/tasks/{id}/approve|reject）。 */
+export type ApprovalDecision = "approve" | "reject"
+
 export interface Workspace {
   id: number
   name: string

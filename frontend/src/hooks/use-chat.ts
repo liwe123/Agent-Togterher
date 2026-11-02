@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react"
 
 import type { Agent, ConnectionStatus } from "@/types/agent"
 import type {
+  ApprovalDecision,
   ChatMessage,
   ChatTask,
   ChatWorkspaceEvent,
@@ -25,7 +26,7 @@ import {
   pickActiveWorkspace,
   toWorkspace,
 } from "@/lib/active-workspace"
-import type { MyWorkspace } from "@/types/membership"
+import type { MyWorkspace, WorkspaceRole } from "@/types/membership"
 
 function upsertMessage(
   messages: ChatMessage[],
@@ -66,6 +67,8 @@ export function useChat() {
   const [isSending, setIsSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [relayProgress, setRelayProgress] = useState<RelayProgressReducer>({})
+  // 人工审批端点要求 admin 及以上；聊天页用该角色决定审批卡是否可操作。
+  const [currentUserRole, setCurrentUserRole] = useState<WorkspaceRole>("viewer")
   const [requestVersion, setRequestVersion] = useState(0)
   const localErrorId = useRef(-1)
   const fetchedRef = useRef(false)
@@ -165,6 +168,7 @@ export function useChat() {
 
         setWorkspace(currentWorkspace)
         setConversation(currentConversation)
+        setCurrentUserRole(active.role)
         setAgents(workspaceAgents)
         setMessages(conversationMessages)
         setTasks(
@@ -270,6 +274,28 @@ export function useChat() {
     onStatusChange: setConnectionStatus,
   })
 
+  const resolveApproval = useCallback(
+    async (taskId: number, decision: ApprovalDecision): Promise<ChatTask> => {
+      // 后端 approve/reject 无请求体：POST /api/tasks/{id}/{approve|reject}
+      const task = await requestData<ChatTask>(
+        `/api/tasks/${taskId}/${decision}`,
+        { method: "POST" },
+      )
+      setTasks((current) => upsertTask(current, task))
+      return task
+    },
+    [],
+  )
+
+  const approveTask = useCallback(
+    (taskId: number) => resolveApproval(taskId, "approve"),
+    [resolveApproval],
+  )
+  const rejectTask = useCallback(
+    (taskId: number) => resolveApproval(taskId, "reject"),
+    [resolveApproval],
+  )
+
   const sendMessage = useCallback(
     async (content: string): Promise<boolean> => {
       if (!conversation || isSending) {
@@ -324,7 +350,10 @@ export function useChat() {
     isSending,
     error,
     relayProgress,
+    currentUserRole,
     retry,
     sendMessage,
+    approveTask,
+    rejectTask,
   }
 }

@@ -193,18 +193,18 @@ export function ChatComposer({
   }
 
   return (
-    <div className="border-t border-border/70 bg-card/90 backdrop-blur-xl px-4 py-3 md:px-6 md:py-4">
+    <div className="border-t-[0.5px] border-console-line bg-console-bg/85 px-4 py-3 backdrop-blur-xl md:px-6 md:py-4">
       <div className="mx-auto w-full max-w-4xl space-y-3">
         {mobileActionsOpen ? (
-          <div className="space-y-3 rounded-3xl border border-border/80 bg-card p-4 shadow-xl md:hidden">
+          <div className="space-y-3 rounded-console-lg border-[0.5px] border-console-line bg-console-surface p-4 md:hidden">
             <div>
-              <p className="mb-2 text-xs font-semibold text-foreground">快捷指令</p>
+              <p className="mb-2 text-xs font-semibold text-console-ink">快捷指令</p>
               <div className="flex flex-wrap gap-2">
                 {promptTemplates.map((template) => (
                   <button
                     key={template.label}
                     type="button"
-                    className="min-h-10 rounded-full border border-border/80 bg-secondary/60 px-3.5 text-xs text-foreground font-medium"
+                    className="min-h-10 rounded-full border-[0.5px] border-console-line bg-console-tag px-3.5 text-xs font-medium text-console-ink-2 transition-colors hover:bg-console-hover hover:text-console-ink"
                     onClick={() => {
                       appendTemplate(template.text)
                       setMobileActionsOpen(false)
@@ -216,13 +216,13 @@ export function ChatComposer({
               </div>
             </div>
             <div>
-              <p className="mb-2 text-xs font-semibold text-foreground">选择可 @ 的角色</p>
+              <p className="mb-2 text-xs font-semibold text-console-ink">选择可 @ 的角色</p>
               <div className="flex flex-wrap gap-2">
                 {allMentionEntries.map((entry) => (
                   <button
                     key={entry.key}
                     type="button"
-                    className="min-h-10 rounded-full border border-border/80 bg-secondary/60 px-3.5 text-xs text-foreground font-medium"
+                    className="min-h-10 rounded-full border-[0.5px] border-console-line bg-console-tag px-3.5 text-xs font-medium text-console-ink-2 transition-colors hover:bg-console-hover hover:text-console-ink"
                     onClick={() => {
                       selectMention(entry)
                       setMobileActionsOpen(false)
@@ -246,7 +246,7 @@ export function ChatComposer({
                 key={tmpl.label}
                 type="button"
                 onClick={() => appendTemplate(tmpl.text)}
-                className="shrink-0 whitespace-nowrap rounded-full border border-border/70 bg-secondary/50 px-3 py-1 text-[11px] font-medium text-foreground/90 hover:border-primary/50 hover:bg-primary/15 hover:text-primary transition-all active:scale-95"
+                className="shrink-0 whitespace-nowrap rounded-full border-[0.5px] border-console-line bg-console-tag px-3 py-1 text-[11px] font-medium text-console-ink-2 transition-colors hover:bg-console-hover hover:text-console-ink active:scale-95"
               >
                 {tmpl.label}
               </button>
@@ -259,7 +259,7 @@ export function ChatComposer({
                 type="button"
                 title={`@${entry.name} (${entry.roleLabel ?? entry.subtitle})`}
                 onClick={() => selectMention(entry)}
-                className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-border/60 bg-secondary/40 px-2.5 py-0.5 text-[11px] text-muted-foreground hover:border-primary/40 hover:bg-primary/10 hover:text-foreground transition-all active:scale-95"
+                className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border-[0.5px] border-console-line bg-console-tag px-2.5 py-0.5 text-[11px] text-console-ink-2 transition-colors hover:bg-console-hover hover:text-console-ink active:scale-95"
               >
                 <span>{entry.avatar ?? entry.name.slice(0, 1)}</span>
                 <span>@{entry.name.slice(0, 4)}</span>
@@ -300,11 +300,11 @@ export function ChatComposer({
             />
           )}
 
-          {/* Pixel M3 Pill Composer Container */}
-          <div className="flex items-end gap-2 rounded-3xl border border-border/80 bg-secondary/40 p-2 transition-all focus-within:border-primary focus-within:bg-card/90 focus-within:ring-2 focus-within:ring-primary/20 md:block md:rounded-3xl md:p-3.5 shadow-sm">
+          {/* DS-Bot 输入卡皮肤：22px 圆角 + 0.5px 发丝描边 + accent 聚焦环 */}
+          <div className="flex items-end gap-2 rounded-[22px] border-[0.5px] border-console-line-2 bg-console-raised p-2 transition-[border-color,box-shadow,background-color] duration-150 focus-within:border-console-accent focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--console-accent)_20%,transparent)] md:block md:p-3.5 motion-reduce:transition-none [[data-motion=quiet]_&]:transition-none">
             <button
               type="button"
-              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-primary/15 text-primary md:hidden"
+              className="flex size-10 shrink-0 items-center justify-center rounded-full bg-console-tag text-console-accent md:hidden"
               aria-label={mobileActionsOpen ? "关闭快捷操作" : "打开快捷操作"}
               aria-expanded={mobileActionsOpen}
               onClick={() => setMobileActionsOpen((open) => !open)}
@@ -333,12 +333,12 @@ export function ChatComposer({
                 updateMention(event.currentTarget.value, event.currentTarget.selectionStart)
               }}
               onKeyDown={handleKeyDown}
-              className="min-h-10 min-w-0 flex-1 max-h-36 border-0 bg-transparent px-2 py-2 text-base shadow-none focus-visible:border-transparent focus-visible:ring-0 md:min-h-20 md:w-full md:px-2 md:py-1 md:text-sm"
+              className="min-h-10 min-w-0 flex-1 max-h-36 border-0 bg-transparent px-2 py-2 text-base text-console-ink shadow-none placeholder:text-[13px] placeholder:text-console-ink-3 focus-visible:border-transparent focus-visible:ring-0 md:min-h-20 md:w-full md:px-2 md:py-1 md:text-sm"
             />
 
             <div className="flex shrink-0 items-center gap-3 md:w-full md:justify-between md:pt-2.5 md:border-t md:border-border/50">
-              <p className="hidden items-center gap-1.5 px-2 text-[11px] text-muted-foreground md:flex">
-                <CornerDownLeft aria-hidden="true" className="size-3 text-primary" />
+              <p className="hidden items-center gap-1.5 px-2 text-[11px] text-console-ink-3 md:flex">
+                <CornerDownLeft aria-hidden="true" className="size-3 text-console-accent" />
                 Enter 发送 · Shift + Enter 换行 · 输入 @ 召唤角色 · 多 @ 顺序接力
               </p>
               <div className="ml-auto flex items-center gap-2">
@@ -357,7 +357,7 @@ export function ChatComposer({
                 <Button
                   type="button"
                   size="lg"
-                  className="size-10 rounded-full px-0 md:h-9.5 md:w-auto md:px-5 shadow-md transition-all active:scale-95"
+                  className="size-10 rounded-full bg-console-accent px-0 text-console-accent-ink shadow-sm transition-all hover:bg-[color-mix(in_srgb,var(--console-accent)_88%,var(--console-ink))] active:scale-95 disabled:opacity-45 disabled:shadow-none md:h-9.5 md:w-auto md:px-5 motion-reduce:transition-none"
                   disabled={!value.trim() || disabled || isSending}
                   onClick={() => void submitMessage()}
                 >

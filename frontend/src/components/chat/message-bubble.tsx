@@ -1,9 +1,15 @@
-import { AlertTriangle, Bot, ExternalLink, UserRound } from "lucide-react"
-import Link from "next/link"
-import ReactMarkdown from "react-markdown"
+"use client"
 
+import { AlertTriangle, Check, Copy, ExternalLink, UserRound } from "lucide-react"
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useMemo, useState } from "react"
+import ReactMarkdown, { defaultUrlTransform } from "react-markdown"
+
+import { BotMark } from "@/components/console/bot-mark"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
+import { botShapeForRole } from "@/lib/bot-shapes"
+import { linkMentions } from "@/lib/mention-utils"
 import { cn } from "@/lib/utils"
 import type { Agent } from "@/types/agent"
 import type { ChatMessage, ChatTask } from "@/types/chat"
@@ -17,13 +23,9 @@ const taskStatusLabels: Record<string, string> = {
   cancelled: "已取消",
 }
 
-const agentInitials: Record<string, string> = {
-  项目总设计师: "PD",
-  Agent工程师: "AE",
-  前端设计师: "FD",
-  知识库管理员: "KM",
-  测试专员: "QA",
-  运维: "OP",
+/** 保留 mention:// 内部协议，其余 URL 仍走 react-markdown 的安全白名单。 */
+function keepMentionUrl(url: string): string {
+  return url.startsWith("mention://") ? url : defaultUrlTransform(url)
 }
 
 function formatTime(value: string): string {
@@ -33,44 +35,225 @@ function formatTime(value: string): string {
   }).format(new Date(value))
 }
 
-function MessageContent({ content }: { content: string }) {
+interface MentionChipProps {
+  id: number
+  label: string
+  agentById?: Map<number, Agent>
+  /** 用户气泡是反色面（bg-console-user），chip 需改用继承色系保证可读。 */
+  isUser?: boolean
+}
+
+/**
+ * 行内 @ 引用 chip（DS-Bot §4.1 / P0-7）：14px 头像 + 名字，无下划线，
+ * 点击直接跳到群聊输入框并预填 @name。
+ */
+function MentionChip({ id, label, agentById, isUser = false }: MentionChipProps) {
+  const router = useRouter()
+  const agent = agentById?.get(id)
+  const name = agent?.name ?? label
+  const href = `/chats?mention=${encodeURIComponent(name)}`
+
+  return (
+    <Link
+      href={href}
+      onClick={(event) => {
+        // 保留 <a> 语义，但导航走客户端路由，避免整页刷新。
+        event.preventDefault()
+        event.stopPropagation()
+        router.push(href)
+      }}
+      title={`向 ${name} 发起协作`}
+      data-user-bubble={isUser || undefined}
+      className={cn(
+        "mx-0.5 inline-flex min-h-0! max-w-full items-center gap-1 rounded-md px-1 align-baseline text-[0.94em] font-medium no-underline transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-console-accent/45 motion-reduce:transition-none [[data-motion=quiet]_&]:transition-none",
+        isUser
+          ? "bg-black/10 text-inherit hover:bg-black/15"
+          : "bg-console-tag text-console-ink-2 hover:bg-console-hover hover:text-console-ink",
+      )}
+    >
+      <span
+        className={cn(
+          "flex size-3.5 shrink-0 items-center justify-center overflow-hidden rounded-full",
+          isUser ? "bg-black/10 text-inherit" : "bg-console-raised text-console-ink-2",
+        )}
+        aria-hidden="true"
+      >
+        {agent ? (
+          <BotMark
+            shape={botShapeForRole(agent.role)}
+            size={13}
+            state="idle"
+            ink="currentColor"
+          />
+        ) : (
+          <span className="text-[9px] leading-none">{name.slice(0, 1)}</span>
+        )}
+      </span>
+      <span className="truncate">{name}</span>
+    </Link>
+  )
+}
+
+interface MessageContentProps {
+  content: string
+  agentById?: Map<number, Agent>
+  selfId: number | null
+  isUser: boolean
+}
+
+function MessageContent({ content, agentById, selfId, isUser }: MessageContentProps) {
+  const mentionAgents = useMemo(
+    () =>
+      Array.from(agentById?.values() ?? []).map((agent) => ({
+        id: agent.id,
+        name: agent.name,
+      })),
+    [agentById],
+  )
+  const linked = useMemo(
+    () => linkMentions(content, mentionAgents, selfId),
+    [content, mentionAgents, selfId],
+  )
+
   return (
     <ReactMarkdown
       skipHtml
+      urlTransform={keepMentionUrl}
       components={{
-        a: ({ href, children }) => (
-          <a
-            href={href}
-            target="_blank"
-            rel="noreferrer noopener"
-            className="font-medium text-primary underline underline-offset-4 hover:opacity-80"
-          >
-            {children}
-          </a>
-        ),
+        a: ({ href, children }) => {
+          const target = typeof href === "string" ? href : ""
+          if (target.startsWith("mention://")) {
+            const mentionId = Number.parseInt(target.slice("mention://".length), 10)
+            const label = typeof children === "string" ? children : ""
+            return (
+              <MentionChip
+                id={Number.isNaN(mentionId) ? 0 : mentionId}
+                label={label}
+                agentById={agentById}
+                isUser={isUser}
+              />
+            )
+          }
+          return (
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer noopener"
+              className={cn(
+                "font-medium underline underline-offset-4 transition-opacity hover:opacity-80",
+                isUser ? "text-inherit" : "text-console-accent",
+              )}
+            >
+              {children}
+            </a>
+          )
+        },
         code: ({ className, children }) => {
           const isBlock = className?.startsWith("language-")
           return isBlock ? (
-            <code className={cn("block overflow-x-auto rounded-2xl bg-secondary/80 p-3.5 font-mono text-xs leading-6 border border-border/60", className)}>
+            <code
+              className={cn(
+                "block overflow-x-auto rounded-console-md p-3 font-mono text-xs leading-5",
+                isUser
+                  ? "bg-black/10 text-inherit"
+                  : "bg-console-tag text-console-ink-2",
+                className,
+              )}
+            >
               {children}
             </code>
           ) : (
-            <code className="rounded-md bg-secondary/80 px-1.5 py-0.5 font-mono text-[0.88em] text-primary font-medium">
+            <code
+              className={cn(
+                "rounded-md px-1.5 py-0.5 font-mono text-[0.88em] font-medium",
+                isUser
+                  ? "bg-black/10 text-inherit"
+                  : "bg-console-tag text-console-ink",
+              )}
+            >
               {children}
             </code>
           )
         },
-        pre: ({ children }) => <pre className="my-3 overflow-x-auto">{children}</pre>,
-        ul: ({ children }) => <ul className="my-2 list-disc space-y-1 pl-5">{children}</ul>,
-        ol: ({ children }) => <ol className="my-2 list-decimal space-y-1 pl-5">{children}</ol>,
-        h1: ({ children }) => <h1 className="mb-2 mt-3 text-lg font-bold tracking-tight text-foreground">{children}</h1>,
-        h2: ({ children }) => <h2 className="mb-2 mt-3 text-base font-bold tracking-tight text-foreground">{children}</h2>,
-        h3: ({ children }) => <h3 className="mb-1.5 mt-2 font-semibold text-foreground">{children}</h3>,
-        p: ({ children }) => <p className="my-1.5 first:mt-0 last:mb-0">{children}</p>,
+        pre: ({ children }) => <pre className="my-2 overflow-x-auto">{children}</pre>,
+        ul: ({ children }) => <ul className="my-1.5 list-disc space-y-1 pl-5">{children}</ul>,
+        ol: ({ children }) => <ol className="my-1.5 list-decimal space-y-1 pl-5">{children}</ol>,
+        h1: ({ children }) => (
+          <h1 className="mb-1.5 mt-2 text-base font-bold tracking-tight text-inherit">{children}</h1>
+        ),
+        h2: ({ children }) => (
+          <h2 className="mb-1.5 mt-2 text-[15px] font-bold tracking-tight text-inherit">{children}</h2>
+        ),
+        h3: ({ children }) => (
+          <h3 className="mb-1 mt-1.5 text-sm font-semibold text-inherit">{children}</h3>
+        ),
+        p: ({ children }) => <p className="my-1 first:mt-0 last:mb-0">{children}</p>,
       }}
     >
-      {content}
+      {linked}
     </ReactMarkdown>
+  )
+}
+
+interface MessageToolbarProps {
+  message: ChatMessage
+  task?: ChatTask
+  align: "start" | "end"
+}
+
+/**
+ * 悬停工具条（P0-5）：预留气泡右侧 82px，hover / 键盘聚焦才出现；
+ * 触屏（pointer: coarse）常显，避免「无可 hover」导致操作不可达。
+ */
+function MessageToolbar({ message, task, align }: MessageToolbarProps) {
+  const [copied, setCopied] = useState(false)
+
+  async function copyContent() {
+    try {
+      await navigator.clipboard.writeText(message.content)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1500)
+    } catch {
+      // 剪贴板不可用时静默降级，不打断阅读。
+    }
+  }
+
+  return (
+    <div
+      className={cn(
+        "absolute top-0.5 flex items-center gap-0.5 rounded-lg border-[0.5px] border-console-line bg-console-raised/95 p-0.5 shadow-sm backdrop-blur-sm",
+        "opacity-0 transition-opacity duration-150 group-hover/msg:opacity-100 focus-within:opacity-100",
+        "[[data-motion=quiet]_&]:transition-none motion-reduce:transition-none",
+        "[@media(pointer:coarse)]:opacity-100",
+        align === "start" ? "left-full ml-1.5" : "right-full mr-1.5",
+      )}
+      role="toolbar"
+      aria-label="消息操作"
+    >
+      <button
+        type="button"
+        onClick={() => void copyContent()}
+        title={copied ? "已复制" : "复制内容"}
+        aria-label={copied ? "已复制消息内容" : "复制消息内容"}
+        className="flex size-6 items-center justify-center rounded-md text-console-ink-3 transition-colors hover:bg-console-hover hover:text-console-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-console-accent/45"
+      >
+        {copied ? (
+          <Check aria-hidden="true" className="size-3.5 text-console-success" />
+        ) : (
+          <Copy aria-hidden="true" className="size-3.5" />
+        )}
+      </button>
+      {task ? (
+        <Link
+          href={`/tasks/${task.id}`}
+          title="查看任务详情"
+          aria-label={`查看 Task #${task.id} 详情`}
+          className="flex size-6 items-center justify-center rounded-md text-console-ink-3 transition-colors hover:bg-console-hover hover:text-console-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-console-accent/45"
+        >
+          <ExternalLink aria-hidden="true" className="size-3.5" />
+        </Link>
+      ) : null}
+    </div>
   )
 }
 
@@ -79,9 +262,11 @@ interface MessageBubbleProps {
   agent?: Agent
   agentIndex?: number
   task?: ChatTask
-  /** 连续同发送者分组：是否分组首条（显示头像与名称）。 */
+  /** 同一 Agent 的已知成员表，用于渲染 @ 引用 chip 的头像与名字。 */
+  agentById?: Map<number, Agent>
+  /** 连续同发送者分组：是否分组首条（显示头像、名称与时间）。 */
   groupStart?: boolean
-  /** 是否分组末条（显示时间与完整圆角）。 */
+  /** 是否分组末条（气泡下侧收窄 6px）。 */
   groupEnd?: boolean
   showTime?: boolean
   /** 接力任务中的棒次（第 index/total 棒）。 */
@@ -93,40 +278,49 @@ export function MessageBubble({
   agent,
   agentIndex = 0,
   task,
+  agentById,
   groupStart = true,
   groupEnd = true,
   showTime = true,
   relayHop = null,
 }: MessageBubbleProps) {
   const isUser = message.sender_type === "user"
-  const isSystem = message.sender_type === "system"
+  const isSystemLike =
+    message.sender_type === "system" || message.message_type === "error"
   const isError = message.message_type === "error"
-  const senderName = isUser ? "你" : isSystem ? "系统" : agent?.name ?? "Agent"
+  const senderName = isUser ? "你" : agent?.name ?? "Agent"
   const taskLabel = task
     ? taskStatusLabels[task.status] ?? task.status
     : message.message_type === "task"
       ? "任务消息"
       : null
-  const taskBadgeVariant =
+  const taskTone =
     task?.status === "failed"
-      ? "destructive"
+      ? "text-console-danger"
       : task?.status === "running"
-        ? "default"
+        ? "text-console-accent"
         : task?.status === "completed"
-          ? "secondary"
-          : "outline"
+          ? "text-console-success"
+          : "text-console-tag-ink"
 
-  if (isSystem && !isError) {
+  // 系统消息与错误事件统一渲染为居中事件行（DS-Bot 事件语法），不再是带边框的小气泡。
+  if (isSystemLike) {
     return (
-      <article className="flex justify-center px-2 py-1.5">
-        <div className="flex max-w-[88%] items-center gap-2 rounded-full border border-border/60 bg-secondary/50 px-4 py-1.5 text-xs text-muted-foreground shadow-sm">
-          <Avatar size="sm">
-            <AvatarFallback className="rounded-full bg-secondary text-primary">
-              <Bot aria-hidden="true" className="size-3.5" />
-            </AvatarFallback>
-          </Avatar>
+      <article role="status" className="flex justify-center px-2 py-2">
+        <div
+          className={cn(
+            "flex max-w-[92%] items-center gap-1.5 text-center text-xs leading-[18px]",
+            isError ? "text-console-danger" : "text-console-ink-2",
+          )}
+        >
+          {isError ? (
+            <AlertTriangle aria-hidden="true" className="size-3.5 shrink-0" />
+          ) : null}
           <span className="whitespace-pre-wrap break-words">{message.content}</span>
-          <time className="shrink-0 font-mono text-[10px]" dateTime={message.created_at}>
+          <time
+            className="shrink-0 text-[11px] text-console-ink-3 console-tabular"
+            dateTime={message.created_at}
+          >
             {formatTime(message.created_at)}
           </time>
         </div>
@@ -134,134 +328,150 @@ export function MessageBubble({
     )
   }
 
+  const selfId =
+    message.sender_type === "agent" && message.sender_id !== null
+      ? message.sender_id
+      : null
+
   return (
     <article
       className={cn(
-        "flex w-full items-start gap-3",
+        "group/msg flex w-full items-start gap-2",
         isUser ? "justify-end" : "justify-start",
-        groupStart ? "mt-4 first:mt-0" : "mt-0.5",
+        groupStart ? "mt-4" : "mt-1",
       )}
       data-message-type={message.message_type}
+      data-group-start={groupStart || undefined}
+      data-group-end={groupEnd || undefined}
     >
       {!isUser &&
         (groupStart ? (
-          <Avatar
-            className="agent-avatar mt-0.5 size-9.5 shrink-0 rounded-full shadow-sm ring-2 ring-card"
+          <span
+            className="agent-avatar mt-0.5 flex size-[22px] shrink-0 items-center justify-center overflow-hidden rounded-full"
             data-tone={agentIndex % 6}
+            aria-hidden="true"
           >
-            <AvatarFallback className="rounded-full">
-              {agent?.avatar ??
-                agentInitials[agent?.name ?? ""] ?? (
-                  <Bot aria-hidden="true" className="size-4" />
-                )}
-            </AvatarFallback>
-          </Avatar>
+            <BotMark
+              shape={botShapeForRole(agent?.role ?? "")}
+              size={16}
+              state={agent?.status === "running" ? "running" : "idle"}
+              ink="var(--avatar-tone, var(--console-accent))"
+            />
+          </span>
         ) : (
-          <span className="chat-avatar-spacer" aria-hidden="true" />
+          <span className="w-[22px] shrink-0" aria-hidden="true" />
         ))}
 
       <div
         className={cn(
-          "flex max-w-[min(84%,48rem)] flex-col",
+          "flex min-w-0 flex-col",
           isUser ? "items-end" : "items-start",
+          "max-w-[min(var(--console-msg-w,80%),calc(100%-5.125rem))]",
         )}
       >
         {groupStart && (
-          <div className="mb-1 flex min-w-0 items-center gap-2 px-1">
-            {isError && (
-              <AlertTriangle
-                aria-hidden="true"
-                className="size-3.5 shrink-0 text-destructive"
-              />
-            )}
-            <span
-              className={cn(
-                "truncate text-xs font-semibold",
-                isUser ? "text-primary font-bold" : "text-foreground",
-                isError && "text-destructive",
-              )}
-            >
+          <div className="mb-1 flex max-w-full min-w-0 items-center gap-1.5 px-0.5">
+            <span className="truncate text-[13px] font-bold text-console-ink">
               {senderName}
             </span>
-            {relayHop && !isUser && (
+            {relayHop && !isUser ? (
               <span
-                className="chat-relay-badge"
+                className="inline-flex h-4 shrink-0 items-center rounded-full bg-console-tag px-1.5 text-[10px] font-semibold text-console-tag-ink console-tabular"
                 title={`接力第 ${relayHop.index}/${relayHop.total} 棒`}
               >
                 接力 {relayHop.index}/{relayHop.total}
               </span>
-            )}
-            {taskLabel &&
-              (task ? (
+            ) : null}
+            <time
+              className="shrink-0 text-[11px] text-console-ink-3 console-tabular"
+              dateTime={message.created_at}
+            >
+              {formatTime(message.created_at)}
+            </time>
+            {taskLabel ? (
+              task ? (
                 <Link
                   href={`/tasks/${task.id}`}
                   title={`查看 Task #${task.id} 详情`}
-                  className="group flex items-center gap-1 transition-opacity hover:opacity-85"
+                  className={cn(
+                    "group/task inline-flex h-5 min-h-0! max-w-[11rem] shrink-0 items-center gap-1 rounded-full border-[0.5px] border-console-line bg-console-tag px-2 text-[11px] font-medium transition-colors hover:bg-console-hover motion-reduce:transition-none [[data-motion=quiet]_&]:transition-none",
+                    taskTone,
+                  )}
                 >
-                  <Badge
-                    variant={taskBadgeVariant}
-                    className={cn(
-                      "h-5 gap-1 rounded-full px-2 text-[10px] shadow-sm cursor-pointer",
-                      isUser &&
-                        task?.status !== "failed" &&
-                        "border-primary/30 bg-primary/15 text-primary",
-                    )}
-                  >
-                    <span>
-                      Task #{task.id} · {taskLabel}
-                    </span>
-                    <ExternalLink className="size-2.5 transition-transform group-hover:scale-110" />
-                  </Badge>
+                  <span className="truncate">
+                    Task #{task.id} · {taskLabel}
+                  </span>
+                  <ExternalLink
+                    aria-hidden="true"
+                    className="size-2.5 shrink-0 transition-transform group-hover/task:scale-110 motion-reduce:transition-none [[data-motion=quiet]_&]:transition-none"
+                  />
                 </Link>
               ) : (
-                <Badge
-                  variant={taskBadgeVariant}
+                <span
                   className={cn(
-                    "h-5 rounded-full px-2 text-[10px]",
-                    isUser && "border-primary/30 bg-primary/15 text-primary",
+                    "inline-flex h-5 shrink-0 items-center rounded-full bg-console-tag px-2 text-[11px] font-medium",
+                    taskTone,
                   )}
                 >
                   {taskLabel}
-                </Badge>
-              ))}
+                </span>
+              )
+            ) : null}
           </div>
         )}
 
-        <div
-          className={cn(
-            "chat-bubble px-4 py-3 text-foreground shadow-sm transition-colors duration-200",
-            isUser
-              ? "border border-primary/30 bg-primary/18"
-              : "border border-border/70 bg-secondary/55",
-            groupStart ? (isUser ? "rounded-3xl rounded-tr-md" : "rounded-3xl rounded-tl-md") : "rounded-3xl",
-            groupEnd ? (isUser ? "rounded-3xl rounded-br-md" : "rounded-3xl rounded-bl-md") : "rounded-3xl",
-            isError && "bg-destructive/15 text-foreground border-destructive/40",
-          )}
-        >
-          <div className="whitespace-pre-wrap break-words text-[15px] leading-relaxed md:text-sm md:leading-6">
-            <MessageContent content={message.content} />
+        <div className="relative max-w-full">
+          <div
+            className={cn(
+              "max-w-full px-3.5 py-2 text-[15px] leading-6 md:text-sm md:leading-[22px]",
+              "break-words [overflow-wrap:anywhere]",
+              isUser
+                ? "bg-console-user text-console-user-ink"
+                : "bg-console-surface-2 text-console-ink",
+              "console-hairline rounded-console-xl",
+              groupStart &&
+                (isUser ? "rounded-tr-console-xs" : "rounded-tl-console-xs"),
+              groupEnd &&
+                (isUser ? "rounded-br-console-xs" : "rounded-bl-console-xs"),
+            )}
+          >
+            <MessageContent
+              content={message.content}
+              agentById={agentById}
+              selfId={selfId}
+              isUser={isUser}
+            />
           </div>
+
+          <MessageToolbar
+            message={message}
+            task={task}
+            align={isUser ? "end" : "start"}
+          />
         </div>
 
-        {showTime && (
+        {showTime && !groupStart ? (
           <time
-            className="mt-1 px-1.5 font-mono text-[10px] text-muted-foreground/80"
+            className="mt-1 px-1 text-[11px] text-console-ink-3 console-tabular"
             dateTime={message.created_at}
           >
             {formatTime(message.created_at)}
           </time>
-        )}
+        ) : null}
       </div>
 
       {isUser &&
-        (groupEnd ? (
-          <Avatar className="mt-0.5 size-9.5 shrink-0 rounded-full shadow-sm ring-2 ring-card">
-            <AvatarFallback className="rounded-full bg-primary/20 font-bold text-primary">
-              <UserRound aria-hidden="true" className="size-4" />
+        (groupStart ? (
+          <Avatar
+            className="mt-0.5 size-[22px] shrink-0 rounded-full"
+            aria-hidden="true"
+          >
+            <AvatarFallback className="rounded-full bg-console-tag text-console-ink-2">
+              <UserRound aria-hidden="true" className="size-3" />
             </AvatarFallback>
           </Avatar>
         ) : (
-          <span className="chat-avatar-spacer" aria-hidden="true" />
+          <span className="w-[22px] shrink-0" aria-hidden="true" />
         ))}
     </article>
   )

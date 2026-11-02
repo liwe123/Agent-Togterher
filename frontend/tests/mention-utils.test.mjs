@@ -192,4 +192,101 @@ describe("mention-utils", () => {
       assert.equal(nextValue, "通知@项目总设计师 继续执行")
     })
   })
+
+  describe("linkMentions", () => {
+    const agents = [
+      { id: 1, name: "项目总设计师" },
+      { id: 2, name: "测试专员" },
+      { id: 3, name: "Cursor" },
+    ]
+
+    it("converts a known agent mention into a mention markdown link", () => {
+      assert.equal(
+        mod.linkMentions("通知@测试专员 处理", agents),
+        "通知[测试专员](mention://2) 处理",
+      )
+    })
+
+    it("matches the longest agent name instead of a shorter prefix", () => {
+      const ambiguous = [
+        { id: 7, name: "测试" },
+        { id: 2, name: "测试专员" },
+      ]
+      assert.equal(
+        mod.linkMentions("@测试专员 请检查", ambiguous),
+        "[测试专员](mention://2) 请检查",
+      )
+      assert.equal(mod.linkMentions("@测试 先看", ambiguous), "[测试](mention://7) 先看")
+    })
+
+    it("keeps fenced code blocks and inline code untouched", () => {
+      const fenced = "示例：\n\n```bash\n@测试专员\n```\n\n结束"
+      assert.equal(mod.linkMentions(fenced, agents), fenced)
+      assert.equal(mod.linkMentions("`@测试专员` 是代码", agents), "`@测试专员` 是代码")
+      assert.equal(
+        mod.linkMentions("看 `@测试专员` 和 @测试专员", agents),
+        "看 `@测试专员` 和 [测试专员](mention://2)",
+      )
+    })
+
+    it("skips mentions inside markdown links", () => {
+      const text = "[@测试专员](https://example.com/@测试专员) 不是提及"
+      assert.equal(mod.linkMentions(text, agents), text)
+    })
+
+    it("skips email addresses and path prefixes", () => {
+      assert.equal(
+        mod.linkMentions("联系 contact@Cursor 获取", agents),
+        "联系 contact@Cursor 获取",
+      )
+      assert.equal(mod.linkMentions("路径 src/@Cursor 无效", agents), "路径 src/@Cursor 无效")
+    })
+
+    it("skips a mention whose name is followed by identifier characters", () => {
+      assert.equal(mod.linkMentions("@Cursors 不是提及", agents), "@Cursors 不是提及")
+      assert.equal(
+        mod.linkMentions("@Cursor 在运行", agents),
+        "[Cursor](mention://3) 在运行",
+      )
+    })
+
+    it("does not link the sender itself when selfId matches", () => {
+      assert.equal(mod.linkMentions("@测试专员 已收到", agents, 2), "@测试专员 已收到")
+      assert.equal(
+        mod.linkMentions("@测试专员 请通知 @项目总设计师", agents, 2),
+        "@测试专员 请通知 [项目总设计师](mention://1)",
+      )
+    })
+
+    it("links Chinese agent names inside Chinese sentences", () => {
+      assert.equal(
+        mod.linkMentions("请 @项目总设计师 和 @测试专员 一起看", agents),
+        "请 [项目总设计师](mention://1) 和 [测试专员](mention://2) 一起看",
+      )
+    })
+
+    it("keeps @所有人 as plain text", () => {
+      assert.equal(mod.linkMentions("@所有人 请注意", agents), "@所有人 请注意")
+    })
+
+    it("leaves text unchanged when nothing matches or the agent list is empty", () => {
+      assert.equal(mod.linkMentions("@未知角色 你好", agents), "@未知角色 你好")
+      assert.equal(mod.linkMentions("@测试专员 你好", []), "@测试专员 你好")
+      assert.equal(mod.linkMentions("", agents), "")
+    })
+
+    it("converts every occurrence in a paragraph and keeps markdown structure", () => {
+      assert.equal(
+        mod.linkMentions("**@测试专员** 与 @Cursor 同时在线", agents),
+        "**[测试专员](mention://2)** 与 [Cursor](mention://3) 同时在线",
+      )
+    })
+
+    it("supports the full-width @ marker", () => {
+      assert.equal(
+        mod.linkMentions("请＠测试专员 跟进", agents),
+        "请[测试专员](mention://2) 跟进",
+      )
+    })
+  })
 })

@@ -18,12 +18,14 @@ import {
   Workflow,
 } from "lucide-react"
 
+import { TeamColumn } from "@/components/console/team-column"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
+import { useTeamRoster } from "@/hooks/use-team-roster"
 import { useWorkspaces } from "@/hooks/use-workspaces"
 import { clearTokens, getRefreshToken } from "@/lib/auth"
 import { apiBaseUrl } from "@/lib/task-api"
 import { cn } from "@/lib/utils"
-import type { ConnectionStatus } from "@/types/agent"
+import type { Agent, ConnectionStatus } from "@/types/agent"
 import type { WorkspaceRole } from "@/types/membership"
 
 const navigation = [
@@ -45,21 +47,50 @@ const ROLE_SHORT_LABELS: Record<WorkspaceRole, string> = {
 interface AppSidebarProps {
   connectionStatus: ConnectionStatus
   activeItem?: (typeof navigation)[number]["id"]
+  /** 上层已持有 Agent 名单时直接传入，避免重复请求 */
+  agents?: Agent[]
+  agentsLoading?: boolean
+  agentsError?: string | null
+  onRetryAgents?: () => void
+  selectedAgentId?: number | null
+  /** 传入后行点击改为回调（控制台页打开详情面板），否则跳转 /chats?mention= */
+  onSelectAgent?: (agent: Agent) => void
 }
 
 export function AppSidebar({
   connectionStatus,
   activeItem = "console",
+  agents,
+  agentsLoading,
+  agentsError,
+  onRetryAgents,
+  selectedAgentId = null,
+  onSelectAgent,
 }: AppSidebarProps) {
   const router = useRouter()
   const {
     workspaces,
     activeWorkspace,
     currentUserRole,
+    isLoading: workspacesLoading,
     switchWorkspace,
     createWorkspace,
     joinWorkspace,
   } = useWorkspaces()
+
+  const usingExternalAgents = agents !== undefined
+  const roster = useTeamRoster({
+    workspaceId: activeWorkspace?.id ?? null,
+    enabled: !usingExternalAgents && activeWorkspace !== null,
+  })
+  const rosterAgents = agents ?? roster.agents
+  const rosterLoading = usingExternalAgents
+    ? (agentsLoading ?? false)
+    : roster.isLoading || workspacesLoading
+  const rosterError = usingExternalAgents
+    ? (agentsError ?? null)
+    : roster.error
+  const rosterRetry = usingExternalAgents ? onRetryAgents : roster.retry
 
   const [showWorkspaceMenu, setShowWorkspaceMenu] = useState(false)
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -139,103 +170,141 @@ export function AppSidebar({
     }
   }
 
+  const handleAgentSelect = (agent: Agent) => {
+    if (onSelectAgent) {
+      onSelectAgent(agent)
+      return
+    }
+    router.push(`/chats?mention=${encodeURIComponent(agent.name)}`)
+  }
+
+  const connectionLabel =
+    connectionStatus === "online"
+      ? "实时通道已连接"
+      : connectionStatus === "connecting"
+        ? "实时通道连接中"
+        : "实时通道未连接"
+
   return (
     <>
-      {/* Desktop M3 Navigation Rail */}
-      <aside className="hidden min-h-svh flex-col items-center overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
-        {/* Top Logo & Workspace Trigger */}
-        <div className="flex h-[72px] w-full flex-col items-center justify-center border-b border-sidebar-border/60 relative">
-          <button
-            type="button"
-            onClick={() => setShowWorkspaceMenu((prev) => !prev)}
-            title={`当前工作区: ${activeWorkspace?.name || "默认工作区"} (${ROLE_SHORT_LABELS[currentUserRole] || "成员"})`}
-            className="group relative flex size-11 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary shadow-[0_2px_12px_color-mix(in_oklch,var(--primary)_20%,transparent)] transition-all duration-200 hover:scale-105 hover:bg-primary/20 active:scale-95"
-          >
-            <Sparkles aria-hidden="true" className="size-5 transition-transform duration-300 group-hover:rotate-12" />
-            <span
-              className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-sidebar bg-[var(--status-running)] shadow-[0_0_6px_var(--status-running)]"
-              aria-hidden="true"
-            />
-          </button>
-        </div>
+      {/* Desktop: 76px 导航 rail + 264px 团队列 */}
+      <aside className="sticky top-0 z-10 hidden h-svh shrink-0 border-r border-console-line bg-console-sidebar text-console-ink md:flex">
+        <div className="flex w-[76px] shrink-0 flex-col items-center border-r border-console-line">
+          {/* 品牌 / 工作区入口 */}
+          <div className="flex h-[72px] w-full shrink-0 items-center justify-center border-b border-console-line">
+            <button
+              type="button"
+              onClick={() => setShowWorkspaceMenu((prev) => !prev)}
+              title={`当前工作区: ${activeWorkspace?.name || "默认工作区"} (${ROLE_SHORT_LABELS[currentUserRole] || "成员"})`}
+              aria-label="切换工作区"
+              aria-expanded={showWorkspaceMenu}
+              aria-haspopup="menu"
+              className="group relative flex size-11 items-center justify-center rounded-2xl border border-console-line-2 bg-console-raised text-console-accent transition-colors duration-[var(--console-dur-tap,290ms)] hover:bg-console-hover active:bg-console-active motion-reduce:transition-none [html[data-motion=quiet]_&]:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-console-accent/60"
+            >
+              <Sparkles
+                aria-hidden="true"
+                className="size-5 transition-transform duration-[var(--console-dur-tap,290ms)] group-hover:rotate-12 motion-reduce:transition-none [html[data-motion=quiet]_&]:transition-none"
+              />
+              <span
+                className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-console-sidebar bg-console-success"
+                aria-hidden="true"
+              />
+            </button>
+          </div>
 
-        {/* Navigation items */}
-        <nav aria-label="主导航" className="flex flex-1 flex-col items-center gap-3 py-6">
-          {navigation.map((item) => {
-            const Icon = item.icon
-            const isActive = item.id === activeItem
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                title={item.label}
-                aria-label={item.label}
-                aria-current={isActive ? "page" : undefined}
-                className={cn(
-                  "group flex flex-col items-center gap-1 text-center transition-all duration-200 focus-visible:outline-none",
-                )}
-              >
-                <div
-                  className={cn(
-                    "flex h-8 w-14 items-center justify-center rounded-full transition-all duration-200",
-                    isActive
-                      ? "bg-primary/22 text-primary shadow-[0_0_12px_color-mix(in_oklch,var(--primary)_18%,transparent)]"
-                      : "text-muted-foreground group-hover:bg-secondary/70 group-hover:text-foreground group-hover:scale-105 group-active:scale-95",
-                  )}
+          {/* 导航项 */}
+          <nav aria-label="主导航" className="flex w-full flex-1 flex-col items-center gap-2 py-5">
+            {navigation.map((item) => {
+              const Icon = item.icon
+              const isActive = item.id === activeItem
+              return (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  title={item.label}
+                  aria-label={item.label}
+                  aria-current={isActive ? "page" : undefined}
+                  className="group flex w-full flex-col items-center gap-1 text-center focus-visible:outline-none"
                 >
-                  <Icon aria-hidden="true" className="size-5" />
-                </div>
-                <span
-                  className={cn(
-                    "text-[10px] font-medium transition-colors duration-200",
-                    isActive ? "font-semibold text-primary" : "text-muted-foreground/90 group-hover:text-foreground",
-                  )}
-                >
-                  {item.label}
-                </span>
-              </Link>
-            )
-          })}
-        </nav>
+                  <span
+                    className={cn(
+                      "flex h-8 w-14 items-center justify-center rounded-full transition-colors duration-[var(--console-dur-tap,290ms)] motion-reduce:transition-none [html[data-motion=quiet]_&]:transition-none",
+                      isActive
+                        ? "bg-console-active text-console-accent"
+                        : "text-console-ink-3 group-hover:bg-console-hover group-hover:text-console-ink",
+                    )}
+                  >
+                    <Icon aria-hidden="true" className="size-5" />
+                  </span>
+                  <span
+                    className={cn(
+                      "text-[11px] font-medium leading-4 transition-colors duration-[var(--console-dur-tap,290ms)] motion-reduce:transition-none [html[data-motion=quiet]_&]:transition-none",
+                      isActive
+                        ? "font-semibold text-console-ink"
+                        : "text-console-ink-3 group-hover:text-console-ink",
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              )
+            })}
+          </nav>
 
-        {/* Bottom User Actions & Status Dot */}
-        <div className="flex flex-col items-center gap-2 py-4 border-t border-sidebar-border/60 w-full">
-          <button
-            type="button"
-            onClick={() => setShowLogoutConfirm(true)}
-            title="退出登录"
-            aria-label="退出登录"
-            disabled={isLoggingOut}
-            className="flex size-9 items-center justify-center rounded-full text-muted-foreground hover:bg-destructive/15 hover:text-destructive transition-colors disabled:opacity-50"
-          >
-            <LogOut className="size-4" />
-          </button>
+          {/* 底部：退出登录 + 连接状态 */}
+          <div className="flex w-full flex-col items-center gap-2 border-t border-console-line py-4">
+            <button
+              type="button"
+              onClick={() => setShowLogoutConfirm(true)}
+              title="退出登录"
+              aria-label="退出登录"
+              disabled={isLoggingOut}
+              className="flex size-9 items-center justify-center rounded-full text-console-ink-3 transition-colors hover:bg-console-hover hover:text-console-danger disabled:opacity-50 motion-reduce:transition-none [html[data-motion=quiet]_&]:transition-none"
+            >
+              <LogOut className="size-4" aria-hidden="true" />
+            </button>
 
-          <div
-            className="flex h-8 w-full items-center justify-center"
-            title={connectionStatus === "online" ? "实时通道已连接" : "实时通道未连接"}
-          >
-            <span className="status-dot size-2.5 rounded-full" data-status={connectionStatus} aria-hidden="true" />
+            <div className="flex h-8 w-full items-center justify-center" title={connectionLabel}>
+              <span
+                className="status-dot size-2.5 rounded-full"
+                data-status={connectionStatus}
+                aria-hidden="true"
+              />
+              <span className="sr-only">{connectionLabel}</span>
+            </div>
           </div>
         </div>
+
+        <TeamColumn
+          className="hidden lg:flex"
+          workspaceName={activeWorkspace?.name || "默认工作区"}
+          agents={rosterAgents}
+          isLoading={rosterLoading}
+          error={rosterError}
+          selectedAgentId={selectedAgentId}
+          onSelectAgent={handleAgentSelect}
+          onOpenWorkspaceMenu={() => setShowWorkspaceMenu((prev) => !prev)}
+          workspaceMenuOpen={showWorkspaceMenu}
+          onRetry={rosterRetry}
+        />
       </aside>
 
-      {/* Workspace Switcher Popover */}
+      {/* 工作区切换弹层 */}
       {showWorkspaceMenu && (
         <>
           <div
             className="fixed inset-0 z-40"
             onClick={() => setShowWorkspaceMenu(false)}
           />
-          <div className="fixed left-[76px] top-4 z-50 w-72 rounded-xl border border-border bg-card p-3 shadow-2xl space-y-2 animate-in fade-in zoom-in-95 duration-150">
-            <div className="px-2 py-1.5 border-b border-border/60 flex items-center justify-between">
-              <span className="text-xs font-semibold text-muted-foreground">我的协作工作区</span>
-              <span className="text-[10px] font-mono rounded bg-secondary px-1.5 py-0.5 text-muted-foreground">
+          <div className="console-card fixed top-4 left-[76px] z-50 w-72 space-y-2 p-3 shadow-2xl lg:left-[340px]">
+            <div className="flex items-center justify-between border-b border-console-line px-2 py-1.5">
+              <span className="console-section-title">我的协作工作区</span>
+              <span className="console-pill px-1.5 py-0.5 font-mono text-[10px] text-console-ink-2">
                 {workspaces.length} 个
               </span>
             </div>
 
-            <div className="max-h-60 overflow-y-auto space-y-1">
+            <div className="console-scroll max-h-60 space-y-1 overflow-y-auto">
               {workspaces.map((ws) => {
                 const isCurrent = ws.id === activeWorkspace?.id
                 return (
@@ -247,25 +316,27 @@ export function AppSidebar({
                       setShowWorkspaceMenu(false)
                     }}
                     className={cn(
-                      "w-full flex items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors",
+                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs transition-colors",
                       isCurrent
-                        ? "bg-primary/15 text-primary font-medium"
-                        : "hover:bg-secondary text-foreground"
+                        ? "bg-console-active font-medium text-console-ink"
+                        : "text-console-ink-2 hover:bg-console-hover hover:text-console-ink",
                     )}
                   >
-                    <div className="flex flex-col truncate pr-2">
+                    <span className="flex min-w-0 flex-col truncate pr-2">
                       <span className="truncate">{ws.name}</span>
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-[10px] text-console-ink-3">
                         {ROLE_SHORT_LABELS[ws.role] || ws.role}
                       </span>
-                    </div>
-                    {isCurrent && <Check className="size-4 shrink-0 text-primary" />}
+                    </span>
+                    {isCurrent && (
+                      <Check className="size-4 shrink-0 text-console-accent" aria-hidden="true" />
+                    )}
                   </button>
                 )
               })}
             </div>
 
-            <div className="pt-2 border-t border-border/60 space-y-1">
+            <div className="space-y-1 border-t border-console-line pt-2">
               <button
                 type="button"
                 onClick={() => {
@@ -273,9 +344,9 @@ export function AppSidebar({
                   setCreateError(null)
                   setShowCreateModal(true)
                 }}
-                className="w-full flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-console-ink-2 transition-colors hover:bg-console-hover hover:text-console-ink"
               >
-                <Plus className="size-3.5" />
+                <Plus className="size-3.5" aria-hidden="true" />
                 创建新工作区
               </button>
 
@@ -286,18 +357,18 @@ export function AppSidebar({
                   setJoinError(null)
                   setShowJoinModal(true)
                 }}
-                className="w-full flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-console-ink-2 transition-colors hover:bg-console-hover hover:text-console-ink"
               >
-                <UserPlus className="size-3.5" />
+                <UserPlus className="size-3.5" aria-hidden="true" />
                 输入邀请码加入
               </button>
 
               <Link
                 href="/settings/members"
                 onClick={() => setShowWorkspaceMenu(false)}
-                className="w-full flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-muted-foreground hover:bg-secondary hover:text-foreground transition-colors"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-xs text-console-ink-2 transition-colors hover:bg-console-hover hover:text-console-ink"
               >
-                <Users className="size-3.5" />
+                <Users className="size-3.5" aria-hidden="true" />
                 成员与权限管理
               </Link>
             </div>
@@ -308,7 +379,7 @@ export function AppSidebar({
       {/* Create Workspace Modal */}
       {showCreateModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget && !isSubmitting) {
               setShowCreateModal(false)
@@ -324,15 +395,15 @@ export function AppSidebar({
             role="dialog"
             aria-modal="true"
             aria-labelledby="create-workspace-title"
-            className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl space-y-4"
+            className="console-card w-full max-w-md space-y-4 border border-console-line p-6 shadow-xl"
           >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <h2 id="create-workspace-title" className="text-lg font-bold">创建新协作工作区</h2>
+            <div className="flex items-center justify-between border-b border-console-line pb-3">
+              <h2 id="create-workspace-title" className="text-lg font-bold text-console-ink">创建新协作工作区</h2>
               <button
                 type="button"
                 aria-label="关闭创建弹窗"
                 onClick={() => setShowCreateModal(false)}
-                className="rounded-md p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="rounded-md p-1 text-console-ink-3 transition-colors hover:text-console-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-console-accent"
               >
                 ✕
               </button>
@@ -341,7 +412,7 @@ export function AppSidebar({
             {createError && (
               <div
                 role="alert"
-                className="rounded-lg border border-destructive/30 bg-destructive/15 px-3 py-2 text-xs font-medium text-destructive"
+                className="rounded-lg border border-console-danger/40 bg-console-danger/10 px-3 py-2 text-xs font-medium text-console-danger"
               >
                 {createError}
               </div>
@@ -358,7 +429,7 @@ export function AppSidebar({
                   placeholder="如：智能体研发团队"
                   value={newWsName}
                   onChange={(e) => setNewWsName(e.target.value)}
-                  className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                  className="w-full rounded-md border border-console-line-2 bg-console-surface-2 px-3 py-2 text-sm text-console-ink focus:border-console-accent focus:outline-none"
                 />
               </div>
 
@@ -370,7 +441,7 @@ export function AppSidebar({
                   placeholder="协作空间的主要职责"
                   value={newWsDesc}
                   onChange={(e) => setNewWsDesc(e.target.value)}
-                  className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
+                  className="w-full rounded-md border border-console-line-2 bg-console-surface-2 px-3 py-2 text-sm text-console-ink focus:border-console-accent focus:outline-none"
                 />
               </div>
 
@@ -378,14 +449,14 @@ export function AppSidebar({
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary"
+                  className="rounded-lg border border-console-line-2 px-4 py-2 text-sm font-medium text-console-ink-2 transition-colors hover:bg-console-hover hover:text-console-ink"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  className="rounded-lg bg-console-accent px-4 py-2 text-sm font-semibold text-console-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
                   {isSubmitting ? "创建中..." : "立即创建"}
                 </button>
@@ -398,7 +469,7 @@ export function AppSidebar({
       {/* Join Workspace Modal */}
       {showJoinModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-150"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget && !isSubmitting) {
               setShowJoinModal(false)
@@ -414,15 +485,15 @@ export function AppSidebar({
             role="dialog"
             aria-modal="true"
             aria-labelledby="join-workspace-title"
-            className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-xl space-y-4"
+            className="console-card w-full max-w-md space-y-4 border border-console-line p-6 shadow-xl"
           >
-            <div className="flex items-center justify-between border-b border-border/60 pb-3">
-              <h2 id="join-workspace-title" className="text-lg font-bold">加入协作工作区</h2>
+            <div className="flex items-center justify-between border-b border-console-line pb-3">
+              <h2 id="join-workspace-title" className="text-lg font-bold text-console-ink">加入协作工作区</h2>
               <button
                 type="button"
                 aria-label="关闭加入弹窗"
                 onClick={() => setShowJoinModal(false)}
-                className="rounded-md p-1 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                className="rounded-md p-1 text-console-ink-3 transition-colors hover:text-console-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-console-accent"
               >
                 ✕
               </button>
@@ -431,7 +502,7 @@ export function AppSidebar({
             {joinError && (
               <div
                 role="alert"
-                className="rounded-lg border border-destructive/30 bg-destructive/15 px-3 py-2 text-xs font-medium text-destructive"
+                className="rounded-lg border border-console-danger/40 bg-console-danger/10 px-3 py-2 text-xs font-medium text-console-danger"
               >
                 {joinError}
               </div>
@@ -448,7 +519,7 @@ export function AppSidebar({
                   placeholder="粘贴团队成员发给您的邀请码"
                   value={joinCode}
                   onChange={(e) => setJoinCode(e.target.value)}
-                  className="w-full rounded-md border border-border bg-input px-3 py-2 text-sm text-foreground font-mono focus:border-primary focus:outline-none"
+                  className="w-full rounded-md border border-console-line-2 bg-console-surface-2 px-3 py-2 font-mono text-sm text-console-ink focus:border-console-accent focus:outline-none"
                 />
               </div>
 
@@ -456,14 +527,14 @@ export function AppSidebar({
                 <button
                   type="button"
                   onClick={() => setShowJoinModal(false)}
-                  className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-secondary"
+                  className="rounded-lg border border-console-line-2 px-4 py-2 text-sm font-medium text-console-ink-2 transition-colors hover:bg-console-hover hover:text-console-ink"
                 >
                   取消
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
+                  className="rounded-lg bg-console-accent px-4 py-2 text-sm font-semibold text-console-accent-ink transition-opacity hover:opacity-90 disabled:opacity-50"
                 >
                   {isSubmitting ? "加入中..." : "加入工作区"}
                 </button>
@@ -477,7 +548,7 @@ export function AppSidebar({
       {activeItem !== "chats" ? (
         <nav
           aria-label="移动端导航"
-          className="mobile-tab-bar fixed right-0 bottom-0 left-0 z-40 grid grid-cols-5 border-t border-sidebar-border/80 bg-sidebar/95 backdrop-blur-xl px-2 pt-2 text-sidebar-foreground md:hidden"
+          className="mobile-tab-bar fixed right-0 bottom-0 left-0 z-40 grid grid-cols-6 border-t border-console-line bg-console-sidebar/95 px-1 pt-2 text-console-ink-2 backdrop-blur-xl md:hidden"
         >
           {navigation.map((item) => {
             const Icon = item.icon
@@ -488,18 +559,18 @@ export function AppSidebar({
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(
-                  "flex min-h-14 flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all active:scale-95",
-                  isActive ? "font-semibold text-primary" : "text-muted-foreground",
+                  "flex min-h-14 flex-col items-center justify-center gap-1 px-0.5 text-center text-[11px] font-medium transition-all active:scale-95",
+                  isActive ? "font-semibold text-console-accent" : "text-console-ink-3",
                 )}
               >
-                <div
+                <span
                   className={cn(
-                    "flex h-7 w-12 items-center justify-center rounded-full transition-all duration-200",
-                    isActive ? "bg-primary/20 text-primary" : "text-muted-foreground",
+                    "flex h-7 w-11 items-center justify-center rounded-full transition-colors duration-200",
+                    isActive ? "bg-console-active text-console-accent" : "text-console-ink-3",
                   )}
                 >
                   <Icon aria-hidden="true" className="size-5" />
-                </div>
+                </span>
                 <span>{item.label}</span>
               </Link>
             )

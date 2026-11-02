@@ -53,7 +53,7 @@ export function ContactsPage() {
     : 0
 
   return (
-    <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-hidden md:grid-cols-[76px_minmax(0,1fr)]">
+    <div className="console-shell grid grid-cols-[minmax(0,1fr)] overflow-x-clip md:grid-cols-[auto_minmax(0,1fr)]">
       <AppSidebar connectionStatus={connectionStatus} activeItem="contacts" />
 
       <main className="console-main px-5 py-7 sm:px-7 md:px-9 md:py-8 xl:px-12">

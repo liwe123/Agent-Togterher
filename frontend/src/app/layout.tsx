@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   description: "编排多模型与多 Agent、追踪任务执行和实时状态的协同运行台",
 };
 
+import { AppProviders } from "@/components/app-providers";
 import { AuthGuard } from "@/components/auth-guard";
 
 export default function RootLayout({
@@ -14,9 +15,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className="dark h-full antialiased">
+    <html lang="zh-CN" className="dark h-full antialiased" data-theme="deepseek" data-motion="normal">
       <body className="flex min-h-full flex-col">
-        <AuthGuard>{children}</AuthGuard>
+        <AppProviders>
+          <AuthGuard>{children}</AuthGuard>
+        </AppProviders>
       </body>
     </html>
   );
