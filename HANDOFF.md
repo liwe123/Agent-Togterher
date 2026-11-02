@@ -1,8 +1,8 @@
 # Agent Console 项目接力文档 (HANDOFF)
 
-> 更新时间：2026-11-01  
+> 更新时间：2026-11-02  
 > 工作目录：`E:\Agents`  
-> 当前阶段：**Phase 5 整改项目（DS-Bot 对标二期 + 历史缺口收口）进行中**。最新基线：`docs/整改项目完整计划.md`（2026-11-01 批准，7 个批次 C-275~C-334）。已完成 C-267~C-274：群聊多 Agent 接力（多 @ 顺序接力/PASS/relay_progress + 接力链/成员面板/消息分组/时间分隔）、独立验收、CI 依赖漂移假红修复，真实 CI run 41271455539 与后续 run 三 job 全绿；远端 main 已同步。历史缺口已关闭：REQ-B1/B2/B7/B8/C1/C2 与 2026-09-25 P0 五项契约级缺陷。剩余开放项与批次归属见整改计划 §2.2（A1/A5/A6/A7、B3/B4/B5/B6/B9、D2/D3/D4/D6、OPT-5、E1-E3、P1/P2 遗留、DS-Bot P1-1~P2-2）。**  
+> 当前阶段：**Phase 5 UI 迁移第二批（DS-Bot 前端 UI/UX 设计迁移）已完成待推送**。最新基线：`docs/整改项目完整计划.md`（2026-11-01 批准，7 个批次 C-275~C-334）与 `docs/prd/PRD-DS-Bot前端设计系统与信息架构迁移.md`（2026-11-02）。已完成 C-267~C-274（群聊多 Agent 接力、独立验收、CI 假红修复）与 C-275~C-282（Batch1 执行级预算/脱敏/并发/认证 BUG/CI 锁定）；本批新增 DS-Bot 设计基座与信息架构迁移：4 主题 × 8 颜色键语义令牌层与弹簧动效、侧栏团队列、可拖拽详情面板、全局命令面板、聊天表面（分组气泡 / @ chip / typing / 动作卡 / Widget）、设置 198px 双栏 IA + 外观卡、用量页升级、DS-Bot 角色形状库；前端门禁 130 tests / typecheck / eslint / build 全绿，A/B 截图归档 `docs/ab-20261102/`。历史缺口已关闭：REQ-B1/B2/B7/B8/C1/C2 与 2026-09-25 P0 五项契约级缺陷。剩余开放项与批次归属见整改计划 §2.2（A1/A5/A6/A7、B3/B4/B5/B6/B9、D2/D3/D4/D6、E1-E3、P1/P2 遗留、DS-Bot P1-1/P1-3~P1-5）。**  
 > 环境注意：GitHub 直连被阻断，推送须走本机代理 `git -c http.proxy=http://127.0.0.1:7890 push origin main`；本地门禁用 `pwsh -NoProfile -File scripts/ci-local.ps1`，CI 依赖由 `backend/constraints.txt` 锁定。
 
 ---
@@ -114,11 +114,29 @@
 
 > 三项均已完成守则流程（PRD 三处同步 + 测试 + 验收 + 推送）。前端缺口登记在 20260907 报告 C1/C2/B1：C1（Webhook 配置 UI）已由 C-217 落地、C2（HITL 按钮角色控制）已由 C-214 落地，仅剩 B1（DAG 线性渲染）留 Phase 3 收尾。
 
+## 3.6 Phase 5 UI 迁移第二批（DS-Bot 前端 UI/UX 迁移，2026-11-02）
+
+- **PRD**：`docs/prd/PRD-DS-Bot前端设计系统与信息架构迁移.md`（Target/用户故事/FR1-FR12/AC1-AC12；已登记 `docs/PRD.md` 索引，PRD.html 由生成脚本重建）。
+- **落地范围**（Lead + 3 个子 Agent 并行，按 `docs/DS-Bot分析报告/DS-Bot前端UI与交互模式分析.md` §5 可迁移清单）：
+
+| 主题 | 关键落点 |
+|---|---|
+| 设计基座（FR1-FR3） | `globals.css` 4 主题 × 8 颜色键 → `--console-*` 语义令牌 + Tailwind 映射（`bg-console-*`/`text-console-*`/`border-console-*`/`rounded-console-*`）+ `.console-*` 工具类；`lib/design-tokens.ts`（主题/强调色 19 ink/WCAG accentInk/暗色映射）；`lib/motion.ts`（DS-Bot springEasing 同算法生成 25 点 `linear()`，8 条曲线）；`hooks/use-appearance.ts`（localStorage 持久化 + `data-theme`/`data-motion`/dark class）；三档动效 quiet/normal/lively + reduced-motion 全量降级 |
+| 信息架构（FR4-FR6） | `console/app-sidebar.tsx` rail 76px + `console/team-column.tsx` 团队列 264px（主 Agent 磁贴/状态点/活预览/骨架）；`console/details-panel.tsx` 320–520px 可拖拽面板（localStorage 持久化 + 详情/统计 tab）；`console/command-palette.tsx` Ctrl/Cmd+K 三组命令（`components/app-providers.tsx` 挂载）；`hooks/use-team-roster.ts` |
+| 聊天表面（FR7-FR9） | `chat/message-bubble.tsx`（分组圆角 18/6 + 0.5px 内描边 + hover 工具条 + 事件行 + @ chip）、`chat/message-list.tsx`（30min 时间分隔/空态/骨架/typing 行）、`chat/chat-page.tsx`（40px 胶囊头 + 渐变遮罩 + 成员条 + 详情面板）、`chat/action-card.tsx`（waiting_approval 审批 A/B/C 键位 + 单卡仲裁 + 真实 approve/reject）、`chat/widget-card.tsx`（Metric/DataTable/Progress/Callout）、`lib/action-cards.ts` 放置去重 |
+| 设置与用量（FR10-FR11） | `settings/settings-page.tsx` 198px 粘性分页导航 + 区块行 + 外观区块；`settings/appearance-card.tsx`（主题/明暗/强调色/动效档位）；`app/settings/cost/page.tsx`（24h/7d/30d/12m + 堆叠柱 + 排行 + 空态，12m 标注服务端 90 天上限） |
+| 角色形象与反馈（FR12） | `lib/bot-shapes.ts`（从 DS-Bot CHARACTERS 提取 whale/star/moon/gumdrop/squircle）+ `console/bot-mark.tsx`（SVG + paints 高光 + 视线跟随 + running/waiting/alert 动效）+ `ui/feedback.tsx`（EmptyState/SkeletonRows/ShimmerText/InlineError）；移动端底栏 6 列修复 |
+| 页面外壳 | 11 个页面外框改 `md:grid-cols-[auto_minmax(0,1fr)]` + `overflow-x-clip`（保持侧栏 sticky），任务/通讯录/工作流/设置子页同步换肤 |
+
+- **验证**：`npm test` 130 passed（新增 design-tokens 9 / motion 5 / mention-utils +12 / action-cards 14 / bot-shapes 9）；`npx tsc --noEmit` 0；`npx eslint` 0；`next build` 16 路由全部成功。
+- **A/B 取证**：`docs/ab-20261102/`（HEAD `255cd29` worktree 生产构建 vs 本次生产构建；1440×900 / 390×844；deepseek 深色 + paper 浅色 / mono / moonlight；含命令面板、详情面板、设置外观、用量页），结论见该目录 `README.md`。
+- **留待后续**：记忆面板（依赖 Phase 2 记忆能力）、relay 暂停/继续（缺后端暂停语义）、自定义 emoji 头像与 BotMark 共存、HITL 卡片的服务端备注字段。
+
 ## 4. 质量与验证基准
 
 - **后端自动化测试**：44 个测试模块，共计 **270 tests passed**（100% 通过；测试用一次性 SQLite 文件库跑测，CI 另有 `test-postgres` job 覆盖 PG 方言，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性；2026-08-29 compose 容器实跑 AC1/AC2/AC4/AC7/AC8 通过；2026-09-26 本机复跑 270 passed / PG 复跑 270 passed）。
 - **CI 稳定性修复（2026-09-26）**：`test-postgres` 跨事件循环 Redis 客户端（配额限流单例）改为随循环重建；`build-linux` aiosqlite 取消期关闭竞争（WS 会话取消中断 DB 操作 → invalidate → terminate 双 stop 挂死）通过「WS 快照与会话释放前移到握手 accept 之前」根除；CI 增加 job `timeout-minutes`、pytest-timeout、无进展看门狗（dump 线程栈 + asyncio 任务栈）与 `-s` 诊断。修复后连续 3 次复跑三 job 全绿。
-- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 35 passed，`next build` 12+ 页面全部编译成功。
+- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 130 passed（2026-11-02；新增 design-tokens/motion/mention-utils/action-cards/bot-shapes 用例），`next build` 16 条路由全部编译成功；UI 改动 A/B 与冒烟记录见 `docs/ab-20261102/`。
 - **文档自动化体系**：14 列变更记录全量无空值，`PRD.md`、`Agent_Console_变更追踪.xlsx` 与 `PRD.html` 自动化生成并与 Git 历史完全同步。
 
 ---

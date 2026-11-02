@@ -58,6 +58,17 @@ PREFIX_TYPE = {
 
 # Curated rows: keyed by short commit sha. Fields override git inference.
 CURATED = {
+    "88dfd27": {
+        "type": "Requirement",
+        "scope": "前端、文档",
+        "content": "DS-Bot 前端 UI/UX 设计迁移（UI 迁移二期）：新增 4 主题 × 8 颜色键语义令牌层（--console-* + Tailwind 映射 + DS-Bot 同算法弹簧 linear() 缓动 + quiet/normal/lively 三档动效与 reduced-motion 降级）、外观偏好（主题/明暗/强调色 WCAG 前景推导/动效档位，localStorage 持久化）、侧栏 76px rail + 264px 团队列（主 Agent 磁贴/状态点/活预览）、控制台三栏与 320–520px 可拖拽详情面板（宽度持久化）、全局命令面板（Ctrl/Cmd+K）、聊天表面（40px 胶囊头与渐变遮罩、分组气泡 18/6 圆角与 0.5px 内描边、hover 工具条、30min 时间分隔、typing 行、@ 提及 chip）、waiting_approval 动作卡（A/B/C 键位 + 单卡仲裁 + 真实 approve/reject）、Widget 展示卡、设置页 198px 双栏 IA 与外观卡、用量页范围/堆叠柱/排行升级、EmptyState/SkeletonRows/ShimmerText/InlineError 反馈原子组件、DS-Bot 角色形状库（whale/star/moon/gumdrop/squircle + 状态动效）、移动端底栏 6 列修复与侧栏 sticky 滚动修复",
+        "frontend": "globals.css 令牌层与 .console-* 工具类；components/{app-providers,console/{team-column,details-panel,command-palette,bot-mark,agent-meta},chat/{action-card,widget-card,chat-member-strip,message-bubble,message-list,chat-page},settings/{settings-page,appearance-card,segmented-control},ui/feedback}；hooks/{use-appearance,use-team-roster,use-chat}；lib/{design-tokens,motion,mention-utils,action-cards,bot-shapes}；tests/{design-tokens,motion,mention-utils,action-cards,bot-shapes}",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "前端 npm test 130 passed（新增 49 例）/ npx tsc --noEmit 0 / npx eslint 0 / next build 16 路由成功；生产构建 A/B 截图 1440×900 与 390×844 归档 docs/ab-20261102/（deepseek 深色 + paper 浅色 + mono + moonlight + 命令面板 + 详情面板 + 设置外观 + 用量页）",
+        "notes": "PRD: docs/prd/PRD-DS-Bot前端设计系统与信息架构迁移.md（PRD.md 索引已登记，PRD.html 由本批脚本重建）；A/B 结论见 docs/ab-20261102/README.md；独立验收结论见后续回写；未改后端与数据库",
+    },
     "920b54f": {
         "type": "BUG",
         "content": "修复艾特候选与路由核心缺陷：统一内部 Agent 与外部节点首位艾特探测，消除中文无空格混排下外部节点越权抢跑；修复中文输入法回车误触发补全；排除邮箱地址误弹；补齐@后端等角色别名；增加空 Agent 工作区防御",
