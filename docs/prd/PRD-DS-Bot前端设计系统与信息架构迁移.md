@@ -1,6 +1,6 @@
 # PRD · DS-Bot 前端设计系统与信息架构迁移（UI 迁移二期）
 
-> 类型：Requirement｜状态：实施中｜日期：2026-11-02｜作者：LI
+> 类型：Requirement｜状态：M1–M3 已实施并验收（M4 遗留项见 §6/§8）｜日期：2026-11-02｜作者：LI
 > 依据：`docs/DS-Bot对标分析与改造方案.md` §3、`docs/DS-Bot分析报告/DS-Bot前端UI与交互模式分析.md`（§1 设计系统 / §2 信息架构 / §3 组件 / §4 交互 / §5 可迁移清单 / §7 不要照抄）、`docs/整改项目完整计划.md` Phase 5（WP5.1~WP5.6）
 > 参考项目：[Fei2411/DS-Bot](https://github.com/Fei2411/DS-Bot)（DeepSeek Harness 插件社区项目，npm `@lininn/ds-bot@0.2.6`，源码内联 CSS 与组件函数可逐行取证）
 > 关联：`docs/prd/PRD-群聊多Agent接力协作.md`（C-267，已落地的聊天分组/时间分隔/接力链是本 PRD 的前置）
@@ -159,7 +159,15 @@
 
 ---
 
-## 9. 系统关系
+## 9. 实施与验收记录（2026-11-02）
+
+- 实施提交：`88dfd27`（feat，前端 + 本 PRD）；登记提交：`c6fed2f`（docs，PRD.html/改动表/HANDOFF/A-B 截图）。
+- 质量门禁：`npm test` 130 passed（新增 49 例）/ `npx tsc --noEmit` 0 / `npx eslint` 0 / `next build` static pages 16/16、Route 表 15 条全部成功。
+- A/B 取证：`docs/ab-20261102/`（22 张 PNG：6 baseline + 16 new；桌面 1440×900、移动 390×844@dpr2；deepseek 深色 + paper 浅色 + mono + moonlight + 命令面板 + 详情面板 + 设置外观 + 用量页），结论见该目录 README.md。
+- 独立验收：PASS（0 阻塞；非阻塞观察 3 条已在 C-283 备注与本文档修订）。
+- 遗留（不在本批验收范围）：记忆面板（依赖 Phase 2 记忆能力）、relay 暂停/继续（缺后端暂停语义）、自定义 emoji 头像与 BotMark 共存、HITL 服务端备注字段。
+
+## 10. 系统关系
 
 - 上游：`docs/DS-Bot分析报告/DS-Bot前端UI与交互模式分析.md`（证据源）、`docs/整改项目完整计划.md` Phase 5（WP5.1~WP5.6 对应 FR 编号）。
 - 下游：`docs/PRD.md` 索引 + 根目录 `PRD.html`（生成器自动同步）、`docs/Agent_Console_变更追踪.xlsx`（每提交一行）。

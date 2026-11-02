@@ -126,9 +126,9 @@
 | 聊天表面（FR7-FR9） | `chat/message-bubble.tsx`（分组圆角 18/6 + 0.5px 内描边 + hover 工具条 + 事件行 + @ chip）、`chat/message-list.tsx`（30min 时间分隔/空态/骨架/typing 行）、`chat/chat-page.tsx`（40px 胶囊头 + 渐变遮罩 + 成员条 + 详情面板）、`chat/action-card.tsx`（waiting_approval 审批 A/B/C 键位 + 单卡仲裁 + 真实 approve/reject）、`chat/widget-card.tsx`（Metric/DataTable/Progress/Callout）、`lib/action-cards.ts` 放置去重 |
 | 设置与用量（FR10-FR11） | `settings/settings-page.tsx` 198px 粘性分页导航 + 区块行 + 外观区块；`settings/appearance-card.tsx`（主题/明暗/强调色/动效档位）；`app/settings/cost/page.tsx`（24h/7d/30d/12m + 堆叠柱 + 排行 + 空态，12m 标注服务端 90 天上限） |
 | 角色形象与反馈（FR12） | `lib/bot-shapes.ts`（从 DS-Bot CHARACTERS 提取 whale/star/moon/gumdrop/squircle）+ `console/bot-mark.tsx`（SVG + paints 高光 + 视线跟随 + running/waiting/alert 动效）+ `ui/feedback.tsx`（EmptyState/SkeletonRows/ShimmerText/InlineError）；移动端底栏 6 列修复 |
-| 页面外壳 | 11 个页面外框改 `md:grid-cols-[auto_minmax(0,1fr)]` + `overflow-x-clip`（保持侧栏 sticky），任务/通讯录/工作流/设置子页同步换肤 |
+| 页面外壳 | 12 个页面文件外框改 `md:grid-cols-[auto_minmax(0,1fr)]` + `overflow-x-clip`（保持侧栏 sticky），任务/通讯录/工作流/设置子页同步换肤 |
 
-- **验证**：`npm test` 130 passed（新增 design-tokens 9 / motion 5 / mention-utils +12 / action-cards 14 / bot-shapes 9）；`npx tsc --noEmit` 0；`npx eslint` 0；`next build` 16 路由全部成功。
+- **验证**：`npm test` 130 passed（新增 design-tokens 9 / motion 5 / mention-utils +12 / action-cards 14 / bot-shapes 9）；`npx tsc --noEmit` 0；`npx eslint` 0；`next build` static pages 16/16、Route 表 15 条全部成功。
 - **A/B 取证**：`docs/ab-20261102/`（HEAD `255cd29` worktree 生产构建 vs 本次生产构建；1440×900 / 390×844；deepseek 深色 + paper 浅色 / mono / moonlight；含命令面板、详情面板、设置外观、用量页），结论见该目录 `README.md`。
 - **留待后续**：记忆面板（依赖 Phase 2 记忆能力）、relay 暂停/继续（缺后端暂停语义）、自定义 emoji 头像与 BotMark 共存、HITL 卡片的服务端备注字段。
 
@@ -136,7 +136,7 @@
 
 - **后端自动化测试**：44 个测试模块，共计 **270 tests passed**（100% 通过；测试用一次性 SQLite 文件库跑测，CI 另有 `test-postgres` job 覆盖 PG 方言，生产 PostgreSQL 由 `test_alembic_migrations.py` 保障迁移正确性；2026-08-29 compose 容器实跑 AC1/AC2/AC4/AC7/AC8 通过；2026-09-26 本机复跑 270 passed / PG 复跑 270 passed）。
 - **CI 稳定性修复（2026-09-26）**：`test-postgres` 跨事件循环 Redis 客户端（配额限流单例）改为随循环重建；`build-linux` aiosqlite 取消期关闭竞争（WS 会话取消中断 DB 操作 → invalidate → terminate 双 stop 挂死）通过「WS 快照与会话释放前移到握手 accept 之前」根除；CI 增加 job `timeout-minutes`、pytest-timeout、无进展看门狗（dump 线程栈 + asyncio 任务栈）与 `-s` 诊断。修复后连续 3 次复跑三 job 全绿。
-- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 130 passed（2026-11-02；新增 design-tokens/motion/mention-utils/action-cards/bot-shapes 用例），`next build` 16 条路由全部编译成功；UI 改动 A/B 与冒烟记录见 `docs/ab-20261102/`。
+- **前端质量门禁**：`eslint` 0 error 0 warning，`node --test` 130 passed（2026-11-02；新增 design-tokens/motion/mention-utils/action-cards/bot-shapes 用例），`next build` static pages 16/16、Route 表 15 条全部编译成功；UI 改动 A/B 与冒烟记录见 `docs/ab-20261102/`。
 - **文档自动化体系**：14 列变更记录全量无空值，`PRD.md`、`Agent_Console_变更追踪.xlsx` 与 `PRD.html` 自动化生成并与 Git 历史完全同步。
 
 ---

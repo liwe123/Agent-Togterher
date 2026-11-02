@@ -67,7 +67,7 @@ CURATED = {
         "db": "否",
         "breaking": "否",
         "verify": "前端 npm test 130 passed（新增 49 例）/ npx tsc --noEmit 0 / npx eslint 0 / next build 16 路由成功；生产构建 A/B 截图 1440×900 与 390×844 归档 docs/ab-20261102/（deepseek 深色 + paper 浅色 + mono + moonlight + 命令面板 + 详情面板 + 设置外观 + 用量页）",
-        "notes": "PRD: docs/prd/PRD-DS-Bot前端设计系统与信息架构迁移.md（PRD.md 索引已登记，PRD.html 由本批脚本重建）；A/B 结论见 docs/ab-20261102/README.md；独立验收结论见后续回写；未改后端与数据库",
+        "notes": "PRD: docs/prd/PRD-DS-Bot前端设计系统与信息架构迁移.md（PRD.md 索引已登记，PRD.html 由本批脚本重建）；A/B 结论见 docs/ab-20261102/README.md；独立验收 PASS（0 阻塞，3 条非阻塞：globals/layout 为 Lead 设计基座改动已登记、页面数/路由口径已修正、regen 自身行滞后属守则 4 豁免）；未改后端与数据库",
     },
     "920b54f": {
         "type": "BUG",
