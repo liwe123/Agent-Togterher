@@ -9,14 +9,14 @@ import {
   LoaderCircle,
   Radio,
   XCircle,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import Link from "next/link"
 import { useState } from "react"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { TaskStatusBadge } from "@/components/tasks/task-status-badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { AgentGlyph } from "@/components/console/agent-glyph"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -221,13 +221,11 @@ function TaskList({ tasks }: { tasks: TaskListItem[] }) {
             </div>
 
             <div className="flex min-w-0 items-center gap-2.5">
-              <Avatar size="sm" className="rounded-full ring-1 ring-border">
-                <AvatarFallback className="rounded-full bg-secondary text-foreground text-xs font-semibold">
-                  {task.assigned_agent?.avatar ??
-                    task.assigned_agent?.name.slice(0, 1) ??
-                    "—"}
-                </AvatarFallback>
-              </Avatar>
+              <AgentGlyph
+                agent={task.assigned_agent ?? undefined}
+                className="size-6 border-[0.5px] border-console-line"
+                markSize={16}
+              />
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium text-foreground">
                   {task.assigned_agent?.name ?? "未分配"}

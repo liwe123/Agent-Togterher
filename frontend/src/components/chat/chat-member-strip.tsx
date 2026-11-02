@@ -1,7 +1,7 @@
 "use client"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ROLE_LABELS } from "@/lib/mention-utils"
+import { AgentGlyph } from "@/components/console/agent-glyph"
 import { cn } from "@/lib/utils"
 import type { Agent } from "@/types/agent"
 
@@ -45,15 +45,7 @@ export function ChatMemberStrip({
                 : "border-console-line bg-console-raised text-console-ink-2 hover:bg-console-hover hover:text-console-ink",
             )}
           >
-            <Avatar
-              className="agent-avatar size-5 shrink-0 rounded-full"
-              data-tone={index % 6}
-              aria-hidden="true"
-            >
-              <AvatarFallback className="rounded-full text-[9px] leading-none">
-                {agent.avatar ?? agent.name.slice(0, 1)}
-              </AvatarFallback>
-            </Avatar>
+            <AgentGlyph agent={agent} toneIndex={index} className="size-5" markSize={14} />
             <span className="max-w-[7rem] truncate text-[12px] font-medium">
               {agent.name}
             </span>

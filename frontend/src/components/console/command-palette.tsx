@@ -15,7 +15,7 @@ import {
   Sun,
   Workflow,
   X,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 import { AgentPortrait } from "@/components/console/agent-portrait"
 import { agentRoleLabel } from "@/components/console/agent-meta"

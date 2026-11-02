@@ -18,7 +18,7 @@ import {
   Trash2,
   Workflow,
   X,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"

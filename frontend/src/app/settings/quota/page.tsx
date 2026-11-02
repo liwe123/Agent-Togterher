@@ -13,7 +13,7 @@ import {
   RefreshCw,
   Save,
   ShieldAlert,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { usePermissions } from "@/hooks/use-permissions"

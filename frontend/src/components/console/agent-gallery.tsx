@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle, Bot, Cpu, MessageSquare, UsersRound, X } from "lucide-react"
+import { AlertCircle, Bot, Cpu, MessageSquare, UsersRound, X } from "@/components/ui/icons"
 import Link from "next/link"
 import { useEffect, useRef, useState } from "react"
 

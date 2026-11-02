@@ -2,11 +2,11 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
-import { ContactRound, UsersRound, X } from "lucide-react"
+import { ContactRound, UsersRound, X } from "@/components/ui/icons"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { ROLE_LABELS } from "@/lib/mention-utils"
 import { formatRelativeTime } from "@/lib/relay-utils"
+import { AgentGlyph } from "@/components/console/agent-glyph"
 import { cn } from "@/lib/utils"
 import type { Agent } from "@/types/agent"
 
@@ -67,15 +67,7 @@ export function ChatMemberPanel({ agents, onClose }: ChatMemberPanelProps) {
         <ul className="chat-member-list">
           {agents.map((agent, index) => (
             <li key={agent.id} className="chat-member-row" data-status={agent.status}>
-              <Avatar
-                size="sm"
-                className="agent-avatar size-9 shrink-0"
-                data-tone={index % 6}
-              >
-                <AvatarFallback className="rounded-full text-xs">
-                  {agent.avatar ?? agent.name.slice(0, 2)}
-                </AvatarFallback>
-              </Avatar>
+              <AgentGlyph agent={agent} toneIndex={index} className="size-9" markSize={22} />
               <div className="chat-member-body">
                 <p className="chat-member-name">
                   {agent.name}

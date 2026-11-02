@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle, ArrowLeft, ChevronRight, UsersRound } from "lucide-react"
+import { AlertCircle, ArrowLeft, ChevronRight, UsersRound } from "@/components/ui/icons"
 import Link from "next/link"
 import { useCallback, useMemo, useState } from "react"
 

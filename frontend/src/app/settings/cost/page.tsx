@@ -22,7 +22,7 @@ import {
   Minus,
   RefreshCw,
   TrendingUp,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { SegmentedControl } from "@/components/settings/segmented-control"

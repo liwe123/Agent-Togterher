@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Mail, Lock, Sparkles, User, Loader2 } from "lucide-react"
+import { Mail, Lock, Sparkles, User, Loader2 } from "@/components/ui/icons"
 import { apiBaseUrl } from "@/lib/task-api"
 import { setTokens } from "@/lib/auth"
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Activity } from "lucide-react"
+import { Activity } from "@/components/ui/icons"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { AgentGallery } from "@/components/console/agent-gallery"

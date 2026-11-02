@@ -16,14 +16,14 @@ import {
   ServerCog,
   Timer,
   UserRound,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import Link from "next/link"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { ErrorBoundary } from "@/components/error-boundary"
 import { TaskReplayPlayer } from "@/components/tasks/task-replay-player"
 import { TaskStatusBadge } from "@/components/tasks/task-status-badge"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { AgentGlyph } from "@/components/console/agent-glyph"
 import { Badge } from "@/components/ui/badge"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -237,13 +237,11 @@ function TaskOverview({ task }: { task: TaskDetail }) {
         <dl className="grid content-start gap-4 rounded-2xl border border-border/70 bg-secondary/30 p-5 sm:grid-cols-2 lg:grid-cols-1">
           <OverviewItem icon={UserRound} label="负责 Agent">
             <div className="flex min-w-0 items-center gap-2.5">
-              <Avatar size="sm" className="rounded-full ring-1 ring-border">
-                <AvatarFallback className="rounded-full bg-secondary text-foreground text-xs font-semibold">
-                  {task.assigned_agent?.avatar ??
-                    task.assigned_agent?.name.slice(0, 1) ??
-                    "—"}
-                </AvatarFallback>
-              </Avatar>
+              <AgentGlyph
+                agent={task.assigned_agent ?? undefined}
+                className="size-6 border-[0.5px] border-console-line"
+                markSize={16}
+              />
               <div className="min-w-0">
                 <p className="truncate text-xs font-medium text-foreground">
                   {task.assigned_agent?.name ?? "未分配"}

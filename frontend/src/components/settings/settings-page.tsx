@@ -29,7 +29,7 @@ import {
   Users,
   XCircle,
   Zap,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { ErrorBoundary } from "@/components/error-boundary"

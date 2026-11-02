@@ -13,7 +13,7 @@ import {
   UserPlus,
   Users,
   X,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -325,7 +325,7 @@ export default function MembersSettingsPage() {
                 onClick={() => setShowInviteModal(false)}
                 className="text-muted-foreground hover:text-foreground text-sm"
               >
-                ✕
+                <X className="size-4" aria-hidden="true" />
               </button>
             </div>
 

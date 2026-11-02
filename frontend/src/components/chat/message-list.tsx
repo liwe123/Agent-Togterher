@@ -1,11 +1,11 @@
 "use client"
 
-import { ArrowDown, MessagesSquare } from "lucide-react"
+import { ArrowDown, MessagesSquare } from "@/components/ui/icons"
 import { useEffect, useMemo, useRef, useState } from "react"
 
 import { TaskApprovalCard } from "@/components/chat/action-card"
 import { MessageBubble } from "@/components/chat/message-bubble"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { AgentGlyph } from "@/components/console/agent-glyph"
 import { Button } from "@/components/ui/button"
 import { EmptyState, ShimmerText, SkeletonRows } from "@/components/ui/feedback"
 import type { ApprovalPlacement } from "@/lib/action-cards"
@@ -120,16 +120,12 @@ function TypingIndicator({ typing }: { typing?: TypingState | null }) {
       aria-live={active ? "polite" : undefined}
       aria-hidden={active ? undefined : true}
     >
-      <Avatar
-        className={cn("agent-avatar size-7 shrink-0 rounded-full", agent?.status === "running" && "console-state-bob")}
-        data-tone={tone}
-        data-state={agent?.status ?? "idle"}
-        aria-hidden="true"
-      >
-        <AvatarFallback className="rounded-full text-[12px] leading-none">
-          {agent?.avatar ?? agent?.name?.slice(0, 1) ?? "···"}
-        </AvatarFallback>
-      </Avatar>
+      <AgentGlyph
+        agent={agent}
+        toneIndex={tone}
+        className={cn("size-7", agent?.status === "running" && "console-state-bob")}
+        markSize={20}
+      />
       <ShimmerText className="min-w-0 truncate text-[13px] [[data-motion=quiet]_&]:text-console-ink-2 motion-reduce:text-console-ink-2">
         {typing?.label ?? "正在输入…"}
       </ShimmerText>

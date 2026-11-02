@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { CSSProperties } from "react"
-import { MousePointerClick, X } from "lucide-react"
+import { MousePointerClick, X } from "@/components/ui/icons"
 
 import { AgentPortrait } from "@/components/console/agent-portrait"
 import {

@@ -12,7 +12,7 @@ import {
   RotateCcw,
   Sparkles,
   X,
-} from "lucide-react"
+} from "@/components/ui/icons"
 
 import { formatCost, formatDuration, formatTokens, stepLabel } from "@/lib/task-format"
 import { requestData } from "@/lib/task-api"

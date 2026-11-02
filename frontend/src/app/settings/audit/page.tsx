@@ -7,7 +7,8 @@ import {
   Loader2,
   RefreshCw,
   Shield,
-} from "lucide-react"
+  X,
+} from "@/components/ui/icons"
 
 import { AppSidebar } from "@/components/console/app-sidebar"
 import { useWorkspaceConnection } from "@/hooks/use-workspace-connection"
@@ -110,7 +111,7 @@ export default function AuditLogsPage() {
               </p>
             </div>
 
-            <button
+            <button aria-label="关闭"
               type="button"
               onClick={handleRefresh}
               className="flex items-center gap-2 rounded-lg border border-border bg-card px-3.5 py-2 text-sm font-medium hover:bg-secondary transition-colors"
@@ -305,7 +306,7 @@ export default function AuditLogsPage() {
                 onClick={() => setSelectedLog(null)}
                 className="text-muted-foreground hover:text-foreground text-sm"
               >
-                ✕
+                <X className="size-4" aria-hidden="true" />
               </button>
             </div>
 

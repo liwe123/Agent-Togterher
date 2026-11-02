@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertCircle, Bot, ChevronsUpDown } from "lucide-react"
+import { AlertCircle, Bot, ChevronsUpDown } from "@/components/ui/icons"
 
 import { AgentPortrait } from "@/components/console/agent-portrait"
 import {

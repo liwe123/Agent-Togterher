@@ -1,6 +1,6 @@
 "use client"
 
-import { AlertTriangle, Check, Copy, ExternalLink, UserRound } from "lucide-react"
+import { AlertTriangle, Check, Copy, ExternalLink, UserRound } from "@/components/ui/icons"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useMemo, useState } from "react"

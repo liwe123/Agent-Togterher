@@ -16,7 +16,8 @@ import {
   UserPlus,
   Users,
   Workflow,
-} from "lucide-react"
+  X,
+} from "@/components/ui/icons"
 
 import { TeamColumn } from "@/components/console/team-column"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog"
@@ -405,7 +406,7 @@ export function AppSidebar({
                 onClick={() => setShowCreateModal(false)}
                 className="rounded-md p-1 text-console-ink-3 transition-colors hover:text-console-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-console-accent"
               >
-                ✕
+                <X className="size-4" aria-hidden="true" />
               </button>
             </div>
 
@@ -495,7 +496,7 @@ export function AppSidebar({
                 onClick={() => setShowJoinModal(false)}
                 className="rounded-md p-1 text-console-ink-3 transition-colors hover:text-console-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-console-accent"
               >
-                ✕
+                <X className="size-4" aria-hidden="true" />
               </button>
             </div>
 

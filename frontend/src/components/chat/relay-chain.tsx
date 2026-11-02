@@ -1,6 +1,6 @@
 "use client"
 
-import { Link2, LoaderCircle, TriangleAlert, Check, MinusCircle } from "lucide-react"
+import { Link2, LoaderCircle, TriangleAlert, Check, MinusCircle } from "@/components/ui/icons"
 import Link from "next/link"
 
 import { deriveRelayHops, type RelayProgressReducer } from "@/lib/relay-utils"

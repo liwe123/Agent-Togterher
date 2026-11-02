@@ -1,9 +1,10 @@
 "use client"
 
-import { ArrowRight, CornerDownLeft, Send, Sparkles, Trash2, Zap } from "lucide-react"
+import { ArrowRight, CornerDownLeft, Send, Sparkles, Trash2, Zap } from "@/components/ui/icons"
 import { useSearchParams } from "next/navigation"
 import { useEffect, useMemo, useRef, useState } from "react"
 
+import { AgentGlyph } from "@/components/console/agent-glyph"
 import { MentionMenu, type MentionEntry } from "@/components/chat/mention-menu"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -253,7 +254,7 @@ export function ChatComposer({
             ))}
           </div>
           <div className="flex shrink-0 items-center gap-1.5">
-            {allMentionEntries.map((entry) => (
+            {allMentionEntries.map((entry, index) => (
               <button
                 key={entry.key}
                 type="button"
@@ -261,7 +262,13 @@ export function ChatComposer({
                 onClick={() => selectMention(entry)}
                 className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border-[0.5px] border-console-line bg-console-tag px-2.5 py-0.5 text-[11px] text-console-ink-2 transition-colors hover:bg-console-hover hover:text-console-ink active:scale-95"
               >
-                <span>{entry.avatar ?? entry.name.slice(0, 1)}</span>
+                <AgentGlyph
+                  agent={entry.kind === "agent" ? { role: entry.role } : undefined}
+                  kind={entry.kind}
+                  toneIndex={index}
+                  className="size-4"
+                  markSize={12}
+                />
                 <span>@{entry.name.slice(0, 4)}</span>
               </button>
             ))}

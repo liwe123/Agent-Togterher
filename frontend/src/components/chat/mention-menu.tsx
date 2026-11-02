@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react"
-import { Activity, Circle } from "lucide-react"
+import { Activity, Circle } from "@/components/ui/icons"
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { AgentGlyph } from "@/components/console/agent-glyph"
 import { cn } from "@/lib/utils"
 import type { MentionEntry } from "@/lib/mention-utils"
 
@@ -63,11 +63,13 @@ export function MentionMenu({ items, activeIndex, onSelect }: MentionMenuProps) 
                   : "hover:bg-secondary/70 text-foreground",
               )}
             >
-              <Avatar size="sm" className="agent-avatar rounded-full shrink-0" data-tone={index % 6}>
-                <AvatarFallback className="rounded-full">
-                  {entry.avatar ?? entry.name.slice(0, 2)}
-                </AvatarFallback>
-              </Avatar>
+              <AgentGlyph
+                agent={isIntegration ? undefined : { role: entry.role }}
+                kind={isIntegration ? "integration" : "agent"}
+                toneIndex={index}
+                className="size-6"
+                markSize={16}
+              />
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5 flex-wrap">
                   <span className="block truncate text-xs font-semibold">@{entry.name}</span>

@@ -1,6 +1,6 @@
 "use client"
 
-import { Check } from "lucide-react"
+import { Check } from "@/components/ui/icons"
 
 import { SegmentedControl } from "@/components/settings/segmented-control"
 import { useAppearance } from "@/hooks/use-appearance"

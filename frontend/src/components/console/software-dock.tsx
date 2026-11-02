@@ -7,7 +7,7 @@ import {
   MousePointer2,
   Sparkles,
   Workflow,
-} from "lucide-react"
+} from "@/components/ui/icons"
 import type { CSSProperties } from "react"
 import { useMemo, useState } from "react"
 

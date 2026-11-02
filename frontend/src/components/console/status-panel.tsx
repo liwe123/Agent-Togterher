@@ -1,4 +1,5 @@
-import { Activity, Bot, Clock3 } from "lucide-react"
+import { AgentPortrait } from "@/components/console/agent-portrait"
+import { Activity, Bot, Clock3 } from "@/components/ui/icons"
 
 import type { Agent, RecentOutput } from "@/types/agent"
 
@@ -91,7 +92,9 @@ export function StatusPanel({ agents, recentOutputs }: StatusPanelProps) {
                 key={agent.id}
                 className="flex min-w-0 items-center gap-2.5 rounded-full border border-border/70 bg-secondary/40 px-3.5 py-1.5 shadow-sm transition-all duration-200 hover:border-primary/40 hover:bg-secondary/70 active:scale-95"
               >
-                <span aria-hidden="true" className="text-base select-none">{agent.avatar ?? "🤖"}</span>
+                <span aria-hidden="true" className="flex size-6 items-center justify-center">
+                  <AgentPortrait agent={agent} index={agent.id % 6} size="xxs" showStatusDot={false} className="pointer-events-none" />
+                </span>
                 <span className="max-w-36 truncate text-xs font-medium text-foreground">{agent.name}</span>
                 <span className="status-dot size-2 rounded-full" data-status={agent.status} aria-hidden="true" />
                 <span className="text-[11px] text-muted-foreground">
@@ -117,8 +120,12 @@ export function StatusPanel({ agents, recentOutputs }: StatusPanelProps) {
                 const agent = agentsById.get(output.agentId)
                 return (
                   <div key={idx} className="flex gap-3 rounded-2xl border border-border/60 bg-secondary/35 p-3 transition-all duration-200 hover:bg-secondary/60 hover:border-border/90">
-                    <span className="flex size-8.5 shrink-0 items-center justify-center rounded-full bg-primary/15 text-base" aria-hidden="true">
-                      {agent?.avatar ?? "🤖"}
+                    <span className="flex size-8.5 shrink-0 items-center justify-center rounded-full bg-primary/15" aria-hidden="true">
+                      {agent ? (
+                        <AgentPortrait agent={agent} index={agent.id % 6} size="xxs" showStatusDot={false} className="pointer-events-none" />
+                      ) : (
+                        <Bot className="size-4 text-primary" />
+                      )}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-2">
