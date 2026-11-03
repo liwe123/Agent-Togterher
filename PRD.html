@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>37</b> 份</span>
-        <span>变更记录 <b>289</b> 条</span>
-        <span>生成于 2026-11-03 12:48</span>
+        <span>变更记录 <b>290</b> 条</span>
+        <span>生成于 2026-11-03 12:53</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -4911,6 +4911,22 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>否</td>
 <td>生成 289 行；PRD.html 由 37 份 PRD + 289 条记录生成；重跑两脚本后 diff 仅剩本次提交自身滞后行（豁免）；check_docs_consistency OK prds=37</td>
 <td>B1 复现与修复均按独立验收单执行；复验结论见后续回写</td>
+</tr>
+<tr>
+<td>2026-11-03 12:48</td>
+<td>C-290</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/426530a">426530a</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>文档</td>
+<td>回写图标迁移批次独立验收最终结论并重生成：C-287 备注更新为「首轮 FAIL（PRD.html 失同步 B1）→ 修复后复验 PASS（8/8 必查项、0 阻塞；保留 1 条范围口径观察 N3）」；HANDOFF §3.7 补充独立验收结论；重跑 generate_change_log.py 与 build_prd_html.py 保持 PRD.html/xlsx/PRD.md 与 git 历史同步</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>生成 289 行；37 份 PRD + 289 条记录；check_docs_consistency OK prds=37；重跑后 diff 仅剩本次提交自身滞后行（豁免）</td>
+<td>本次提交自身行滞后一行属预期（守则 4 豁免）；图标批次（C-287~C-290）验收闭环</td>
 </tr>
 </tbody>
 </table></div>
