@@ -67,7 +67,7 @@ CURATED = {
         "db": "否",
         "breaking": "否",
         "verify": "前端 npm test 141 passed（新增 11 例）/ npm run typecheck 0 / npx eslint 0 / next build 16 路由全部成功；lucide-react 已从依赖移除（npm ls 为空）；独立视觉 QA PASS（0 阻塞，12 条非阻塞已整改 10 条）；A/B 截图 25 张归档 docs/ab-20261102-icons/（baseline 10 + new 14 + 全图标预览 1，含明暗主题）",
-        "notes": "PRD: docs/prd/PRD-DS-Bot图标设计体系迁移.md（PRD.md 索引已登记，PRD.html 由本批脚本重建）；A/B 与 QA 结论见 docs/ab-20261102-icons/README.md；独立验收：首轮 FAIL（PRD.html 与 HEAD 文档源 2 行失同步 B1）→ 已修复并重生成、请求复验（见 task-8）；未改后端与数据库",
+        "notes": "PRD: docs/prd/PRD-DS-Bot图标设计体系迁移.md（PRD.md 索引已登记，PRD.html 由本批脚本重建）；A/B 与 QA 结论见 docs/ab-20261102-icons/README.md；独立验收：首轮 FAIL（PRD.html 与 HEAD 文档源 2 行失同步 B1）→ 修复后复验 PASS（8/8 必查项通过、0 阻塞；保留 1 条范围口径观察 N3，见 task-8）；未改后端与数据库",
     },
     "88dfd27": {
         "type": "Requirement",
@@ -715,6 +715,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 回写独立验收 PASS 并重生成（C-290）": {
+        "type": "Optimization",
+        "scope": "文档",
+        "content": "回写图标迁移批次独立验收最终结论并重生成：C-287 备注更新为「首轮 FAIL（PRD.html 失同步 B1）→ 修复后复验 PASS（8/8 必查项、0 阻塞；保留 1 条范围口径观察 N3）」；HANDOFF §3.7 补充独立验收结论；重跑 generate_change_log.py 与 build_prd_html.py 保持 PRD.html/xlsx/PRD.md 与 git 历史同步",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 289 行；37 份 PRD + 289 条记录；check_docs_consistency OK prds=37；重跑后 diff 仅剩本次提交自身滞后行（豁免）",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）；图标批次（C-287~C-290）验收闭环",
+    },
     "docs: 登记 DS-Bot 图标体系迁移并重生成（C-288）": {
         "type": "Optimization",
         "scope": "文档",

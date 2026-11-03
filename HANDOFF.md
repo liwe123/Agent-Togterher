@@ -142,6 +142,7 @@
   - `components/console/agent-glyph.tsx`：聊天成员条/成员面板/提及候选/快捷 @ 芯片/任务负责人头像统一为角色形状或 Plug 图标，emoji 头像渲染归零。
   - `lucide-react` 依赖移除；`✕` 文本关闭按钮与 `🤖` emoji 图标清零；`icons.test.mjs` 强制校验注册表网格/线宽/颜色、95 具名导出、0 lucide 引用、0 emoji 残留。
 - **验证**：前端 141 tests passed（新增 11）/ typecheck 0 / eslint 0 / next build 16 路由成功；独立视觉 QA PASS（0 阻塞，12 条非阻塞已整改 10 条，证据 `.tmp/qa-icons/` 不入库）；A/B 截图归档 `docs/ab-20261102-icons/`（22 张，含全图标预览大图与明暗主题）。
+- **独立验收**：独立子 Agent 两轮验收——首轮 FAIL（PRD.html 与文档源 2 行失同步 B1）→ 修复后复验 **PASS**（8/8 必查项通过、0 阻塞；保留 1 条范围口径观察）；验收报告见 task-8。
 - **留待后续**：quota 页个别硬编码 amber 色在 paper 主题下偏弱（非本批引入）、自定义 emoji 头像与角色形状共存方案、blocks 与 layout-dashboard 进一步区分。
 
 ## 4. 质量与验证基准
