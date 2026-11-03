@@ -715,6 +715,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 回写 CI 重跑结果并重生成（C-292）": {
+        "type": "Optimization",
+        "scope": "文档",
+        "content": "回写图标迁移批次 CI 重跑复验结果并重生成：重跑 run 41580692833（head 3ccb2fc）三 job 全绿——build-linux / test-postgres / test-frontend success，dependency-canary 按 push 触发规则 skipped；HANDOFF 同步记录首次 test-postgres 失败为环境/日期边界一次性 flake 及重跑证据；重跑两个生成脚本保持文档与 git 历史同步",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 291 行；37 份 PRD + 291 条记录；check_docs_consistency OK prds=37；CI run 41580692833 三 job success + canary skipped",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）；图标批次（C-287~C-292）至此含真实 CI 证据闭环",
+    },
     "docs: 记录首次 CI 失败并重跑（C-291）": {
         "type": "Optimization",
         "scope": "文档",
