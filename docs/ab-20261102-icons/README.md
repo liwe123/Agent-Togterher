@@ -18,10 +18,13 @@
 
 | 文件 | 视口 | 场景 |
 |---|---|---|
-| `preview-icons-1440.png` | 1440×2236（整页） | 图标预览页：尺寸阶梯 / 颜色继承 / 89 个图标全量 / 95 个历史语义映射（另含扩展插件图标 Plug） |
+| `preview-icons-1440.png` | 1440×2312（整页） | 图标预览页：尺寸阶梯 / 颜色继承 / 89 个图标全量 / 95 个历史语义映射（另含扩展插件图标 Plug）；本目录共 25 个 PNG（baseline 10 + new 14 + 全图标预览 1） |
 | `baseline-console-1440.png` / `new-console-1440.png` | 1440×900 | 控制台（导航 rail / 软件 Dock / 团队列 / 详情面板空态） |
 | `baseline-console-panel-1440.png` / `new-console-panel-1440.png` | 1440×900 | 控制台 + 右侧 Agent 详情面板 |
 | `baseline-chats-1440.png` / `new-chats-1440.png` | 1440×900 | 群聊（胶囊头 / 消息工具条 / 输入区发送键 / 键盘提示） |
+| `new-chats-panel-1440.png` | 1440×900 | 群聊 + Agent 详情面板（成员条 / 详情 / 成员形状头像） |
+| `new-chats-390.png` | 390×844 | 移动端群聊（输入区 / 提及 / 发送图标） |
+| `new-console-light-paper-1440.png`、`new-settings-light-paper-1440.png` | 1440×900 | paper 浅色主题（currentColor 图标适配） |
 | `baseline-settings-1440.png` / `new-settings-1440.png` | 1440×900 | 设置中心（分页导航图标 / 区块行图标） |
 | `baseline-cost-1440.png` / `new-cost-1440.png` | 1440×900 | 用量页（范围 tabs / KPI 卡图标 / 排行） |
 | `baseline-tasks-1440.png` / `new-tasks-1440.png` | 1440×900 | 任务队列（状态筛选图标 / 列表） |

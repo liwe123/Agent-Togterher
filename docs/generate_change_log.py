@@ -66,8 +66,8 @@ CURATED = {
         "backend": "-",
         "db": "否",
         "breaking": "否",
-        "verify": "前端 npm test 141 passed（新增 11 例）/ npm run typecheck 0 / npx eslint 0 / next build 16 路由全部成功；lucide-react 已从依赖移除（npm ls 为空）；独立视觉 QA PASS（0 阻塞，12 条非阻塞已整改 10 条）；A/B 截图 22 张归档 docs/ab-20261102-icons/（含全图标预览大图与明暗主题）",
-        "notes": "PRD: docs/prd/PRD-DS-Bot图标设计体系迁移.md（PRD.md 索引已登记，PRD.html 由本批脚本重建）；A/B 与 QA 结论见 docs/ab-20261102-icons/README.md；独立验收结论见后续回写；未改后端与数据库",
+        "verify": "前端 npm test 141 passed（新增 11 例）/ npm run typecheck 0 / npx eslint 0 / next build 16 路由全部成功；lucide-react 已从依赖移除（npm ls 为空）；独立视觉 QA PASS（0 阻塞，12 条非阻塞已整改 10 条）；A/B 截图 25 张归档 docs/ab-20261102-icons/（baseline 10 + new 14 + 全图标预览 1，含明暗主题）",
+        "notes": "PRD: docs/prd/PRD-DS-Bot图标设计体系迁移.md（PRD.md 索引已登记，PRD.html 由本批脚本重建）；A/B 与 QA 结论见 docs/ab-20261102-icons/README.md；独立验收：首轮 FAIL（PRD.html 与 HEAD 文档源 2 行失同步 B1）→ 已修复并重生成、请求复验（见 task-8）；未改后端与数据库",
     },
     "88dfd27": {
         "type": "Requirement",
@@ -715,6 +715,26 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 登记 DS-Bot 图标体系迁移并重生成（C-288）": {
+        "type": "Optimization",
+        "scope": "文档",
+        "content": "登记 DS-Bot 图标设计体系迁移并重生成文档：新增 PRD 到 docs/PRD.md 索引、HANDOFF 增加 §3.7 交付与验证记录、归档 A/B 截图与 README（docs/ab-20261102-icons/，25 张 PNG：baseline 10 + new 14 + 全图标预览 1）、重跑 generate_change_log.py 与 build_prd_html.py 使 PRD.html/xlsx/PRD.md 与 git 历史对齐",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 288 行；37 份 PRD + 288 条记录；check_docs_consistency OK prds=37；A/B 25 张归档",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）；独立验收首轮发现 PRD.html 与后续文档源改稿失同步（B1），由下一笔修复并重生成",
+    },
+    "docs: 修复 PRD.html 失同步并重生成（C-289）": {
+        "type": "Optimization",
+        "scope": "文档",
+        "content": "修复独立验收阻塞 B1：使 PRD.html 与 HEAD 文档源同步（重跑 build_prd_html.py 与 generate_change_log.py），同时按验收意见修正口径——A/B 截图数量 22→25（baseline 10 + new 14 + 预览 1）、README 清单补全漏列的 4 个 new-* 截图、preview 尺寸 1440×2312、AC2 改为「lucide-react import 为 0」",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 289 行；PRD.html 由 37 份 PRD + 289 条记录生成；重跑两脚本后 diff 仅剩本次提交自身滞后行（豁免）；check_docs_consistency OK prds=37",
+        "notes": "B1 复现与修复均按独立验收单执行；复验结论见后续回写",
+    },
     "docs: 登记 DS-Bot UI 迁移并重生成（C-283）": {
         "type": "Optimization",
         "scope": "文档",

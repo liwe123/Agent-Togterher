@@ -56,7 +56,7 @@
 - 尺寸与线宽在 12–18px 范围视觉均衡：12px 场景使用 1.8 线宽的专用图标（link），导航/主按钮 1.6，其余 1.5。
 
 ### FR5 测试与证据
-- frontend/tests/icons.test.mjs：注册表完整性（≥75、名称唯一、每个 def 非空）、全量 20×20、允许 primitive 类型、颜色只允许 currentColor/none、线宽 ∈ {1.5,1.6,1.8}、具名导出覆盖全部历史 lucide 名称、src 下 lucide-react 引用数为 0、无 emoji 图标残留（✕/🤖）。
+- frontend/tests/icons.test.mjs：注册表完整性（≥75、名称唯一、每个 def 非空）、全量 20×20、允许 primitive 类型、颜色只允许 currentColor/none、线宽 ∈ {1.5,1.6,1.8}、具名导出覆盖全部历史 lucide 名称、frontend/src 中 lucide-react import 为 0（仅注释出处）、无 emoji 图标残留（✕/🤖）。
 - 临时 /icon-preview 路由（仅本地截图验证，不提交）渲染全部图标大图，供 A/B 归档与人工检查。
 
 ---
@@ -91,10 +91,10 @@ IconDefinition = { prims: IconPrimitive[]; sw?: 1.5 | 1.6 | 1.8; dash?: string }
 ## 7. 验收标准（AC）
 
 - **AC1**：npm test 通过（新增 icons 用例 ≥8）；npx tsc --noEmit 0；npx eslint 0；next build 全部路由成功。
-- **AC2**：grep -r "lucide-react" frontend/src 为 0；package.json 不再含 lucide-react；npm ls lucide-react 为空。
+- **AC2**：frontend/src 中来自 lucide-react 的 import 为 0（注册表注释保留出处说明）；package.json 不再含 lucide-react；npm ls lucide-react 为空。
 - **AC3**：注册表 ≥75 个图标，全部 20×20、允许 primitive/线宽集合、颜色仅 currentColor/无硬编码色值（单测强制）。
 - **AC4**：全仓 ✕ 文本按钮与 🤖 emoji 图标为 0（单测扫描强制）。
-- **AC5**：A/B 截图（HEAD 生产构建 vs 本批生产构建，1440×900 + 390×844）归档 docs/ab-20261102-icons/，含 /icon-preview 全图标大图；导航/软件 Dock/设置/聊天/任务/工作流页面图标视觉一致、无尺寸跳变。
+- **AC5**：A/B 截图（HEAD 生产构建 vs 本批生产构建，1440×900 + 390×844）归档 docs/ab-20261102-icons/，共 25 张（baseline 10 + new 14 + 全图标预览 1，含 /icon-preview 大图）；导航/软件 Dock/设置/聊天/任务/工作流页面图标视觉一致、无尺寸跳变。
 - **AC6**：独立验收子 Agent PASS（0 阻塞）；改动表、PRD 三处同步、HANDOFF、CI 全绿闭环。
 
 ---
@@ -115,7 +115,7 @@ IconDefinition = { prims: IconPrimitive[]; sw?: 1.5 | 1.6 | 1.8; dash?: string }
 - **实现**：新增 `frontend/src/lib/icon-paths.ts`（**89 个图标**纯数据注册表：20×20 网格、线宽 1.5×69 / 1.6×16 / 1.8×2、填充 7 个、虚线 1 个；其中 28 个图标路径与 DS-Bot `client.js` 逐字一致）＋ `frontend/src/components/ui/icons.tsx`（渲染器 + **95 个历史语义同名导出** + 扩展 Plug）；新增 `components/console/agent-glyph.tsx` 统一角色/外部节点头像图形。
 - **替换范围**：33 个产品文件的 lucide import 全部切换；239 处图标 JSX 用法保留原尺寸/颜色类；3 处 ✕ 关闭按钮、2 处 🤖 头像、7 处聊天/任务 emoji 头像统一为图标/角色形状；`lucide-react` 从 package.json 与 lockfile 移除（`npm ls lucide-react` 为空）。
 - **质量门禁**：`npm test` **141 passed**（新增 icons 用例 11 项，覆盖注册表网格/线宽/颜色、95 具名导出、0 lucide 引用、0 emoji 残留）；`npm run typecheck` 0；`npx eslint` 0；`npm run build` 16 条路由全部成功（临时预览路由已删除）。
-- **A/B 取证**：`docs/ab-20261102-icons/`（22 张 PNG：图标全量预览大图 + 控制台/群聊/设置/成本/任务/工作流/通讯录/移动端/命令面板/明暗主题；baseline 为 HEAD `00af490` 生产构建），结论见该目录 `README.md`。
+- **A/B 取证**：`docs/ab-20261102-icons/`（25 张 PNG：baseline 10 + new 14 + 全图标预览 1，覆盖控制台/群聊/设置/成本/任务/工作流/通讯录/移动端/命令面板/明暗主题；baseline 为 HEAD `00af490` 生产构建），结论见该目录 `README.md`。
 - **独立视觉 QA**：PASS（0 阻塞）。12 条非阻塞问题中 10 条已整改（wrench/server-cog 越界、key/gauge/coins 可读性、sparkles/palette/calendar-clock/flame/cursor-click 细节、blocks 与 layout-dashboard 区分度）；留待后续：quota 页个别硬编码 amber 色（非本批引入）、自定义 emoji 头像与形状共存。
 - **提交**：见《改动表》C-287（feat）与 C-288（docs 登记）；独立验收结论见改动表备注。
 

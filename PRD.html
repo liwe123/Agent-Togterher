@@ -248,8 +248,8 @@ li.toc-item.collapsed > .toc-children { max-height: 0; opacity: 0; }
       <p class="sub">产品需求文档 · 变更追踪 · 全量阅读版</p>
       <div class="stats">
         <span>需求文档 <b>37</b> 份</span>
-        <span>变更记录 <b>287</b> 条</span>
-        <span>生成于 2026-11-02 23:02</span>
+        <span>变更记录 <b>288</b> 条</span>
+        <span>生成于 2026-11-03 12:45</span>
       </div>
     </header>
     <article class="markdown-body">
@@ -4877,8 +4877,24 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td>-</td>
 <td>否</td>
 <td>否</td>
-<td>前端 npm test 141 passed（新增 11 例）/ npm run typecheck 0 / npx eslint 0 / next build 16 路由全部成功；lucide-react 已从依赖移除（npm ls 为空）；独立视觉 QA PASS（0 阻塞，12 条非阻塞已整改 10 条）；A/B 截图 22 张归档 docs/ab-20261102-icons/（含全图标预览大图与明暗主题）</td>
-<td>PRD: docs/prd/PRD-DS-Bot图标设计体系迁移.md（PRD.md 索引已登记，PRD.html 由本批脚本重建）；A/B 与 QA 结论见 docs/ab-20261102-icons/README.md；独立验收结论见后续回写；未改后端与数据库</td>
+<td>前端 npm test 141 passed（新增 11 例）/ npm run typecheck 0 / npx eslint 0 / next build 16 路由全部成功；lucide-react 已从依赖移除（npm ls 为空）；独立视觉 QA PASS（0 阻塞，12 条非阻塞已整改 10 条）；A/B 截图 25 张归档 docs/ab-20261102-icons/（baseline 10 + new 14 + 全图标预览 1，含明暗主题）</td>
+<td>PRD: docs/prd/PRD-DS-Bot图标设计体系迁移.md（PRD.md 索引已登记，PRD.html 由本批脚本重建）；A/B 与 QA 结论见 docs/ab-20261102-icons/README.md；独立验收：首轮 FAIL（PRD.html 与 HEAD 文档源 2 行失同步 B1）→ 已修复并重生成、请求复验（见 task-8）；未改后端与数据库</td>
+</tr>
+<tr>
+<td>2026-11-02 23:02</td>
+<td>C-288</td>
+<td>已完成</td>
+<td><a href="https://github.com/liwe123/Agent-Togterher/commit/43bf482">43bf482</a></td>
+<td>LI</td>
+<td>Optimization</td>
+<td>文档</td>
+<td>登记 DS-Bot 图标设计体系迁移并重生成文档：新增 PRD 到 docs/PRD.md 索引、HANDOFF 增加 §3.7 交付与验证记录、归档 A/B 截图与 README（docs/ab-20261102-icons/，25 张 PNG：baseline 10 + new 14 + 全图标预览 1）、重跑 generate_change_log.py 与 build_prd_html.py 使 PRD.html/xlsx/PRD.md 与 git 历史对齐</td>
+<td>-</td>
+<td>-</td>
+<td>否</td>
+<td>否</td>
+<td>生成 288 行；37 份 PRD + 288 条记录；check_docs_consistency OK prds=37；A/B 25 张归档</td>
+<td>本次提交自身行滞后一行属预期（守则 4 豁免）；独立验收首轮发现 PRD.html 与后续文档源改稿失同步（B1），由下一笔修复并重生成</td>
 </tr>
 </tbody>
 </table></div>
@@ -5117,7 +5133,7 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <td><a href="#prd-ds-bot图标设计体系迁移">PRD-DS-Bot图标设计体系迁移.md</a></td>
 <td>DS-Bot 图标设计体系迁移（20×20 网格/1.5–1.8 线宽/currentColor 自绘图标注册表，替换 95 个 lucide 语义、239 处引用与 emoji 图标，移除 lucide-react 依赖）</td>
 <td>见追踪表</td>
-<td>C-286 起</td>
+<td>C-287~</td>
 </tr>
 </tbody>
 </table></div>
@@ -6117,7 +6133,7 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 </ul>
 <h4 id="prd-ds-bot图标设计体系迁移-fr5-测试与证据">FR5 测试与证据</h4>
 <ul>
-<li>frontend/tests/icons.test.mjs：注册表完整性（≥75、名称唯一、每个 def 非空）、全量 20×20、允许 primitive 类型、颜色只允许 currentColor/none、线宽 ∈ {1.5,1.6,1.8}、具名导出覆盖全部历史 lucide 名称、src 下 lucide-react 引用数为 0、无 emoji 图标残留（✕/🤖）。</li>
+<li>frontend/tests/icons.test.mjs：注册表完整性（≥75、名称唯一、每个 def 非空）、全量 20×20、允许 primitive 类型、颜色只允许 currentColor/none、线宽 ∈ {1.5,1.6,1.8}、具名导出覆盖全部历史 lucide 名称、frontend/src 中 lucide-react import 为 0（仅注释出处）、无 emoji 图标残留（✕/🤖）。</li>
 <li>临时 /icon-preview 路由（仅本地截图验证，不提交）渲染全部图标大图，供 A/B 归档与人工检查。</li>
 </ul>
 <hr />
@@ -6164,10 +6180,10 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <h3 id="prd-ds-bot图标设计体系迁移-7-验收标准ac">7. 验收标准（AC）</h3>
 <ul>
 <li><strong>AC1</strong>：npm test 通过（新增 icons 用例 ≥8）；npx tsc --noEmit 0；npx eslint 0；next build 全部路由成功。</li>
-<li><strong>AC2</strong>：grep -r "lucide-react" frontend/src 为 0；package.json 不再含 lucide-react；npm ls lucide-react 为空。</li>
+<li><strong>AC2</strong>：frontend/src 中来自 lucide-react 的 import 为 0（注册表注释保留出处说明）；package.json 不再含 lucide-react；npm ls lucide-react 为空。</li>
 <li><strong>AC3</strong>：注册表 ≥75 个图标，全部 20×20、允许 primitive/线宽集合、颜色仅 currentColor/无硬编码色值（单测强制）。</li>
 <li><strong>AC4</strong>：全仓 ✕ 文本按钮与 🤖 emoji 图标为 0（单测扫描强制）。</li>
-<li><strong>AC5</strong>：A/B 截图（HEAD 生产构建 vs 本批生产构建，1440×900 + 390×844）归档 docs/ab-20261102-icons/，含 /icon-preview 全图标大图；导航/软件 Dock/设置/聊天/任务/工作流页面图标视觉一致、无尺寸跳变。</li>
+<li><strong>AC5</strong>：A/B 截图（HEAD 生产构建 vs 本批生产构建，1440×900 + 390×844）归档 docs/ab-20261102-icons/，共 25 张（baseline 10 + new 14 + 全图标预览 1，含 /icon-preview 大图）；导航/软件 Dock/设置/聊天/任务/工作流页面图标视觉一致、无尺寸跳变。</li>
 <li><strong>AC6</strong>：独立验收子 Agent PASS（0 阻塞）；改动表、PRD 三处同步、HANDOFF、CI 全绿闭环。</li>
 </ul>
 <hr />
@@ -6204,9 +6220,9 @@ ID 递增分配（工单号）。改动类型：<code>Requirement</code>（新�
 <li><strong>实现</strong>：新增 <code>frontend/src/lib/icon-paths.ts</code>（<strong>89 个图标</strong>纯数据注册表：20×20 网格、线宽 1.5×69 / 1.6×16 / 1.8×2、填充 7 个、虚线 1 个；其中 28 个图标路径与 DS-Bot <code>client.js</code> 逐字一致）＋ <code>frontend/src/components/ui/icons.tsx</code>（渲染器 + <strong>95 个历史语义同名导出</strong> + 扩展 Plug）；新增 <code>components/console/agent-glyph.tsx</code> 统一角色/外部节点头像图形。</li>
 <li><strong>替换范围</strong>：33 个产品文件的 lucide import 全部切换；239 处图标 JSX 用法保留原尺寸/颜色类；3 处 ✕ 关闭按钮、2 处 🤖 头像、7 处聊天/任务 emoji 头像统一为图标/角色形状；<code>lucide-react</code> 从 package.json 与 lockfile 移除（<code>npm ls lucide-react</code> 为空）。</li>
 <li><strong>质量门禁</strong>：<code>npm test</code> <strong>141 passed</strong>（新增 icons 用例 11 项，覆盖注册表网格/线宽/颜色、95 具名导出、0 lucide 引用、0 emoji 残留）；<code>npm run typecheck</code> 0；<code>npx eslint</code> 0；<code>npm run build</code> 16 条路由全部成功（临时预览路由已删除）。</li>
-<li><strong>A/B 取证</strong>：<code>docs/ab-20261102-icons/</code>（22 张 PNG：图标全量预览大图 + 控制台/群聊/设置/成本/任务/工作流/通讯录/移动端/命令面板/明暗主题；baseline 为 HEAD <code>00af490</code> 生产构建），结论见该目录 <code>README.md</code>。</li>
+<li><strong>A/B 取证</strong>：<code>docs/ab-20261102-icons/</code>（25 张 PNG：baseline 10 + new 14 + 全图标预览 1，覆盖控制台/群聊/设置/成本/任务/工作流/通讯录/移动端/命令面板/明暗主题；baseline 为 HEAD <code>00af490</code> 生产构建），结论见该目录 <code>README.md</code>。</li>
 <li><strong>独立视觉 QA</strong>：PASS（0 阻塞）。12 条非阻塞问题中 10 条已整改（wrench/server-cog 越界、key/gauge/coins 可读性、sparkles/palette/calendar-clock/flame/cursor-click 细节、blocks 与 layout-dashboard 区分度）；留待后续：quota 页个别硬编码 amber 色（非本批引入）、自定义 emoji 头像与形状共存。</li>
-<li><strong>提交</strong>：见《改动表》C-286（feat）与 C-287（docs 登记）；独立验收结论见改动表备注。</li>
+<li><strong>提交</strong>：见《改动表》C-287（feat）与 C-288（docs 登记）；独立验收结论见改动表备注。</li>
 </ul>
 <h3 id="prd-ds-bot图标设计体系迁移-10-系统关系">10. 系统关系</h3>
 <ul>
