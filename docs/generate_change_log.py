@@ -715,6 +715,16 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 记录 CI 间歇 flake 并重跑（C-293）": {
+        "type": "Optimization",
+        "scope": "文档",
+        "content": "记录图标迁移批次 CI 间歇 flake 并重跑：run 41580692833（head 3ccb2fc）三 job 全绿作为本批代码通过证据；随后纯文档 regen 提交 502e858 的 run 41581035834 再次出现 test-postgres 间歇失败（1m50s、退出码 1，build-linux / test-frontend 均绿且本批无后端改动），判定为环境间歇 flake，继续重跑取证并回写",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "生成 292 行；重跑 CI 结果见后续回写；已有 run 41580692833 三 job success + canary skipped",
+        "notes": "本次提交自身行滞后一行属预期（守则 4 豁免）",
+    },
     "docs: 回写 CI 重跑结果并重生成（C-292）": {
         "type": "Optimization",
         "scope": "文档",
