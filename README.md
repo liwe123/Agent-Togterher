@@ -1,35 +1,106 @@
+<div align="center">
+
 # Agent Console
 
-一个本地优先的多智能体协同运行台。你在群聊里 @某个 Agent 派活，后端自动拆解、分发、执行、审核、汇总，全程 WebSocket 实时推送到前端面板。
+**企业级本地优先多智能体协同运行台与可观测治理中心**  
+*Local-First Multi-Agent Collaborative Runtime, Orchestration & Enterprise Governance Console*
 
-不做聊天玩具，不做黑盒。每一步流转、每次工具调用、每个 Token 消耗，都看得见。
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](#技术栈)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Async%20Control%20Plane-009688?logo=fastapi&logoColor=white)](#系统架构)
+[![Next.js 16](https://img.shields.io/badge/Next.js%2016-React%2019%20%C2%B7%20TypeScript-000000?logo=next.js&logoColor=white)](#技术栈)
+[![Database](https://img.shields.io/badge/ORM-SQLAlchemy%202.0%20%C2%B7%2021%20Tables-336791?logo=postgresql&logoColor=white)](#数据库设计21-张领域表与迁移治理)
+[![LiteLLM](https://img.shields.io/badge/Gateway-LiteLLM%20Multi--Provider-4F46E5)](#统一模型网关与工具调用)
+[![Tests](https://img.shields.io/badge/Tests-320%20Backend%20%2B%2081%20Frontend%20Passed-10B981)](#自动化测试与质量门禁)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](#license)
 
----
+**不做聊天玩具，不做黑盒封装。**  
+你在群聊里 `@` 单个或多个 Agent 派活，或一键触发参数化 DAG 工作流——后端自动完成拆解、并发/顺序接力、工具调用、人工审批挂起、QA 验收与结果汇总，全程通过 WebSocket 毫秒级推送到前端四栏工作台。每一步状态跃迁、每一次工具调用、每一个 Token 消耗，全部白盒可见、可倍速回放、可从任意断点单步恢复。
 
-## 技术栈
+[🎬 运行实况演示](#-运行实况演示-live-demo) · [✨ 核心特性](#-核心特性全景) · [🖼️ 界面总览](#️-界面与交互总览-ds-bot-设计系统) · [🏗️ 系统架构](#️-系统架构) · [🚀 快速开始](#-快速开始) · [🔌 外部桥接](#-外部-agent-软件接入-software-dock) · [🛡️ 权限与治理](#️-企业级安全配额与治理)
 
-| 层 | 选型 |
-|---|---|
-| 后端 | FastAPI · Python 3.11+ · SQLAlchemy 2.0 Async |
-| 前端 | Next.js 16 (App Router) · React 19 · TypeScript |
-| 样式 | Tailwind CSS v4 (OKLCH) · shadcn/ui · Lucide |
-| 数据库 | SQLite（开发）/ PostgreSQL（生产），21 张领域表 |
-| 模型层 | LiteLLM 统一适配 OpenAI / Anthropic / Gemini / DeepSeek / Qwen |
-| 实时 | FastAPI WebSocket + Redis Pub/Sub |
-| 认证 | PBKDF2 + JWT + 4 级 RBAC |
-
-不依赖 LangChain 或 AutoGen。编排逻辑自己写，工具调用自己控，上下文自己管。
+</div>
 
 ---
 
-## 架构
+## 🎬 运行实况演示 (Live Demo)
+
+> 下方动图展示了系统从 **JWT 登录 → 四栏工作台与 `Ctrl+K` 命令面板 → 群聊 3 棒 `@` 顺序接力 + `get_system_status()` 工具调用 → 任务毫秒级 2x 倍速回放 → DAG 双轨并行与 HITL 人工审批放行 → DS-Bot 四套主题与成本/配额/审计联动** 的全链路真实运行实况：
+
+<div align="center">
+  <a href="Agent_Console_项目运行实况演示.mp4" title="点击观看或下载 1080p 完整运行实况视频 (MP4)">
+    <img src="docs/media/agent-console-demo-preview.gif" alt="Agent Console 全链路运行实况演示预览" width="100%" />
+  </a>
+  <p>
+    <a href="Agent_Console_项目运行实况演示.mp4"><strong>▶ 点击观看 / 下载 1080p Full HD 完整运行实况视频（<code>Agent_Console_项目运行实况演示.mp4</code> · 24 FPS · 100s）</strong></a>
+  </p>
+</div>
+
+<video src="Agent_Console_项目运行实况演示.mp4" controls width="100%"></video>
+
+| 演示时间轴 | 实况场景 | 核心工程看点 |
+| :--- | :--- | :--- |
+| **`00:00 - 00:15`** | **实况 01 · 认证与四栏工作台** | JWT 双令牌登录，自动建立工作区 WebSocket 全双工连接；展示 `76px` 导航轨 + `264px` 团队列 + Software Dock + 右侧可拖拽对象详情面板（`DetailsPanel`）及 `Ctrl+K` 全局命令面板 |
+| **`00:15 - 00:38`** | **实况 02 · 群聊 3 棒接力 + 工具探针** | 输入 `@项目总设计师 @Agent工程师 @测试专员` 自动生成 3 棒接力链；第 2 棒自动触发 `get_system_status()` Function Calling 探针，WebSocket 实时流式推送接力进度与棒次徽标 |
+| **`00:38 - 00:51`** | **实况 03 · 毫秒级任务时序回放** | 进入刚完成的接力任务详情页，开启 `2x` 倍速帧级回放，逐步检视每棒 JSON 输入输出载荷、单步耗时与精确到小数点后 6 位的美元成本 |
+| **`00:51 - 01:14`** | **实况 04 · DAG 并行 + HITL 人工审批** | 可视化检视 Kahn 拓扑分层 DAG 画布并启动发布流水线；前序双轨分支并发完成后自动在 `human_approval` 节点挂起为“等待审批”，管理员在线点击“通过”即时唤醒下游灰度发布节点 |
+| **`01:14 - 01:40`** | **实况 05 · 四套主题与企业治理闭环** | 现场切换 `DeepSeek / Mono / Paper / Moonlight` 主题与动效档位；联动检视 4 级 RBAC 成员矩阵、`7d` 输入/输出 Token 堆叠柱状图成本大屏、月度预算硬熔断、插件中心与操作审计流水 |
+
+---
+
+## ✨ 核心特性全景
+
+- **🖥️ DS-Bot 四栏自适应工作台与四主题设计系统**：采用 `76px` 全局导航轨 + `264px` 团队列 + 主工作画布 + `320px~560px` 可拖拽对象详情面板（`DetailsPanel`）架构；角色配备高辨识度 `BotMark` 几何矢量头像与运行态呼吸光环，内置 `Ctrl/Cmd + K` 全局命令面板、4 套主题矩阵（`deepseek` / `mono` / `paper` / `moonlight`）及三档动效控制（`安静` / `正常` / `活跃`），遵循 WCAG 2.1 AA 无障碍基线。
+- **🤝 四路协同编排引擎（零黑盒自研状态机）**：不依赖 LangChain 或 AutoGen，自研确定性六态任务状态机与 `ExecutionTrace` 结构化上下文拼装器，在同一底座上原生支撑：
+  1. **经典四阶段协同流水线**：`总设计师拆解 (Manager) → 领域工程师执行 (Worker) → 测试专员验收 (QA) → 总设计师汇总 (Final)`；
+  2. **群聊多 `@` 顺序接力链**：单条消息按序 `@` 多个内部 Agent（最多 6 棒），前棒产出与执行轨迹自动回灌后棒上下文，无增量意见可回复 `[PASS]` 静默让位；
+  3. **Kahn 拓扑分层并行 DAG 工作流**：自动环路检测与拓扑分层，同层无依赖节点通过 `asyncio.gather` 并发执行，完整拓扑快照落库 `workflow_runs`；
+  4. **HITL 人工在环审批门禁**：工作流支持插入 `human_approval` 挂起节点，群聊顶部/底部自动浮现内联审批卡（`ActionCard` 支持 `A 批准 / B 驳回 / C 自定义说明` 快捷键），跨进程解耦唤醒下游分支。
+- **⚙️ 控制面与执行面彻底分离 + 原子租约防脑裂**：FastAPI 接入层仅处理鉴权、配额校验与入队，所有耗时推理下沉至独立 `app.worker` 进程；通过 `task_queue_items` 数据库持久化队列 + CAS 条件更新认领 `execution_token` + 30 秒后台周期续租 + 60 秒失联孤儿任务自动回收，确保进程崩溃或重启后任务不丢、不重、不脑裂。
+- **⏪ 毫秒级时序步进回放与断点单步恢复**：内置 `TaskReplayPlayer` 多倍速（`1x / 2x / 5x`）步进播放器，完整还原每一步拆解、工具调用与模型推理的起止时间、耗时、Token 及 JSON Payload；失败或取消的任务支持任选历史步骤一键 **“从该步恢复执行（`resume-from-step`）”**。
+- **🔌 Software Dock 外部软件桥接（Cursor / Codex CLI / Trae / Antigravity）**：通过标准化四文件目录契约（`PROMPT.md / task.json / output.md / events.jsonl`）与 `codex exec` CLI 沙箱子进程，将外部编程 Agent 纳管为具备定时心跳、能力匹配、最小负载选点与 22 项测试命令白名单防注入的标准执行节点。
+- **🛡️ 企业级多租户 RBAC、配额硬熔断与合规审计**：支持工作区级租户隔离、专属邀请码核销、4 级 RBAC 权限矩阵（`Owner / Admin / Member / Viewer`）、API Key 信封加密（`v1:`）与落库广播前敏感内容正则脱敏（`Redaction`）、月度美元预算/Token 硬熔断（`is_hard_limit`）、JSON Manifest 插件热插拔（含 HMAC-SHA256 签名 Webhook）以及全平台不可篡改 `audit_logs` 审计流水。
+
+---
+
+## 🖼️ 界面与交互总览 (DS-Bot 设计系统)
+
+| 集群运行总览驾驶舱（`/`） | 多智能体群聊协作、接力与内联审批（`/chats`） |
+| :---: | :---: |
+| ![集群运行总览](docs/media/ui-01-console-overview.png) | ![多智能体群聊协作](docs/media/ui-02-chat-relay-hitl.png) |
+| **双栏导航 + Software Dock 外部节点监控 + 右侧对象详情面板** | **多 `@` 顺序接力棒次徽标 + 行内 `@Chip` + `ActionCard` 人工审批卡** |
+| **任务详情与毫秒级时序步进回放（`/tasks/[id]`）** | **DAG 工作流可视化拓扑画布（`/workflows`）** |
+| ![任务详情与时序回放](docs/media/ui-03-task-replay.png) | ![DAG 工作流拓扑画布](docs/media/ui-04-workflow-dag.png) |
+| **`1x/2x/5x` 帧级步进回放 + JSON 输入输出载荷 + 断点单步恢复** | **Kahn 拓扑分层并行分支 + 橙色 `human_approval` 人工审批门禁** |
+| **成本中心与 Token 堆叠柱状图大屏（`/settings/cost`）** | **配额水位监控与超额硬熔断（`/settings/quota`）** |
+| ![成本中心大屏](docs/media/ui-06-cost-dashboard.png) | ![配额与限流治理](docs/media/ui-07-quota-circuit-breaker.png) |
+| **`24h/7d/30d/12m` 输入/输出 Token 堆叠柱状图 + 按模型/按任务双榜** | **月度 USD 预算进度条 + 并发/RPM 限制 + 超额硬熔断开关** |
+| **多租户成员与 4 级 RBAC 授权（`/settings/members`）** | **全平台不可篡改操作审计日志（`/settings/audit`）** |
+| ![成员与权限管理](docs/media/ui-05-rbac-members.png) | ![平台操作审计日志](docs/media/ui-08-audit-logs.png) |
+| **专属邀请码发放 + Owner / Admin / Member / Viewer 在线角色调整** | **多维动作分类检索 + 客户端 IP 追踪 + 变更前后 JSON 快照检视** |
+
+---
+
+## 🛠️ 技术栈
+
+| 分层 | 核心技术选型 | 关键工程说明 |
+| :--- | :--- | :--- |
+| **前端表现层** | **Next.js 16 (App Router) · React 19 · TypeScript 5** | 严格类型覆盖全部 REST 契约与 WebSocket 事件联合类型；内置 AuthGuard 与并发去重 401 自动无感续期 |
+| **设计系统与组件** | **Tailwind CSS v4 (OKLCH) · DS-Bot 设计体系 · shadcn/ui** | 4 套视觉主题 + 三档动效强度；自研 `BotMark` 几何头像、`TaskReplayPlayer` 回放器与轻量 SVG `dag-canvas` |
+| **后端接入与控制面** | **FastAPI · Python 3.11+ · Pydantic v2 · Uvicorn** | 全异步非阻塞 I/O，依赖注入串联 JWT 鉴权、4 级 RBAC 守卫、配额拦截与统一 JSON 响应信封 |
+| **持久层与迁移** | **SQLAlchemy 2.0 Async · PostgreSQL 16 / SQLite · Alembic** | 单测/轻量开发零配置使用 `aiosqlite`，生产容器使用 `asyncpg + PostgreSQL 16`；21 张领域表由 Alembic 统一版本化管理 |
+| **异步调度与实时总线** | **独立 Worker (`app.worker`) · Redis 7 Pub/Sub** | `task_queue_items` 持久化队列 + `execution_token` 原子租约续期；Redis 承载跨进程事件广播、分布式锁与滑动窗口限流 |
+| **模型网关与安全** | **LiteLLM · PyJWT · PBKDF2-SHA256 · HMAC-SHA256** | 统一适配 OpenAI / Anthropic / Gemini / DeepSeek / 通义千问 Qwen，支持主备模型递归 Fallback 容灾与 API Key 信封加密 |
+
+---
+
+## 🏗️ 系统架构
 
 > 深色主题架构图（GitHub 暗色模式效果最佳）：
 
 ![Agent Console 架构图](docs/architecture-dark.png)
 
 <details>
-<summary>Mermaid 源码版（可编辑）</summary>
+<summary><strong>📐 点击展开：Mermaid 架构源码版（可编辑）</strong></summary>
 
 ```mermaid
 %%{init: {'theme': 'dark', 'flowchart': {'nodeSpacing': 40, 'rankSpacing': 60, 'curve': 'linear'}, 'themeVariables': {'fontSize': '14px', 'background': '#0D0F14', 'primaryColor': '#1a1f2e', 'primaryBorderColor': '#3b82f6', 'primaryTextColor': '#e2e8f0', 'lineColor': '#64748b', 'secondaryColor': '#1e293b', 'tertiaryColor': '#0f172a', 'clusterBkg': '#151821', 'clusterBorder': '#334155', 'edgeLabelBackground': '#0D0F14', 'fontFamily': 'system-ui, -apple-system, sans-serif'}} }%%
@@ -59,18 +130,19 @@ flowchart LR
     subgraph CORE["任务编排核心"]
         direction TB
         HUB["MessageHub<br/>消息接收与 @Agent 路由"]
-        TASK["TaskService<br/>任务状态机与入队"]
-        ORCH["AgentOrchestrator<br/>Manager → Worker → QA → Final"]
+        TASK["TaskService & TaskLease<br/>状态机 · 入队 · 原子租约"]
+        ORCH["AgentOrchestrator<br/>流水线 / 多棒接力 / 断点恢复"]
+        DAG["DAGEngine<br/>拓扑分层并行 · HITL 人工审批"]
         EXEC["执行能力<br/>ExecutionTrace · Tools · Plugins"]
         LLM["模型网关 · LiteLLM<br/>多 Provider · Fallback"]
     end
 
     subgraph RUNTIME["运行与数据层"]
         direction TB
-        WORKER["独立 Worker<br/>领取 · 执行 · 回写"]
+        WORKER["独立 Worker<br/>认领 · 30s 续租 · 60s 孤儿回收"]
         QUEUE[("task_queue_items<br/>持久化任务队列")]
         DB[("SQLite / PostgreSQL<br/>21 张领域表")]
-        REDIS[("Redis<br/>Pub/Sub")]
+        REDIS[("Redis 7<br/>Pub/Sub · 分布式锁 · 限流")]
         MODELS["模型服务<br/>OpenAI · Anthropic · Gemini<br/>DeepSeek · Qwen"]
     end
 
@@ -80,14 +152,15 @@ flowchart LR
     AGENTS <-.->|Bridge 协议| BRIDGE_LAYER
 
     REST --> HUB --> TASK --> ORCH
+    REST -->|/workflows/run| DAG
     REST -->|/dispatch| INT --> BASE
     INT -->|写 TaskStep + 任务状态| DB
-    INT -->|节点负载统计| DB
     BASE --> CURSOR
     BASE --> CODEX
     CURSOR --> AGENTS
     CODEX --> AGENTS
     ORCH --> EXEC --> LLM --> MODELS
+    DAG --> EXEC
 
     TASK --> QUEUE
     QUEUE --> WORKER
@@ -97,6 +170,7 @@ flowchart LR
 
     HUB --> DB
     ORCH --> DB
+    DAG --> DB
     WS <-.->|跨进程广播| REDIS
 ```
 
@@ -104,174 +178,140 @@ flowchart LR
 
 ---
 
-## 怎么跑
+## 🚀 快速开始
 
-### Windows 一键启动
+### 方式一：Windows 全容器一键启动（推荐）
 
-双击 `start.bat`。脚本会拷贝 `.env`、拉起 Docker、轮询健康检查、打开浏览器。
+确保已安装并启动 Docker Desktop，在项目根目录直接双击运行 `start.bat`（或执行 `pwsh -File start.ps1`）：
+- 自动复制生成 `.env` 配置文件；
+- 按序拉起 `db`（PostgreSQL 16）、`redis`（Redis 7）、`migrate`（独占执行 `alembic upgrade head` 迁移容器，杜绝多进程并发建表冲突）、`backend`（`:8000`）、`worker`（独立队列消费进程）与 `frontend`（`:3000`）；
+- 自动轮询 `/api/v1/health` 健康检查并在就绪后打开浏览器访问 [http://localhost:3000](http://localhost:3000)。
 
-### 手动启动
+### 方式二：本地混合桥接启动（需调用宿主机 Codex CLI 时选用）
+
+双击运行 `start-local.bat`：
+- 自动在 Docker 中启动 `PostgreSQL` 与 `Redis`（若未安装 Docker 则自动平滑降级至本地 SQLite `backend/data/agent_console.db`）；
+- 在宿主机独立终端窗口分别拉起 `Backend (:8000)`、`Worker` 与 `Frontend (:3000)`，方便后端直接调用宿主机安装的 `@openai/codex` CLI 与本地桥接目录。
+
+### 方式三：手动三终端开发调试启动
 
 ```bash
-# 后端
+# 终端 1：启动 FastAPI 接入层 (:8000)
 cd backend
-pip install -r requirements.txt
+pip install -r requirements.txt -c constraints.txt
 python -m uvicorn app.main:app --reload --port 8000
 
-# 前端
+# 终端 2：启动独立持久化队列消费 Worker
+cd backend
+python -m app.worker
+
+# 终端 3：启动 Next.js 前端控制台 (:3000)
 cd frontend
 npm install
 npm run dev
 ```
 
-打开 [http://localhost:3000](http://localhost:3000)。
+打开浏览器访问 [http://localhost:3000](http://localhost:3000)。
 
----
+### 🔑 预置演示账号与一键体验指令
 
-## 数据库表
+若已导入演示数据，可直接使用以下四级 RBAC 账号登录（统一密码均为 `Report@123456`）：
 
-21 张表，覆盖用户、工作区、权限、任务、消息、模型、审计、配额、插件、工作流、外部节点、认证会话吊销、工作流运行记录：
+| 角色等级 | 登录邮箱（账号） | 显示名称 | 权限范围说明 |
+| :--- | :--- | :--- | :--- |
+| **Owner（所有者）** | `chenming@agentconsole.dev` | 陈明（架构负责人） | 拥有工作区全部权限（成员管理、配额熔断、插件、工作流、HITL 审批） |
+| **Admin（管理员）** | `liwei@agentconsole.dev` | 李薇（研发主管） | 管理成员、配额、插件、工作流模板及在线审批放行高危节点 |
+| **Member（研发成员）** | `zhanghao@agentconsole.dev` | 张浩（后端开发） | 发起群聊派单、多棒接力、触发工作流与使用回放调试器 |
+| **Viewer（观察者）** | `zhoumin@agentconsole.dev` | 周敏（质量审计） | 只读浏览群聊、任务回放、成本大屏与操作审计流水（写操作返回 `403`） |
 
-```
-workspaces              workspace_memberships    workspace_invitations
-users                   agents                  conversations
-messages                tasks                   task_steps
-task_queue_items        model_calls             provider_credentials
-custom_model_configs    quota_configs           audit_logs
-plugins                 workspace_plugins        workflow_templates
-integration_nodes       refresh_tokens          workflow_runs
-```
+登录后可在 **群聊（`/chats`）** 直接粘贴体验 3 棒顺序接力 + 工具调用：
 
-应用启动自动执行 Alembic 迁移（`alembic upgrade head`），SQLite / PostgreSQL 通用。切 PostgreSQL 只需改 `DATABASE_URL`。
-
-### 迁移治理（Alembic）
-
-数据库模式由 Alembic 统一管理，应用启动即自动 `alembic upgrade head`，无需手动建表。开发（SQLite）/ 生产（PostgreSQL）共用同一套迁移。
-
-手动查看或生成迁移（在 `backend/` 目录）：
-
-```bash
-alembic revision --autogenerate -m "变更描述"
-alembic upgrade head
-alembic downgrade -1
-```
-
-从 SQLite 一次性迁数据到 PostgreSQL：
-
-```bash
-python scripts/migrate_sqlite_to_pg.py --dry-run   # 预检表与行数
-python scripts/migrate_sqlite_to_pg.py             # 实际迁移
+```text
+@项目总设计师 @Agent工程师 @测试专员 请接力完成支付回调幂等锁方案设计、系统状态探针自检与并发回归验收
 ```
 
 ---
 
-## 编队
+## 🤖 预设 6 大专业智能体编队与协同机制
 
-系统初始化拉起 6 个 Agent：
+系统首次启动时通过幂等种子服务初始化 6 位职责互补的专业智能体，每位智能体绑定一个逻辑模型槽位（可在 `config/models.yaml` 或 `/settings` 在线映射至具体大模型）：
 
-| Agent | 干什么 |
-|---|---|
-| 项目总设计师 | 拆需求、分任务、汇总交付 |
-| Agent 工程师 | 后端逻辑、算法、API |
-| 前端设计师 | 界面、组件、交互 |
-| 知识库管理员 | 文档、资料、检索 |
-| 测试专员 | QA、验收、缺陷定位 |
-| 运维 | 部署、Docker、稳定性 |
+| 智能体名称 | 角色标识 (`role`) | 绑定模型槽位 | 核心职责边界 |
+| :--- | :--- | :--- | :--- |
+| **项目总设计师** | `project_architect` | `manager_model` | 需求拆解、技术架构设计、子任务分派与最终交付结果整合 |
+| **Agent工程师** | `agent_engineer` | `code_model` | 后端核心逻辑实现、API 研发、Function Calling 工具调用与算法落地 |
+| **前端设计师** | `frontend_designer` | `code_model` | 页面架构、响应式交互组件实现、视觉体验优化与无障碍适配 |
+| **知识库管理员** | `knowledge_manager` | `writing_model` | 架构文档沉淀、接口契约整理、上下文检索维护与信息溯源 |
+| **测试专员** | `qa_engineer` | `review_model` | 自动化测试编写、边界条件核查、集成回归验证与质量准出把关 |
+| **运维** | `operations_engineer` | `code_model` | 容器化编排、CI/CD 流水线、数据库迁移审计、监控告警与回滚预案 |
 
-每个 Agent 绑定一个模型位（`manager_model` / `code_model` / `writing_model` / `review_model`），在 `config/models.yaml` 里配到具体 Provider。
+### 1. 经典多阶段协同流水线
 
----
+当用户在群聊中直接发送复杂需求（未 `@` 特定业务角色或 `@项目总设计师`）时，自动触发四阶段流水线：
 
-## 页面
-
-| 路由 | 干什么 |
-|---|---|
-| `/` | 集群总览：Agent 负载、外部节点心跳、Software Dock |
-| `/chats` | 群聊：@Agent 派活（可 @ 多个 Agent 顺序接力），Markdown 渲染，自动触发流水线或接力链 |
-| `/contacts` | Agent 花名册 |
-| `/tasks` | 任务列表 |
-| `/tasks/[id]` | 任务详情：执行轨迹、工具调用链、时序回放、断点恢复 |
-| `/workflows` | 工作流模板：参数化运行（后端 DAG 引擎执行，前端为节点链预览，可视化画布为 Phase 3 规划） |
-| `/settings` | 设置中心（成员 / 审计 / 成本 / 配额 / 插件） |
-| `/login` `/register` | 认证 |
-
----
-
-## 编排流程
-
-```
-用户 @项目总设计师 "重构订单模块"
+```text
+用户 @项目总设计师 "重构订单模块幂等锁并完成安全验收"
     │
     ▼
-Manager 拆解 → Worker 1: Agent工程师
-             → Worker 2: 前端设计师
+[Stage 1] Manager 拆解  ──►  生成结构化子任务清单与验收标准
     │
     ▼
-QA 审核 ← Worker 结果回传
+[Stage 2] Worker 执行   ──►  Agent工程师 / 前端设计师（支持工具调用循环与并发执行）
     │
     ▼
-Manager 汇总 → 写回群聊
+[Stage 3] QA 审查验收   ──►  测试专员对照验收标准逐项核查
+    │
+    ▼
+[Stage 4] Manager 汇总  ──►  整合终版交付报告写回群聊 + 持久化完整 ExecutionTrace
 ```
 
-关键点：
+### 2. 群聊多 Agent 顺序接力链（Multi-Agent Relay）
 
-- 任务进 `task_queue_items` 持久化队列，独立 Worker 消费
-- 每轮模型调用前，`ExecutionTrace` 从数据库拼装结构化上下文回灌（任务摘要 + 当前阶段 + 已完成步骤 + 工具结果 + 失败原因）
-- 工具调用形成显式闭环：模型请求 → 执行 → 结果回灌下一轮
-- 超长上下文自动摘要裁剪，关键状态不丢
-- 失败后重试，模型能读到失败前上下文接着跑
+单条消息按出现顺序 `@` 多个内部 Agent 时，自动去重构建最多 **6 棒** 的顺序接力链：
 
-### 群聊多 Agent 接力（C-267）
-
-一条消息 @ 多个内部 Agent 时，按 @ 出现顺序去重成链（上限 6 棒），在同一个任务内逐棒执行：
-
-```
-用户 @A @B @C "完成需求"
+```text
+用户: "@项目总设计师 @Agent工程师 @测试专员 请接力完成支付回调幂等锁方案与验收"
     │
-    ▼
-第 1 棒 A：原始任务 + 执行轨迹            → 产出写回群聊
-第 2 棒 B：原始任务 + A 产出 + 轨迹        → 产出写回群聊
-第 3 棒 C：原始任务 + A/B 产出 + 轨迹      → 产出写回群聊（无新增内容可回复 [PASS] 静默让位）
-    │
-    ▼
-Task 完成：result 汇总各棒产出（PASS 棒不产生群聊消息，仅留 TaskStep 可追溯）
+    ├──► 第 1 棒 [项目总设计师]：原始任务 + 执行轨迹            ──► 产出写回群聊（带「接力 1/3」徽标）
+    ├──► 第 2 棒 [Agent工程师] ：原始任务 + 第 1 棒产出 + 轨迹   ──► 自动调用 get_system_status() ──► 产出写回群聊（「接力 2/3」）
+    └──► 第 3 棒 [测试专员]    ：原始任务 + 前两棒产出 + 轨迹    ──► 产出写回群聊（「接力 3/3」，若无增量可回复 [PASS] 静默让位）
 ```
 
-- 任务数据：`tasks.relay_agent_ids_json`（按棒次排序的 Agent id JSON 数组）；每棒落 `task_steps(relay_turn_n)`
-- 实时事件：WebSocket `task.relay_progress`（`started` / `completed` / `passed` / `failed`），前端渲染接力链与棒次徽标
-- 语义边界：单 @ → 单 Agent 任务；无 @ → Manager 流水线；首个 @ 为外部节点 → 节点派发，均不受接力影响
+- **数据落库**：`tasks.relay_agent_ids_json` 记录接力序列，每一棒独立生成 `task_steps(relay_turn_n)`；
+- **实时进度**：WebSocket 广播 `task.relay_progress`（`started / completed / passed / failed`），前端顶部悬浮渲染接力进度链。
+
+### 3. DAG 分层并行工作流与 HITL 人工审批
+
+- **拓扑排序与并发驱动**：`DAGEngine` 在执行前通过 Kahn 算法执行环路检测与拓扑分层，运行期对同层无依赖节点调用 `asyncio.gather` 并行推进；
+- **人工审批挂起与恢复**：遇到 `type: "human_approval"` 节点时，任务状态自动切换为 `waiting_approval`，同时在群聊内联 `ActionCard` 与任务详情页暴露审批入口；管理员点击“通过”后无缝唤醒下游节点，点击“驳回”则立即终止后续分支并记录审计。
 
 ---
 
-## 工具调用
+## 🔧 统一模型网关与工具调用 (Function Calling)
 
-Agent 支持 Function Calling。内置 4 个工具：
+### 内置工具与插件热挂载
 
-| 工具 | 用途 |
-|---|---|
-| `calculate` | AST 白名单安全算术 |
-| `query_tasks` | 查任务历史 |
-| `get_agents` | 查当前工作区 Agent 列表 |
-| `get_system_status` | 查 Provider 配置状态 |
+编排器内置最多 **5 轮** 受控 Function Calling 循环，每轮调用输入与结果均持久化为独立 `TaskStep`：
 
-工具循环最多 5 轮，每轮结果持久化为 `TaskStep`。
+| 内置工具名 | 功能说明 | 安全机制 |
+| :--- | :--- | :--- |
+| `calculate` | 数学表达式与工程指标计算 | 基于 Python `ast` 语法树白名单安全求值，严禁 `eval` 任意代码执行 |
+| `query_tasks` | 检索当前工作区历史任务状态与摘要 | 强制绑定当前任务所属 `workspace_id`，防止跨租户读取 |
+| `get_agents` | 查询当前工作区智能体编队与在线负载 | 租户级隔离只读查询 |
+| `get_system_status` | 巡检各模型供应商配置状态与网关健康度 | 仅返回布尔就绪状态，绝不暴露明文密钥 |
 
-插件注册中心支持上传 JSON Manifest 注册外部工具，按工作区挂载与启用，Agent 执行时自动注入。
+此外，**插件注册中心（`/settings/plugins`）** 支持上传标准 JSON Manifest 在线扩展外部工具，按工作区粒度启用后自动注入 Agent 工具列表，并通过带 `X-Agent-Console-Signature`（`HMAC-SHA256`）签名的 Webhook 安全调用外部服务。
 
----
+### 模型容灾与密钥管理
 
-## 模型管理
-
-- API Key 在前端 `/settings` 填入，存数据库，`DB > 环境变量` 优先级
-- Key 永不在列表回传，日志全脱敏
-- 支持任意 Provider/Model 组合（如 `anthropic/claude-3-5-sonnet`）
-- 主模型 429/500/超时时，沿降级链自动重试，日志标 `fallback_used: true`
+- **优先级与加密**：在 `/settings` 录入的厂商 API Key 采用信封加密（`v1:` 前缀）落库，优先级高于环境变量（`DB > .env`），列表查询永不回传明文；
+- **递归 Fallback 降级链**：当主模型遭遇超时、`429 RateLimit` 或 `5xx` 故障时，LiteLLM 网关自动沿 `fallback_model` 链切换备选模型并标记 `fallback_used: true`。
 
 ---
 
-## 外部 Agent 软件接入
+## 🔌 外部 Agent 软件接入 (Software Dock)
 
-Software Dock 不再是静态展示。`Cursor`、`Codex CLI`、`Trae`、`Antigravity` 等外部 Agent 软件可以注册为执行节点，纳入统一调度。
+Software Dock 将 `Cursor`、`Codex CLI`、`Trae`、`Antigravity` 等外部编程软件注册为标准执行节点，纳入统一调度与审计：
 
 ```mermaid
 flowchart TB
@@ -299,182 +339,158 @@ flowchart TB
     DOCK <-->|实时更新| WS
 ```
 
-### 调度链路
+### Bridge 标准四文件目录契约
 
-```mermaid
-flowchart TB
-    REQ["POST /api/v1/integrations/dispatch<br/>task_id + node_id"]
-    VAL{"校验 task 与 node<br/>同工作区?"}
-    VAL_NO["422 错误"]
-    SVC["IntegrationService<br/>dispatch_task_to_node()"]
-    SELECT{"选择节点"}
-    MANUAL["手动指定 node_id"]
-    AUTO["自动选择<br/>能力匹配 → 负载最小 → 心跳优先"]
-    LOAD_UP["节点负载 +1<br/>状态 → busy"]
-    PREP["BaseBridge.prepare_task()<br/>生成工作目录与上下文文件"]
-    STEP_RUN["创建 TaskStep（running）<br/>WebSocket: task.step_changed"]
-    EXEC["Bridge.execute()<br/>外部 Agent 执行"]
-    STEP_DONE["TaskStep 标记 completed/failed<br/>写入结果"]
-    TASK_UPDATE["Task 状态更新<br/>result 写回"]
-    LOAD_DOWN["节点负载 -1<br/>状态 → online/busy"]
-    AUDIT["审计日志<br/>integration_node.dispatch"]
-    WS_BC["WebSocket 广播<br/>integration.status_changed<br/>task.status_changed"]
-    RESULT["返回 BridgeResult<br/>success / message / artifacts / metadata"]
-
-    REQ --> VAL
-    VAL -->|否| VAL_NO
-    VAL -->|是| SVC
-    SVC --> SELECT
-    SELECT -->|node_id 已指定| MANUAL
-    SELECT -->|node_id 为空| AUTO
-    MANUAL --> LOAD_UP
-    AUTO --> LOAD_UP
-    LOAD_UP --> PREP --> STEP_RUN --> EXEC --> STEP_DONE
-    STEP_DONE --> TASK_UPDATE --> LOAD_DOWN --> AUDIT --> WS_BC --> RESULT
-```
-
-### Bridge 目录约定
-
-```
+```text
 data/bridges/
   workspace-<id>/
     Cursor/
       task-<task_id>/
-        PROMPT.md        # 任务输入与上下文
-        task.json        # 结构化任务元数据
-        output.md        # 最终文本结果
-        events.jsonl     # 事件流或进度流
+        PROMPT.md        # 派发给外部 Agent 的任务描述与结构化上下文
+        task.json        # 任务元数据与白名单测试命令契约
+        output.md        # 外部 Agent 最终回写的交付文本
+        events.jsonl     # 执行过程流式事件日志
     Codex/
       task-<task_id>/
-        PROMPT.md
-        task.json
-        output.md
-        events.jsonl
+        PROMPT.md · task.json · output.md · events.jsonl
 ```
-
-### API
-
-| 接口 | 用途 |
-|---|---|
-| `POST /api/v1/integrations/nodes` | 注册节点 |
-| `GET /api/v1/integrations/nodes` | 节点列表 |
-| `POST /api/v1/integrations/nodes/{id}/heartbeat` | 心跳上报 |
-| `POST /api/v1/integrations/dispatch` | 派发任务到节点 |
-
-WebSocket 推送 `integration.status_changed` / `integration.heartbeat` / `task.step_changed` 事件，前端实时更新。
-
-### Codex CLI 接入示例
-
-```bash
-npm install -g @openai/codex
-codex  # 首次登录
-
-# 派发任务
-curl -X POST http://localhost:8000/api/v1/integrations/dispatch \
-  -H "Content-Type: application/json" \
-  -d '{"task_id": 42, "node_id": 2}'
-```
-
-Bridge 会调用 `codex exec --json --sandbox workspace-write -o output.md "任务描述"`，结果保存到 `data/bridges/workspace-{id}/Codex/task-{id}/`。
 
 ---
 
-## 权限
+## 🗄️ 数据库设计（21 张领域表）与迁移治理
 
-4 级 RBAC：
+系统持久层共包含 **21 张规范化关系型数据表**，完整覆盖多租户权限、持久队列租约、编排轨迹、模型计量、工作流快照与安全审计：
 
-| 角色 | 能做什么 |
-|---|---|
-| owner | 一切 |
-| admin | 管成员、配额、插件、工作流 |
-| member | 派任务、看任务 |
-| viewer | 只读 |
+```text
+workspaces              workspace_memberships    workspace_invitations
+users                   refresh_tokens           agents
+conversations           messages                 tasks
+task_steps              task_queue_items         model_calls
+provider_credentials    custom_model_configs     quota_configs
+audit_logs              plugins                  workspace_plugins
+workflow_templates      workflow_runs            integration_nodes
+```
 
-工作区隔离：不同工作区看不到彼此的 Agent、任务、消息、节点。
+```bash
+# 查看或生成 Alembic 迁移（在 backend/ 目录下）
+alembic revision --autogenerate -m "describe_change"
+alembic upgrade head
+alembic downgrade -1
 
-所有关键操作自动写 `audit_logs`：登录、成员变更、插件启停、任务执行。
+# 从 SQLite 一次性迁移数据至 PostgreSQL
+python scripts/migrate_sqlite_to_pg.py --dry-run
+python scripts/migrate_sqlite_to_pg.py
+```
 
 ---
 
-## 测试
+## 🛡️ 企业级安全、配额与治理
+
+- **4 级 RBAC 权限矩阵**：服务端通过 `require_workspace_role` 强校验 `owner / admin / member / viewer` 角色，且所有业务接口强制注入服务端可信 `workspace_id`，严防水平越权；
+- **预算水位与硬熔断（`QuotaService`）**：支持按工作区设定月度美元预算上限、月度 Token 上限、最大并发运行任务数及每分钟 API 请求速率（RPM）；开启 `is_hard_limit` 后超额请求立即返回 `429` 拦截；
+- **全链路敏感内容脱敏（`Redaction`）**：任何消息、步骤日志与错误栈在落库及 WebSocket 广播前自动识别并遮蔽 `sk-` 密钥、`Bearer` 令牌与口令；
+- **测试命令白名单防注入**：外部 Bridge 节点仅允许执行 `pytest`、`npm test`、`ruff`、`mypy` 等 22 项白名单命令前缀，拦截一切命令拼接注入。
+
+---
+
+## 🧪 自动化测试与质量门禁
 
 ```bash
-# 后端
+# 后端单元与集成测试（46 个测试文件，320 项测试）
 cd backend
 python -m pytest tests/ -q
 
-# 前端
+# 前端测试、类型检查、代码规范与生产构建（7 个测试文件，81 项测试）
 cd frontend
 npm test
 npm run typecheck
 npm run lint
 npm run build
+
+# 本地一键运行完整 CI 等价门禁
+pwsh -NoProfile -File scripts/ci-local.ps1
 ```
 
-CI 等价门禁：`pwsh -NoProfile -File scripts/ci-local.ps1`（PG 模式加 `-WithPostgres` 并提供 `TEST_PG_DATABASE_URL`）。依赖版本由 `backend/constraints.txt` 锁定，升级依赖后需同步并在本地/CI 各跑绿一次。
-
-当前：后端 320 tests passed（46 个测试文件），前端 81 tests（7 个测试文件）/ typecheck 0 / lint 0 / build pass。
+当前质量门禁基线：**后端 320 passed，前端 81 passed / typecheck 0 error / lint 0 error / build pass**。
 
 ---
 
-## 配置
+## ⚙️ 核心环境变量配置（`.env`）
 
-复制 `.env.example` 为 `.env`，按需填写：
+复制 `.env.example` 为 `.env`，按需配置：
 
 ```bash
-# 模型 Key（任填一个即可启动）
+# 模型厂商 API Key（任填一个即可启动，也可启动后在前端 /settings 页面可视化录入）
 DEEPSEEK_API_KEY=sk-xxx
 OPENAI_API_KEY=sk-xxx
+ANTHROPIC_API_KEY=
+GEMINI_API_KEY=
+DASHSCOPE_API_KEY=
 
-# 可选
-APP_API_TOKEN=         # 设了就开启 Bearer 鉴权
-TASK_EXECUTION_MODE=inline  # 改 worker 则 API 只入队
-WORKER_CONCURRENCY=2
-AGENT_MAX_TOOL_ITERATIONS=5     # 内部工具循环轮次上限（1-20，REQ-D4）
-CONTENT_REDACTION_ENABLED=true  # 落库/广播前脱敏 Key/Token/密码（REQ-D6）
-AGENT_WORKER_PARALLELISM=1      # 关闭工具时多 Worker 子任务并发上限（1-4，OPT-5）
+# 数据库与 Redis 连接（Docker 模式由 docker-compose.yml 自动注入 PostgreSQL 与 Redis）
+DATABASE_URL=sqlite+aiosqlite:///./data/agent_console.db
+REDIS_URL=redis://localhost:6379/0
+
+# 任务调度与安全治理开关
+TASK_EXECUTION_MODE=queue       # queue: 独立 Worker 进程消费持久化队列；inline: API 进程内执行
+WORKER_CONCURRENCY=2            # 单个 Worker 进程最大并发任务槽位数
+WORKER_LEASE_RENEW_INTERVAL_SECONDS=30
+WORKER_RECOVER_INTERVAL_SECONDS=60
+AGENT_TOOLS_ENABLED=true        # 开启 Function Calling 工具循环
+AGENT_MAX_TOOL_ITERATIONS=5     # 单阶段工具调用循环轮次上限（1-20）
+CONTENT_REDACTION_ENABLED=true  # 落库与广播前自动正则脱敏敏感凭证
 ```
 
 ---
 
-## 项目结构
+## 📂 项目工程结构
 
-```
+```text
+├── Agent_Console_项目运行实况演示.mp4   # 1080p Full HD 24fps 项目全链路运行实况演示视频
 ├── backend/
 │   ├── app/
-│   │   ├── api/v1/endpoints/    # REST 路由（agents / tasks / plugins / integrations ...）
-│   │   ├── core/                # orchestrator / config / auth / permissions
-│   │   ├── models/              # 21 张 SQLAlchemy 模型
-│   │   ├── schemas/             # Pydantic 请求与响应
-│   │   ├── services/            # litellm / tools / bridge / cursor_bridge / codex_bridge / integration_service
-│   │   ├── websocket/           # WebSocket manager / events / distributed
-│   │   └── worker.py            # 独立 Worker 入口
-│   ├── alembic/                # Alembic 迁移（env.py + versions）
-│   ├── tests/                   # 46 个测试文件（320 tests）
-│   └── requirements.txt
+│   │   ├── agents/                     # Manager / Worker / QA / Relay 智能体实现与工具循环
+│   │   ├── api/                        # REST 路由控制器（auth / workspaces / tasks / workflows / governance ...）
+│   │   ├── core/                       # AgentOrchestrator / MessageHub / ExecutionTrace / Redaction / RBAC
+│   │   ├── db/                         # AsyncSession 引擎、事务辅助与幂等种子数据初始化
+│   │   ├── models/                     # 21 张 SQLAlchemy 2.0 领域模型定义
+│   │   ├── schemas/                    # Pydantic v2 请求与响应契约
+│   │   ├── services/                   # DAGEngine / TaskService / TaskLease / LiteLLM / Quota / Audit / Bridges
+│   │   ├── websocket/                  # WebSocket 连接池、事件信封与 Redis Pub/Sub 跨进程总线
+│   │   └── worker.py                   # 独立持久化队列消费 Worker 进程入口
+│   ├── alembic/                        # Alembic 数据库版本化迁移脚本
+│   ├── tests/                          # 46 个后端自动化测试套件（320 tests）
+│   ├── requirements.txt                # 后端直接依赖清单
+│   └── constraints.txt                 # 生产与 CI 依赖精确版本锁
 ├── frontend/
 │   ├── src/
-│   │   ├── components/          # UI 组件（software-dock / agent-gallery / status-panel ...）
-│   │   ├── hooks/               # use-integrations / use-workspace-socket / use-tasks ...
-│   │   ├── types/               # TypeScript 类型定义
-│   │   └── app/                 # Next.js App Router 页面
+│   │   ├── app/                        # Next.js 16 App Router 13 个核心业务视图路由
+│   │   ├── components/
+│   │   │   ├── chat/                   # 群聊消息流、@MentionChip、多棒接力进度、ActionCard 人工审批卡
+│   │   │   ├── console/                # 四栏工作台、导航轨、团队列、Software Dock、DetailsPanel、BotMark
+│   │   │   ├── settings/               # 设置中心、4 主题外观切换、模型密钥与降级链配置
+│   │   │   └── workflows/              # 工作流模板卡片与 SVG 拓扑分层 DAG 画布
+│   │   ├── hooks/                      # WebSocket 自动重连、群聊状态机、主题偏好等自定义 Hooks
+│   │   ├── lib/                        # 401 自动刷新请求客户端、接力链解析与纯函数工具库
+│   │   └── types/                      # 前后端契约对齐的 TypeScript 类型定义
 │   └── package.json
+├── config/
+│   └── models.yaml                     # 逻辑模型槽位映射与 Fallback 降级链配置
 ├── docs/
-│   ├── prd/                     # 35 份 PRD 文档
-│   ├── 整改项目完整计划.md       # 2026-11-01 批准：DS-Bot 对标二期 + 历史缺口收口（7 批次）
-│   ├── DS-Bot对标分析与改造方案.md  # 对标分析、A/B 结论与后续 backlog
-│   ├── DS-Bot分析报告/           # 前端 UI / 后端交互两份原始取证报告
-│   ├── PRD.md                   # 变更追踪表（自动生成，由 generate_change_log.py 维护）
-│   ├── check_docs_consistency.py # PRD 索引一致性检查（轻量文档门禁）
-│   ├── generate_change_log.py   # 从 git history 自动生成变更表
-│   └── build_prd_html.py        # 生成单页 PRD.html 阅读器
-├── docker-compose.yml
-├── start.bat / start.ps1
-└── .env.example
+│   ├── media/                          # README 实况动图预览与新版 DS-Bot 高清界面截图
+│   ├── prd/                            # 35 份模块化产品需求文档（PRD）
+│   ├── architecture-dark.png           # 系统全局深色架构图
+│   └── check_docs_consistency.py       # PRD 文档索引一致性检查脚本
+├── scripts/
+│   ├── ci-local.ps1                    # 本地与 GitHub Actions 完全等价的质量门禁脚本
+│   └── migrate_sqlite_to_pg.py         # SQLite 到 PostgreSQL 跨库数据迁移工具
+├── docker-compose.yml                  # 生产级 6 服务容器编排（db / redis / migrate / backend / worker / frontend）
+├── start.bat / start.ps1               # Windows 全容器一键启动脚本
+└── start-local.bat                     # 本地混合桥接启动脚本
 ```
 
 ---
 
-## License
+## 📄 License
 
-MIT
+本项目基于 [MIT License](LICENSE) 开源。
