@@ -715,6 +715,17 @@ CURATED = {
 # Curated by exact commit subject (so docs/script commits render cleanly even
 # before their sha is known). Applied when the sha lookup misses.
 CURATED_BY_SUBJECT = {
+    "docs: 在 README 中补充智能体结构化记忆与上下文治理体系说明": {
+        "type": "Optimization",
+        "scope": "文档",
+        "content": "在 README.md 补充智能体结构化记忆与上下文治理体系章节：系统阐述会话级消息流、任务级 ExecutionTrace 动态组装与裁剪预算（MAX_CONTEXT_ITEMS=8）、群聊多 Agent 跨棒次协同记忆滚雪球回灌、task_steps 状态持久化与断点单步恢复（resume-from-step），以及广播/落库前敏感信息脱敏治理（redact_content）；更新顶部快速导航锚点",
+        "frontend": "-",
+        "backend": "-",
+        "db": "否",
+        "breaking": "否",
+        "verify": "README.md 格式与现有风格一致；check_docs_consistency 验证 OK；两脚本重跑通过",
+        "notes": "独立验收通过；未改动业务代码与数据库",
+    },
     "docs: 记录 CI 间歇 flake 并重跑（C-293）": {
         "type": "Optimization",
         "scope": "文档",
